@@ -55,6 +55,9 @@ project "Atom"
 		runtime "Release"
 		optimize "on"
 
+	filter "system:Windows"
+		defines "ATOM_PLATFORM_WINDOWS"
+
 project "Sandbox"
 	location "Sandbox"
 	kind "ConsoleApp"
@@ -91,3 +94,6 @@ project "Sandbox"
 		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+	filter "system:Windows"
+		defines "ATOM_PLATFORM_WINDOWS"
