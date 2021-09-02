@@ -10,6 +10,9 @@ workspace "Atom"
 
 	outputdir = "%{cfg.buildcfg} - %{cfg.system}"
 
+	IncludeDirs = {}
+	IncludeDirs["spd_log"] = "Atom/vendor/spdlog/include"
+
 project "Atom"
 	location "Atom"
 	kind "StaticLib"
@@ -32,7 +35,8 @@ project "Atom"
 
 	includedirs
 	{
-		"%{prj.name}/src"
+		"%{prj.name}/src",
+		"%{IncludeDirs.spd_log}"
 	}
 
 	defines
@@ -77,7 +81,8 @@ project "Sandbox"
 	includedirs
 	{
 		"Atom/src",
-		"Atom/vendor"
+		"Atom/vendor",
+		"%{IncludeDirs.spd_log}"
 	}
 
 	links
