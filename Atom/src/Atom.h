@@ -5,3 +5,4 @@
 #include "Atom\Core\Core.h"
 #include "Atom\Core\EntryPoint.h"
 #include "Atom\Core\Logger.h"
+#include "Atom\Core\Events\Events.h""
