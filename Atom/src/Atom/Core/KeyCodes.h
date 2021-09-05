@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Atom\Core\Core.h"
+#include "Core.h"
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 #include <Windows.h>
