@@ -13,6 +13,11 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(ms_Application == nullptr, "Application already exists!");
         ms_Application = this;
+
+        WindowProperties properties;
+        properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
+
+        m_Window = Window::Create(properties);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -30,12 +35,16 @@ namespace Atom
 
             m_FrameTimer.Reset();
 
-            for (auto layer : m_LayerStack)
-                layer->OnUpdate(ts);
+            if (!m_Window->IsMinimized())
+            {
+                for (auto layer : m_LayerStack)
+                    layer->OnUpdate(ts);
+            }
+
+            m_Window->OnUpdate();
             
             m_FrameTimer.Stop();
         }
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

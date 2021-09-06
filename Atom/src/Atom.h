@@ -10,3 +10,4 @@
 #include "Atom/Core/LayerStack.h"
 #include "Atom/Core/Timestep.h"
 #include "Atom/Core/Timer.h"
+#include "Atom/Core/Window.h"

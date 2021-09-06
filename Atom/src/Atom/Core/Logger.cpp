@@ -12,7 +12,7 @@ namespace Atom
     {
         spdlog::set_pattern("%^[%T] %n: %v%$");
 
-        ms_EngineLogger = spdlog::stdout_color_mt("ENGINE");
+        ms_EngineLogger = spdlog::stdout_color_mt("ATOM");
         ms_ClientLogger = spdlog::stdout_color_mt("CLIENT");
 
         ms_EngineLogger->set_level(spdlog::level::trace);

@@ -20,6 +20,7 @@ project "Atom"
 	cppdialect "C++17"
 	systemversion "latest"
 	staticruntime "on"
+	characterset("ASCII")
 
 	targetdir("bin/" .. outputdir .. "/%{prj.name}")
 	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
@@ -65,6 +66,7 @@ project "Sandbox"
 	language "C++"
 	cppdialect "C++17"
 	staticruntime "on"
+	characterset("ASCII")
 
 	targetdir("bin/" .. outputdir .. "/%{prj.name}")
 	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
