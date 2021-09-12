@@ -34,6 +34,10 @@
 #define BIT(x) 1 << x
 #define ATOM_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
+#define KB(bytes) (bytes / 1024)
+#define MB(bytes) (KB(bytes) / 1024)
+#define GB(bytes) (MB(bytes) / 1024)
+
 // Asserts
 #if defined(ATOM_DEBUG)
     #define ATOM_ASSERT_IMPL(type, condition, msg, ...) { if(!(condition)) { ATOM##type##ERROR(msg, __VA_ARGS__); ATOM_DEBUG_BREAK(); } }

@@ -3,6 +3,16 @@
 
 #include "Core.h"
 #include "Logger.h"
+#include "Atom/Renderer/Adapter.h"
+#include "Atom/Renderer/Device.h"
+#include "Atom/Renderer/CommandQueue.h"
+#include "Atom/Renderer/GraphicsCommandList.h"
+#include "Atom/Renderer/Renderer.h"
+
+#include "Platform/DirectX12/DX12Adapter.h"
+#include "Platform/DirectX12/DX12Device.h"
+#include "Platform/DirectX12/DX12CommandQueue.h"
+#include "Platform/DirectX12/DX12GraphicsCommandList.h"
 
 namespace Atom
 {
@@ -18,6 +28,10 @@ namespace Atom
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
 
         m_Window = Window::Create(properties);
+
+        Renderer::Initialize();
+
+        
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -31,7 +45,7 @@ namespace Atom
         while (m_Running)
         {
             Timestep ts = m_FrameTimer.GetElapsedTime();
-            ATOM_ENGINE_INFO("{0}ms", ts.GetMilliseconds());
+            //ATOM_ENGINE_INFO("{0}ms", ts.GetMilliseconds());
 
             m_FrameTimer.Reset();
 
@@ -40,9 +54,12 @@ namespace Atom
                 for (auto layer : m_LayerStack)
                     layer->OnUpdate(ts);
             }
-
             m_Window->OnUpdate();
-            
+
+            Renderer::BeginFrame();
+
+            Renderer::EndFrame();
+
             m_FrameTimer.Stop();
         }
     }

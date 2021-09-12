@@ -1,4 +1,7 @@
 #include "atompch.h"
+
+#if defined(ATOM_PLATFORM_WINDOWS)
+
 #include "WindowWin32.h"
 
 namespace Atom
@@ -195,3 +198,4 @@ namespace Atom
         return DefWindowProc(hWnd, Msg, wParam, lParam);
     }
 }
+#endif // ATOM_PLATFORM_WINDOWS

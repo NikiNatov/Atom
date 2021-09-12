@@ -14,4 +14,4 @@
     #if defined(max)
     #undef max
     #endif
-#endif
+#endif // ATOM_PLATFORM_WINDOWS

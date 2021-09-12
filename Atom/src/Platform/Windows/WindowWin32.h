@@ -5,6 +5,8 @@
 
 namespace Atom
 {
+#if defined(ATOM_PLATFORM_WINDOWS)
+
     class WindowWin32 : public Window
     {
     public:
@@ -38,4 +40,6 @@ namespace Atom
         RECT            m_WindowRect;
         EventCallbackFn m_EventCallback;
     };
+
+#endif // ATOM_PLATFORM_WINDOWS
 }
