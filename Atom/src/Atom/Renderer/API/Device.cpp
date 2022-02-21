@@ -1,7 +1,7 @@
 #include "atompch.h"
 #include "Device.h"
 
-#include "Platform/DirectX12/DX12Device.h"
+#include "Atom/Platform/DirectX12/DX12Device.h"
 
 namespace Atom
 {

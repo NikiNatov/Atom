@@ -19,6 +19,6 @@
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 
-#include <Platform/Windows/AtomWin.h>
+#include "Atom/Platform/Windows/AtomWin.h"
 
 #endif

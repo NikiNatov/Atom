@@ -12,7 +12,7 @@
 //--------------------------------------------------------------------------------------
 
 #pragma once
-#include "Platform/Windows/AtomWin.h"
+#include "Atom/Platform/Windows/AtomWin.h"
 #include <sal.h>
 
 #ifdef __cplusplus

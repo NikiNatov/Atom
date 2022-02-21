@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Atom/Renderer/Adapter.h"
+#include "Atom/Renderer/API/Adapter.h"
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 

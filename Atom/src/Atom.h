@@ -13,8 +13,8 @@
 #include "Atom/Core/Window.h"
 
 // Renderer
-#include "Atom/Renderer/Adapter.h"
-#include "Atom/Renderer/Device.h"
-#include "Atom/Renderer/CommandQueue.h"
-#include "Atom/Renderer/GraphicsCommandList.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/API/Adapter.h"
+#include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/API/CommandQueue.h"
+#include "Atom/Renderer/API/GraphicsCommandList.h"
+#include "Atom/Renderer/API/Renderer.h"

@@ -1,16 +1,16 @@
 #include "atompch.h"
-#include "Adapter.h"
+#include "CommandQueue.h"
 
-#include "Platform/DirectX12/DX12Adapter.h"
+#include "Atom/Platform/DirectX12/DX12CommandQueue.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Scope<Adapter> Adapter::CreateAdapter(AdapterPreference preference)
+    Scope<CommandQueue> CommandQueue::CreateCommandQueue(const Device* device, const CommandQueueDesc& description)
     {
         switch (RendererAPI::GetAPI())
         {
-            case RendererAPI::API::DirectX12: return CreateScope<DX12Adapter>(preference);
+            case RendererAPI::API::DirectX12: return CreateScope<DX12CommandQueue>(device, description);
         }
 
         ATOM_ASSERT(false, "Unknown API!");

@@ -1,7 +1,7 @@
 #include "atompch.h"
 #include "GraphicsCommandList.h"
 
-#include "Platform/DirectX12/DX12GraphicsCommandList.h"
+#include "Atom/Platform/DirectX12/DX12GraphicsCommandList.h"
 
 namespace Atom
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Atom/Renderer/CommandQueue.h"
+#include "Atom/Renderer/API/CommandQueue.h"
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 

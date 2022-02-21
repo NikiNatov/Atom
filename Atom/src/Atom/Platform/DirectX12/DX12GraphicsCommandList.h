@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Atom/Renderer/GraphicsCommandList.h"
+#include "Atom/Renderer/API/GraphicsCommandList.h"
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 
