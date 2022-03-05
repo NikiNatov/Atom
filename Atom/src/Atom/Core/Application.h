@@ -7,10 +7,18 @@
 
 namespace Atom
 {
+    struct ApplicationSpecification
+    {
+        String    Name = "Atom Application";
+        u32       WindowWidth = 1280;
+        u32       WindowHeight = 720;
+        bool      VSync = true;
+    };
+
     class Application
     {
     public:
-        Application();
+        Application(const ApplicationSpecification& spec);
         virtual ~Application();
 
         Application(const Application&) = delete;
@@ -21,18 +29,21 @@ namespace Atom
         void Close();
 
         inline Window& GetWindow() { return *m_Window; }
+        inline const ApplicationSpecification& GetSpecification() { return m_Specification; }
     private:
         bool OnWindowClosed(WindowClosedEvent& event);
     public:
-        static inline Application& GetApplicationInstance() { return *ms_Application; }
+        static inline Application& Get() { return *ms_Application; }
     private:
-        bool                m_Running = true;
-        LayerStack          m_LayerStack;
-        Timer               m_FrameTimer;
-        Scope<Window>       m_Window;
+        ApplicationSpecification m_Specification;
+        bool                     m_Running = true;
+        LayerStack               m_LayerStack;
+        Timer                    m_FrameTimer;
+        Scope<Window>            m_Window;
     private:
-        static Application* ms_Application;
+        static Application*      ms_Application;
     };
 
+    Application* CreateApplication();
 }
 

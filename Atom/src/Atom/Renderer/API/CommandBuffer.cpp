@@ -1,18 +1,18 @@
 #include "atompch.h"
-#include "CommandQueue.h"
+#include "CommandBuffer.h"
 
-#include "Atom/Platform/DirectX12/DX12CommandQueue.h"
+#include "Atom/Platform/DirectX12/DX12CommandBuffer.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Scope<CommandQueue> CommandQueue::Create(Device& device, CommandQueueType type)
+    Ref<CommandBuffer> CommandBuffer::Create()
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateScope<DX12CommandQueue>(device, type);
+            case RenderAPI::DirectX12: return CreateRef<DX12CommandBuffer>();
 #endif // ATOM_PLATFORM_WINDOWS
 
         }
@@ -20,4 +20,5 @@ namespace Atom
         ATOM_ASSERT(false, "Unknown API!");
         return nullptr;
     }
+    
 }

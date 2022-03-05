@@ -5,11 +5,15 @@
 
 namespace Atom
 {
-    Scope<Device> Device::CreateDevice(const Adapter* adapter)
+    Ref<Device> Device::Create(GPUPreference gpuPreference)
     {
-        switch (RendererAPI::GetAPI())
+        switch (Renderer::GetAPI())
         {
-            case RendererAPI::API::DirectX12: return CreateScope<DX12Device>(adapter);
+
+#if defined(ATOM_PLATFORM_WINDOWS)
+            case RenderAPI::DirectX12: return CreateRef<DX12Device>(gpuPreference);
+#endif // ATOM_PLATFORM_WINDOWS
+
         }
 
         ATOM_ASSERT(false, "Unknown API!");

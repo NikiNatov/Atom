@@ -2,53 +2,41 @@
 
 #include "Atom/Core/Core.h"
 
-#include "Atom/Renderer/API/Adapter.h"
-#include "Atom/Renderer/API/GraphicsCommandList.h"
-#include "Atom/Renderer/API/CommandQueue.h"
 
 #if defined(ATOM_PLATFORM_WINDOWS)
 
 #include "DirectX12.h"
 
+#include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/API/CommandQueue.h"
+
 namespace Atom { namespace Utils {
 
 
-    static DXGI_GPU_PREFERENCE AtomAdapterPreferenceToDXGI(AdapterPreference preference)
+    static DXGI_GPU_PREFERENCE AtomGPUPreferenceToDXGI(GPUPreference preference)
     {
         switch (preference)
         {
-            case AdapterPreference::None:               return DXGI_GPU_PREFERENCE_UNSPECIFIED;
-            case AdapterPreference::MinimumPowered:     return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
-            case AdapterPreference::HighPerformance:    return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+            case GPUPreference::None:            return DXGI_GPU_PREFERENCE_UNSPECIFIED;
+            case GPUPreference::MinimumPowered:  return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
+            case GPUPreference::HighPerformance: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
         }
 
-        ATOM_ASSERT(false, "Unknown adapter preference!");
+        ATOM_ASSERT(false, "Unknown GPU preference!");
         return DXGI_GPU_PREFERENCE_UNSPECIFIED;
     }
 
-    static D3D12_COMMAND_LIST_TYPE AtomCommandListTypeToD3D12(CommandListType commandListType)
+    static D3D12_COMMAND_LIST_TYPE AtomCommandQueueTypeToD3D12(CommandQueueType type)
     {
-        switch (commandListType)
+        switch (type)
         {
-            case CommandListType::Copy:     return D3D12_COMMAND_LIST_TYPE_COPY;
-            case CommandListType::Compute:  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-            case CommandListType::Direct:   return D3D12_COMMAND_LIST_TYPE_DIRECT;
+            case CommandQueueType::Graphics: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+            case CommandQueueType::Compute:  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+            case CommandQueueType::Copy:     return D3D12_COMMAND_LIST_TYPE_COPY;
         }
 
-        ATOM_ASSERT(false, "Unknown command list type!");
+        ATOM_ASSERT(false, "Unknown queue type!");
         return D3D12_COMMAND_LIST_TYPE_DIRECT;
-    }
-
-    static D3D12_COMMAND_QUEUE_PRIORITY AtomCommandQueuePriorityToD3D12(CommandQueuePriority priority)
-    {
-        switch (priority)
-        {
-            case CommandQueuePriority::Normal: return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            case CommandQueuePriority::High:   return D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
-        }
-
-        ATOM_ASSERT(false, "Unknown command queue priority!");
-        return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     }
 }}
 #endif // ATOM_PLATFORM_WINDOWS

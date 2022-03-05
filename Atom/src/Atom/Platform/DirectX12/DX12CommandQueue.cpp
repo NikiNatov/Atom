@@ -3,22 +3,22 @@
 #if defined(ATOM_PLATFORM_WINDOWS)
 
 #include "DX12CommandQueue.h"
+#include "DX12CommandBuffer.h"
 #include "DX12Device.h"
-#include "DX12GraphicsCommandList.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12CommandQueue::DX12CommandQueue(const Device* device, const CommandQueueDesc& description)
-        : m_Device(device), m_Description(description)
+    DX12CommandQueue::DX12CommandQueue(Device& device, CommandQueueType type)
+        : m_Type(type)
     {
-        auto d3dDevice = m_Device->As<DX12Device>()->GetD3DDevice();
+        auto d3dDevice = device.As<DX12Device>()->GetD3DDevice();
 
         // Create command queue
         D3D12_COMMAND_QUEUE_DESC desc = {};
         desc.NodeMask = 0;
-        desc.Priority = Utils::AtomCommandQueuePriorityToD3D12(m_Description.Priority);
-        desc.Type = Utils::AtomCommandListTypeToD3D12(m_Description.Type);
+        desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        desc.Type = Utils::AtomCommandQueueTypeToD3D12(m_Type);
         desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
         DXCall(d3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_D3DCommandQueue)));
@@ -63,50 +63,34 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandQueue::ExecuteCommandList(const GraphicsCommandList* commandList)
+    u64 DX12CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
     {
-        auto d3dCommandList = commandList->As<DX12GraphicsCommandList>()->GetD3DGraphicsCommandList();
+        auto d3dCommandList = commandBuffer->As<DX12CommandBuffer>()->GetCommandList();
         ID3D12CommandList* commandListArray[] = { d3dCommandList.Get() };
         m_D3DCommandQueue->ExecuteCommandLists(1, commandListArray);
+        return Signal();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandQueue::ExecuteCommandLists(const Vector<GraphicsCommandList*>& commandLists)
+    u64 DX12CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
     {
         Vector<ID3D12CommandList*> commandListArray;
-        commandListArray.reserve(commandLists.size());
+        commandListArray.reserve(commandBuffers.size());
 
-        for (auto list : commandLists)
+        for (auto list : commandBuffers)
         {
-            auto d3dCommandList = list->As<DX12GraphicsCommandList>()->GetD3DGraphicsCommandList();
+            auto d3dCommandList = list->As<DX12CommandBuffer>()->GetCommandList();
             commandListArray.push_back(d3dCommandList.Get());
         }
 
-        m_D3DCommandQueue->ExecuteCommandLists(commandLists.size(), commandListArray.data());
+        m_D3DCommandQueue->ExecuteCommandLists(commandBuffers.size(), commandListArray.data());
+        return Signal();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    CommandListType DX12CommandQueue::GetQueueType() const
+    CommandQueueType DX12CommandQueue::GetQueueType() const
     {
-        return m_Description.Type;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    CommandQueuePriority DX12CommandQueue::GetQueuePriority() const
-    {
-        return m_Description.Priority;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const Device* DX12CommandQueue::GetCreationDevice() const
-    {
-        return m_Device;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    u64 DX12CommandQueue::GetCurrentFenceValue() const
-    {
-        return m_FenceValue;
+        return m_Type;
     }
 }
 #endif // ATOM_PLATFORM_WINDOWS

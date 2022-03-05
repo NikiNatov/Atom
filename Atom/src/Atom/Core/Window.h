@@ -3,6 +3,9 @@
 #include "Core.h"
 #include "Events/Events.h"
 
+#include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/API/SwapChain.h"
+
 namespace Atom
 {
     using EventCallbackFn = std::function<void(Event&)>;
@@ -28,7 +31,8 @@ namespace Atom
     public:
         virtual ~Window() = default;
 
-        virtual void OnUpdate() = 0;
+        virtual void ProcessEvents() = 0;
+        virtual void SwapBuffers() = 0;
         virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
         virtual void SetMinimized(bool state) = 0;
         virtual void ToggleVSync() = 0;
@@ -40,6 +44,8 @@ namespace Atom
         virtual bool IsMinimized() const = 0;
 
         virtual u64 GetWindowHandle() const = 0;
+        virtual Device& GetDevice() const = 0;
+        virtual const SwapChain& GetSwapChain() const = 0;
 
         static Scope<Window> Create(const WindowProperties& properties);
     };

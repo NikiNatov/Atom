@@ -5,7 +5,8 @@
 class SandboxApplication : public Atom::Application
 {
 public:
-    SandboxApplication()
+    SandboxApplication(const Atom::ApplicationSpecification& spec)
+        : Application(spec)
     {
     }
 
@@ -15,7 +16,8 @@ public:
 
 };
 
-Atom::Application* CreateApplication()
+Atom::Application* Atom::CreateApplication()
 {
-    return new SandboxApplication();
+    Atom::ApplicationSpecification spec;
+    return new SandboxApplication(spec);
 }

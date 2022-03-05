@@ -5,6 +5,13 @@
 #include <memory>
 #include <vector>
 #include <filesystem>
+#include <mutex>
+#include <set>
+#include <unordered_set>
+#include <map>
+#include <unordered_map>
+#include <queue>
+#include <stack>
 
 #include "Logger.h"
 
@@ -37,6 +44,20 @@
 #define KB(bytes) (bytes / 1024)
 #define MB(bytes) (KB(bytes) / 1024)
 #define GB(bytes) (MB(bytes) / 1024)
+
+#define IMPL_API_CAST(classType) \
+template<typename T> \
+T* As() const \
+{ \
+    ATOM_ENGINE_ASSERT(false, "Type not supported!"); \
+    return nullptr; \
+} \
+template<> \
+DX12##classType* As() const \
+{ \
+    ATOM_ENGINE_ASSERT(Renderer::GetAPI() == RenderAPI::DirectX12, "Invalid cast! Selected RendererAPI does not match the cast type!"); \
+    return (DX12##classType*)(this); \
+} \
 
 // Asserts
 #if defined(ATOM_DEBUG)
@@ -75,6 +96,24 @@ namespace Atom
 
     template<typename T>
     using Vector = std::vector<T>;
+
+    template<typename T>
+    using Queue = std::queue<T>;
+
+    template<typename T>
+    using Stack = std::stack<T>;
+
+    template<typename T>
+    using Set = std::set<T>;
+
+    template<typename T>
+    using HashSet = std::unordered_set<T>;
+
+    template<typename Key, typename Val>
+    using Map = std::map<Key, Val>;
+
+    template<typename Key, typename Val>
+    using HashMap = std::unordered_map<Key, Val>;
 
     template<typename T>
     using Ref = std::shared_ptr<T>;

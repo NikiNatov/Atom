@@ -1,75 +1,59 @@
 #include "atompch.h"
 #include "Renderer.h"
 
+#include "Atom/Core/Application.h"
+#include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/API/CommandBuffer.h"
+
+#include "Atom/Platform/DirectX12/DX12CommandBuffer.h"
+#include "Atom/Platform/DirectX12/DX12SwapChain.h"
+
 namespace Atom
 {
-    Scope<Renderer> Renderer::ms_Instance = CreateScope<Renderer>();
+    RenderAPI          Renderer::ms_RenderAPI = RenderAPI::None;
+    Ref<CommandBuffer> Renderer::ms_CommandBuffer = nullptr;
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize()
     {
-        // Create adapter
-        ms_Instance->m_Adapter = Adapter::CreateAdapter(AdapterPreference::HighPerformance);
-        ATOM_ENGINE_INFO("GPU: {0}", ms_Instance->m_Adapter->GetDescription());
-        ATOM_ENGINE_INFO("Video Memory: {0} MB", MB(ms_Instance->m_Adapter->GetVideoMemory()));
-        ATOM_ENGINE_INFO("System Memory: {0} MB", MB(ms_Instance->m_Adapter->GetSystemMemory()));
-        ATOM_ENGINE_INFO("Shared Memory: {0} MB", MB(ms_Instance->m_Adapter->GetSharedMemory()));
-
-        // Create device
-        ms_Instance->m_Device = Device::CreateDevice(ms_Instance->m_Adapter.get());
-
-        // Create command queue
-        CommandQueueDesc commandQueueDesc = {};
-        commandQueueDesc.Priority = CommandQueuePriority::Normal;
-        commandQueueDesc.Type = CommandListType::Direct;
-
-        ms_Instance->m_GraphicsQueue = CommandQueue::CreateCommandQueue(ms_Instance->m_Device.get(), commandQueueDesc);
-
-        // Create allocators
-        for (u32 i = 0; i < FRAME_COUNT; i++)
-        {
-            ms_Instance->m_FrameAllocators[i] = CommandAllocator::CreateCommandAllocator(ms_Instance->m_Device.get(), CommandListType::Direct);
-        }
-
-        // Create command list
-        ms_Instance->m_GraphicsCommandList = GraphicsCommandList::CreateGraphicsCommandList(ms_Instance->m_Device.get(), CommandListType::Direct, ms_Instance->m_FrameAllocators[0].get());
+        ms_CommandBuffer = CommandBuffer::Create();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::BeginFrame()
     {
-        u32 frameIndex = ms_Instance->m_CurrentFrameIndex;
+        auto swapChain = Application::Get().GetWindow().GetSwapChain().As<DX12SwapChain>();
+        ms_CommandBuffer->Begin();
 
-        // Wait for the GPU to catch up
-        ms_Instance->m_GraphicsQueue->WaitForFenceValue(ms_Instance->m_FrameFenceValues[frameIndex]);
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()).Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ResourceBarrier(1, &barrier);
 
-        // Reset the current frame command allocator
-        ms_Instance->m_FrameAllocators[frameIndex]->Reset();
-
-        // Reset the graphics command list with the current frame allocator 
-        ms_Instance->m_GraphicsCommandList->Reset(ms_Instance->m_FrameAllocators[frameIndex].get());
+        const f32 color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ClearRenderTargetView(swapChain->GetBackBufferRTV(Renderer::GetCurrentFrameIndex()).GetCPUHandle(), color, 1, &swapChain->GetScissorRect());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::EndFrame()
     {
-        // Close the command list
-        ms_Instance->m_GraphicsCommandList->Close();
+        auto swapChain = Application::Get().GetWindow().GetSwapChain().As<DX12SwapChain>();
 
-        // Execute the commands, signal the command queue and update the frame's fence value
-        ms_Instance->m_GraphicsQueue->ExecuteCommandList(ms_Instance->m_GraphicsCommandList.get());
-        ms_Instance->m_FrameFenceValues[ms_Instance->m_CurrentFrameIndex] = ms_Instance->m_GraphicsQueue->Signal();
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()).Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ResourceBarrier(1, &barrier);
 
-        // Increment frame index
-        ms_Instance->m_CurrentFrameIndex = (ms_Instance->m_CurrentFrameIndex + 1) % FRAME_COUNT;
+        ms_CommandBuffer->End();
+
+        Application::Get().GetWindow().GetDevice().GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(ms_CommandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Flush()
+    Device& Renderer::GetDevice()
     {
-        for (u32 i = 0; i < FRAME_COUNT; i++)
-            ms_Instance->m_GraphicsQueue->WaitForFenceValue(ms_Instance->m_FrameFenceValues[i]);
+        return Application::Get().GetWindow().GetDevice();
+    }
 
-        ms_Instance->m_CurrentFrameIndex = 0;
+    // -----------------------------------------------------------------------------------------------------------------------------
+    u32 Renderer::GetCurrentFrameIndex()
+    {
+        return Application::Get().GetWindow().GetSwapChain().GetCurrentBackBufferIndex();
     }
 }

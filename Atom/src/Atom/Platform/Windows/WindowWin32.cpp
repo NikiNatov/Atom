@@ -51,6 +51,10 @@ namespace Atom
 
 		ATOM_ENGINE_ASSERT(m_WindowHandle, "Failed to create the window!");
 
+		// Create rendering context
+		m_Device = Device::Create(GPUPreference::HighPerformance);
+		m_SwapChain = SwapChain::Create(*m_Device, (u64)m_WindowHandle, m_Width, m_Height);
+
 		ShowWindow(m_WindowHandle, SW_MAXIMIZE);
     }
 
@@ -62,7 +66,7 @@ namespace Atom
 	}
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void WindowWin32::OnUpdate()
+    void WindowWin32::ProcessEvents()
     {
 		// Process window messages
 		MSG msg = {};
@@ -75,6 +79,12 @@ namespace Atom
 			DispatchMessage(&msg);
 		}
     }
+
+	// -----------------------------------------------------------------------------------------------------------------------------
+	void WindowWin32::SwapBuffers()
+	{
+		m_SwapChain->Present(m_VSync);
+	}
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void WindowWin32::SetEventCallback(const EventCallbackFn& callback)
@@ -188,6 +198,8 @@ namespace Atom
 
 				window->m_Width = LOWORD(lParam);
 				window->m_Height = HIWORD(lParam);
+
+				window->m_SwapChain->Resize(window->m_Width, window->m_Height);
 
 				WindowResizedEvent e(window->m_Width, window->m_Height);
 				window->m_EventCallback(e);
