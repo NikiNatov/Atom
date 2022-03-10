@@ -93,6 +93,7 @@ namespace Atom
     typedef double        f64;
 
     typedef std::string   String;
+    typedef std::wstring  WString;
 
     template<typename T>
     using Vector = std::vector<T>;

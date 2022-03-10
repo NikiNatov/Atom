@@ -27,6 +27,8 @@ namespace Atom
         void Run();
         void OnEvent(Event& event);
         void Close();
+        void PushLayer(Layer* layer);
+        void PushOverlay(Layer* overlay);
 
         inline Window& GetWindow() { return *m_Window; }
         inline const ApplicationSpecification& GetSpecification() { return m_Specification; }

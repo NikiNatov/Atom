@@ -15,6 +15,7 @@ namespace Atom
         ~DX12CommandBuffer();
 
         virtual void Begin() override;
+        virtual void TransitionResource(const Ref<Texture2D>& texture, ResourceState beforeState, ResourceState afterState) override;
         virtual void End() override;
 
         inline wrl::ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }

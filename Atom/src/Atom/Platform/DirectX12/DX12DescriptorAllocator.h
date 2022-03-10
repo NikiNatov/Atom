@@ -19,6 +19,9 @@ namespace Atom
         DX12DescriptorHandle& operator=(DX12DescriptorHandle&& other);
         ~DX12DescriptorHandle();
 
+        void Release();
+        void DeferredRelease();
+
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle() const { return m_CPUHandle; }
         inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const { return m_GPUHandle; }
         inline bool IsValid() const { return m_CPUHandle.ptr != 0; }
@@ -38,8 +41,9 @@ namespace Atom
         ~DX12DescriptorHeap();
 
         DX12DescriptorHandle Allocate();
-        void FreeDescriptor(DX12DescriptorHandle& descriptor);
-        void ReleaseDescriptors();
+        void ReleaseDescriptor(DX12DescriptorHandle& descriptor);
+        void DeferredReleaseDescriptor(DX12DescriptorHandle& descriptor);
+        void ProcessDeferredReleases();
 
         inline bool IsShaderVisible() const { return m_GPUStartHandle.ptr != 0; }
         inline D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_Type; }
@@ -68,7 +72,7 @@ namespace Atom
         ~DX12DescriptorAllocator();
 
         DX12DescriptorHandle Allocate();
-        void ReleaseDescriptors();
+        void ProcessDeferredReleases();
 
         inline D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_HeapType; }
         inline u32 GetHeapCapacity() const { return m_HeapCapacity; }

@@ -11,6 +11,11 @@
 #include "DX12Utils.h"
 #include "d3dx12.h"
 
+#if defined(ATOM_DEBUG)
+#include <dxgidebug.h>
+#pragma comment(lib, "dxguid.lib")
+#endif
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 

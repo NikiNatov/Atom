@@ -3,7 +3,6 @@
 // Core
 #include "Atom/Core/Application.h"
 #include "Atom/Core/Core.h"
-#include "Atom/Core/EntryPoint.h"
 #include "Atom/Core/Logger.h"
 #include "Atom/Core/Events/Events.h"
 #include "Atom/Core/Layer.h"
@@ -14,5 +13,8 @@
 
 // Renderer
 #include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/API/CommandQueue.h"
+#include "Atom/Renderer/API/SwapChain.h"
 #include "Atom/Renderer/API/CommandBuffer.h"
+#include "Atom/Renderer/API/Texture.h"
 #include "Atom/Renderer/API/Renderer.h"

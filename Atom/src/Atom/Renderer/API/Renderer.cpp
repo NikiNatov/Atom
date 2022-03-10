@@ -4,45 +4,44 @@
 #include "Atom/Core/Application.h"
 #include "Atom/Renderer/API/Device.h"
 #include "Atom/Renderer/API/CommandBuffer.h"
+#include "Atom/Renderer/API/Texture.h"
 
 #include "Atom/Platform/DirectX12/DX12CommandBuffer.h"
 #include "Atom/Platform/DirectX12/DX12SwapChain.h"
+#include "Atom/Platform/DirectX12/DX12Texture.h"
 
 namespace Atom
 {
-    RenderAPI          Renderer::ms_RenderAPI = RenderAPI::None;
-    Ref<CommandBuffer> Renderer::ms_CommandBuffer = nullptr;
+    RenderAPI Renderer::ms_RenderAPI = RenderAPI::None;
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize()
     {
-        ms_CommandBuffer = CommandBuffer::Create();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginFrame()
+    void Renderer::BeginFrame(const Ref<CommandBuffer>& commandBuffer)
     {
         auto swapChain = Application::Get().GetWindow().GetSwapChain().As<DX12SwapChain>();
-        ms_CommandBuffer->Begin();
+        commandBuffer->Begin();
 
-        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()).Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto backBuffer = swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex())->As<DX12Texture2D>();
+        commandBuffer->TransitionResource(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()), ResourceState::Present, ResourceState::RenderTarget);
 
-        const f32 color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ClearRenderTargetView(swapChain->GetBackBufferRTV(Renderer::GetCurrentFrameIndex()).GetCPUHandle(), color, 1, &swapChain->GetScissorRect());
+        const f32 color[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+        commandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ClearRenderTargetView(backBuffer->GetRenderTargetView(0).GetCPUHandle(), color, 1, &swapChain->GetScissorRect());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndFrame()
+    void Renderer::EndFrame(const Ref<CommandBuffer>& commandBuffer)
     {
         auto swapChain = Application::Get().GetWindow().GetSwapChain().As<DX12SwapChain>();
 
-        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()).Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-        ms_CommandBuffer->As<DX12CommandBuffer>()->GetCommandList()->ResourceBarrier(1, &barrier);
+        commandBuffer->TransitionResource(swapChain->GetBackBuffer(Renderer::GetCurrentFrameIndex()), ResourceState::RenderTarget, ResourceState::Present);
 
-        ms_CommandBuffer->End();
+        commandBuffer->End();
 
-        Application::Get().GetWindow().GetDevice().GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(ms_CommandBuffer);
+        Application::Get().GetWindow().GetDevice().GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

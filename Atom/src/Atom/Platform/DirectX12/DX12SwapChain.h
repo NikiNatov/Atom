@@ -6,6 +6,7 @@
 
 #include "DirectX12.h"
 #include "DX12DescriptorAllocator.h"
+#include "DX12Texture.h"
 
 namespace Atom
 {
@@ -25,8 +26,12 @@ namespace Atom
         inline wrl::ComPtr<IDXGISwapChain4> GetDXGISwapChain() const { return m_DXGISwapChain; }
         inline const D3D12_VIEWPORT& GetViewport() const { return m_Viewport; }
         inline const D3D12_RECT& GetScissorRect() const { return m_ScissorRect; }
-        inline wrl::ComPtr<ID3D12Resource2> GetBackBuffer(u32 bufferIndex) const { ATOM_ASSERT(bufferIndex >= 0 && bufferIndex < m_BackBuffers.size()); return m_BackBuffers[bufferIndex]; }
-        inline const DX12DescriptorHandle& GetBackBufferRTV(u32 bufferIndex) const { ATOM_ASSERT(bufferIndex >= 0 && bufferIndex < m_BackBuffers.size()); return m_BackBufferRTV[bufferIndex]; }
+
+        inline const Ref<Texture2D>& GetBackBuffer(u32 bufferIndex) const 
+        { 
+            ATOM_ASSERT(bufferIndex >= 0 && bufferIndex < m_BackBuffers.size()); 
+            return m_BackBuffers[bufferIndex]; 
+        }
     private:
         void RecreateBuffers();
     private:
@@ -37,8 +42,7 @@ namespace Atom
         D3D12_RECT                           m_ScissorRect;
         u32                                  m_TearingSupported;
         u32                                  m_BackBufferIndex;
-        Vector<wrl::ComPtr<ID3D12Resource2>> m_BackBuffers;
-        Vector<DX12DescriptorHandle>         m_BackBufferRTV;
+        Vector<Ref<DX12Texture2D>>           m_BackBuffers;
         Vector<u64>                          m_FrameFenceValues;
         DX12Device&                          m_Device;
     };

@@ -52,9 +52,23 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12DescriptorHandle::~DX12DescriptorHandle()
     {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12DescriptorHandle::Release()
+    {
         if (IsValid())
         {
-            m_Heap->FreeDescriptor(*this);
+            m_Heap->ReleaseDescriptor(*this);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12DescriptorHandle::DeferredRelease()
+    {
+        if (IsValid())
+        {
+            m_Heap->DeferredReleaseDescriptor(*this);
         }
     }
 
@@ -101,7 +115,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12DescriptorHeap::~DX12DescriptorHeap()
     {
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -122,7 +135,25 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12DescriptorHeap::FreeDescriptor(DX12DescriptorHandle& descriptor)
+    void DX12DescriptorHeap::ReleaseDescriptor(DX12DescriptorHandle& descriptor)
+    {
+        if (descriptor.IsValid())
+        {
+            std::lock_guard<std::mutex> lock(m_Mutex);
+
+            ATOM_ENGINE_ASSERT((descriptor.GetCPUHandle().ptr - m_CPUStartHandle.ptr) % m_DescriptorSize == 0, "Descriptor has different type than the heap!");
+            ATOM_ENGINE_ASSERT(descriptor.GetCPUHandle().ptr >= m_CPUStartHandle.ptr &&
+                descriptor.GetCPUHandle().ptr < m_CPUStartHandle.ptr + m_DescriptorSize * m_Capacity, "Descriptor does not belong to this heap!");
+
+            // Return the index back to the free slots array
+            u32 descriptorIndex = (descriptor.GetCPUHandle().ptr - m_CPUStartHandle.ptr) % m_DescriptorSize;
+            m_Size--;
+            m_FreeSlots.push(descriptorIndex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12DescriptorHeap::DeferredReleaseDescriptor(DX12DescriptorHandle& descriptor)
     {
         if (descriptor.IsValid())
         {
@@ -139,7 +170,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12DescriptorHeap::ReleaseDescriptors()
+    void DX12DescriptorHeap::ProcessDeferredReleases()
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -201,13 +232,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12DescriptorAllocator::ReleaseDescriptors()
+    void DX12DescriptorAllocator::ProcessDeferredReleases()
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
 
         for (u32 i = 0 ; i < m_HeapPool.size(); i++)
         {
-            m_HeapPool[i]->ReleaseDescriptors();
+            m_HeapPool[i]->ProcessDeferredReleases();
 
             // If space has been freed in the heap, add it to the available heaps
             if (m_HeapPool[i]->GetSize() < m_HeapPool[i]->GetCapacity())

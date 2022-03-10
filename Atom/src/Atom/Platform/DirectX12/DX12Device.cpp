@@ -69,6 +69,7 @@ namespace Atom
         // Create the main device with the max supported feature level
         ATOM_ENGINE_ASSERT(featureLevelInfo.MaxSupportedFeatureLevel >= D3D_FEATURE_LEVEL_11_0);
         DXCall(D3D12CreateDevice(m_DXGIAdapter.Get(), featureLevelInfo.MaxSupportedFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
+        DXCall(m_D3DDevice->SetName(L"Main Device"));
 
         // Get feature options
         DXCall(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_FeatureOptions, sizeof(m_FeatureOptions)));
@@ -95,11 +96,21 @@ namespace Atom
         m_DsvAllocator = CreateScope<DX12DescriptorAllocator>(m_D3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 512, false);
         m_CbvSrvUavAllocator = CreateScope<DX12DescriptorAllocator>(m_D3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096, true);
         m_SamplerAllocator = CreateScope<DX12DescriptorAllocator>(m_D3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 512, true);
+
+        // Create deferred release arrays for resources
+        m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12Device::~DX12Device()
     {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12Device::Release()
+    {
+        WaitIdle();
+        ProcessDeferredReleases();
 #if defined(ATOM_DEBUG)
 
         // Reset the message severity levels
@@ -159,12 +170,25 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12Device::ReleaseDeferredDescriptors()
+    void DX12Device::ProcessDeferredReleases()
     {
-        m_RtvAllocator->ReleaseDescriptors();
-        m_DsvAllocator->ReleaseDescriptors();
-        m_CbvSrvUavAllocator->ReleaseDescriptors();
-        m_SamplerAllocator->ReleaseDescriptors();
+        std::lock_guard<std::mutex> lock(m_DeferredReleaseMutex);
+
+        // Release descriptors
+        m_RtvAllocator->ProcessDeferredReleases();
+        m_DsvAllocator->ProcessDeferredReleases();
+        m_CbvSrvUavAllocator->ProcessDeferredReleases();
+        m_SamplerAllocator->ProcessDeferredReleases();
+
+        // Release resources
+        u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+
+        for (auto resource : m_DeferredReleaseResources[currentFrameIndex])
+        {
+            resource->Release();
+        }
+
+        m_DeferredReleaseResources[currentFrameIndex].clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -188,6 +212,13 @@ namespace Atom
 
         ATOM_ENGINE_ASSERT(false, "Unknown descriptor type!");
         return DX12DescriptorHandle();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12Device::ReleaseResource(IUnknown* resource)
+    {
+        std::lock_guard<std::mutex> lock(m_DeferredReleaseMutex);
+        m_DeferredReleaseResources[Renderer::GetCurrentFrameIndex()].push_back(resource);
     }
 }
 

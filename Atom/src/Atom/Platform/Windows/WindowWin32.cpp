@@ -61,6 +61,8 @@ namespace Atom
 	// -----------------------------------------------------------------------------------------------------------------------------
 	WindowWin32::~WindowWin32()
 	{
+		m_Device->Release();
+
 		UnregisterClass(m_WindowClass.lpszClassName, s_hInstance);
 		DestroyWindow(m_WindowHandle);
 	}

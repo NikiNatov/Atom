@@ -5,8 +5,6 @@
 #include "Logger.h"
 #include "Atom/Renderer/API/Renderer.h"
 
-#include "Atom/Platform/DirectX12/DX12DescriptorAllocator.h"
-
 namespace Atom
 {
     Application* Application::ms_Application = nullptr;
@@ -34,6 +32,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Application::~Application()
     {
+        for (auto layer : m_LayerStack)
+            layer->OnDetach();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -54,10 +54,6 @@ namespace Atom
                     layer->OnUpdate(ts);
             }
 
-            Renderer::BeginFrame();
-
-            Renderer::EndFrame();
-
             m_Window->SwapBuffers();
 
             m_FrameTimer.Stop();
@@ -68,6 +64,20 @@ namespace Atom
     void Application::Close()
     {
         m_Running = false;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Application::PushLayer(Layer* layer)
+    {
+        layer->OnAttach();
+        m_LayerStack.PushLayer(layer);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Application::PushOverlay(Layer* overlay)
+    {
+        overlay->OnAttach();
+        m_LayerStack.PushOverlay(overlay);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

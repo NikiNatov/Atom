@@ -40,16 +40,9 @@ namespace Atom
         DXCall(swapChain.As(&m_DXGISwapChain));
         m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
-        // Allocate descriptors for the back buffers
-        u32 framesInFlight = Renderer::GetFramesInFlight();
-        m_BackBufferRTV.resize(framesInFlight);
-
-        for (u32 i = 0; i < framesInFlight; i++)
-        {
-            m_BackBufferRTV[i] = m_Device.AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        }
 
         // Create the back buffers
+        u32 framesInFlight = Renderer::GetFramesInFlight();
         m_BackBuffers.resize(framesInFlight, nullptr);
         RecreateBuffers();
 
@@ -78,7 +71,7 @@ namespace Atom
         gfxQueue.WaitForFenceValue(m_FrameFenceValues[m_BackBufferIndex]);
 
         // Process deferred releases for descriptors
-        m_Device.ReleaseDeferredDescriptors();
+        m_Device.ProcessDeferredReleases();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -136,14 +129,17 @@ namespace Atom
         for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
         {
             // Get the back buffer resource
-            m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(m_BackBuffers[i].GetAddressOf()));
+            wrl::ComPtr<ID3D12Resource2> backBuffer;
+            DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
+
+            m_BackBuffers[i] = DX12Texture2D::CreateFromD3DResource(m_Device, backBuffer, TextureFilter::Linear, TextureWrap::Repeat);
 
             // Create RTV for the back buffer
             D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
             rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
             rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
-            m_Device.GetD3DDevice()->CreateRenderTargetView(m_BackBuffers[i].Get(), &rtvDesc, m_BackBufferRTV[i].GetCPUHandle());
+            m_Device.GetD3DDevice()->CreateRenderTargetView(m_BackBuffers[i]->GetD3DResource().Get(), &rtvDesc, m_BackBuffers[i]->GetRenderTargetView(0).GetCPUHandle());
         }
 
         // Recreate viewport

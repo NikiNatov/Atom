@@ -15,8 +15,6 @@ namespace Atom
         virtual void OnAttach() {};
         virtual void OnDetach() {};
         virtual void OnImGuiRender() {};
-
-        // TODO: Add timestep
         virtual void OnUpdate(Timestep ts) {};
         virtual void OnEvent(Event& event) {};
     private:

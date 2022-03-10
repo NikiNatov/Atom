@@ -20,8 +20,8 @@ namespace Atom
         Renderer() = default;
 
         static void Initialize();
-        static void BeginFrame();
-        static void EndFrame();
+        static void BeginFrame(const Ref<CommandBuffer>& commandBuffer);
+        static void EndFrame(const Ref<CommandBuffer>& commandBuffer);
 
         static u32 GetCurrentFrameIndex();
         static Device& GetDevice();
@@ -31,7 +31,6 @@ namespace Atom
         static RenderAPI GetAPI() { return ms_RenderAPI; }
     private:
         static RenderAPI          ms_RenderAPI;
-        static Ref<CommandBuffer> ms_CommandBuffer;
         static constexpr u32      FRAMES_IN_FLIGHT = 3;
     };
 }
