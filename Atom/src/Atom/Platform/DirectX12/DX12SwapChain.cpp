@@ -16,9 +16,10 @@ namespace Atom
         auto gfxQueue = m_Device.GetCommandQueue(CommandQueueType::Graphics).As<DX12CommandQueue>()->GetD3DCommandQueue();
 
         // Check for tearing support
-        wrl::ComPtr<IDXGIFactory5> factory;
-        dxgiFactory.As(&factory);
+        IDXGIFactory5* factory;
+        dxgiFactory->QueryInterface(&factory);
         DXCall(factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &m_TearingSupported, sizeof(u32)));
+        factory->Release();
 
         // Create the swap chain
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -31,15 +32,16 @@ namespace Atom
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.Flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
-        wrl::ComPtr<IDXGISwapChain1> swapChain;
-        DXCall(dxgiFactory->CreateSwapChainForHwnd(gfxQueue.Get(), (HWND)windowHandle, &swapChainDesc, nullptr, nullptr, &swapChain));
+        IDXGISwapChain1* swapChain = nullptr;
+        DXCall(dxgiFactory->CreateSwapChainForHwnd(gfxQueue, (HWND)windowHandle, &swapChainDesc, nullptr, nullptr, &swapChain));
 
         // Disable exclusive fullscreen mode
         DXCall(dxgiFactory->MakeWindowAssociation((HWND)windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
-        DXCall(swapChain.As(&m_DXGISwapChain));
-        m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
+        DXCall(swapChain->QueryInterface(&m_DXGISwapChain));
+        COMSafeRelease(swapChain);
 
+        m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
         // Create the back buffers
         u32 framesInFlight = Renderer::GetFramesInFlight();
@@ -53,6 +55,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12SwapChain::~DX12SwapChain()
     {
+        COMSafeRelease(m_DXGISwapChain);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -129,8 +132,8 @@ namespace Atom
         for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
         {
             // Get the back buffer resource
-            wrl::ComPtr<ID3D12Resource2> backBuffer;
-            DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
+            ID3D12Resource* backBuffer;
+            DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
             m_BackBuffers[i] = DX12Texture2D::CreateFromD3DResource(m_Device, backBuffer, TextureFilter::Linear, TextureWrap::Repeat);
 
@@ -139,7 +142,7 @@ namespace Atom
             rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
             rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
-            m_Device.GetD3DDevice()->CreateRenderTargetView(m_BackBuffers[i]->GetD3DResource().Get(), &rtvDesc, m_BackBuffers[i]->GetRenderTargetView(0).GetCPUHandle());
+            m_Device.GetD3DDevice()->CreateRenderTargetView(m_BackBuffers[i]->GetD3DResource(), &rtvDesc, m_BackBuffers[i]->GetRenderTargetView(0).GetCPUHandle());
         }
 
         // Recreate viewport

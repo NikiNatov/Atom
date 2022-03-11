@@ -73,7 +73,7 @@ namespace Atom
     }
 
     // ----------------------------------------------------- DX12DescriptorHeap ----------------------------------------------------
-    DX12DescriptorHeap::DX12DescriptorHeap(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible)
+    DX12DescriptorHeap::DX12DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible)
         : m_Type(type), m_Capacity(capacity), m_Size(0)
     {
         ATOM_ENGINE_ASSERT(capacity && 
@@ -115,6 +115,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12DescriptorHeap::~DX12DescriptorHeap()
     {
+        COMSafeRelease(m_D3DHeap);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -191,7 +192,7 @@ namespace Atom
 
 
     // -------------------------------------------------- DX12DescriptorAllocator --------------------------------------------------
-    DX12DescriptorAllocator::DX12DescriptorAllocator(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapCapacity, bool shaderVisible)
+    DX12DescriptorAllocator::DX12DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapCapacity, bool shaderVisible)
         : m_HeapType(descriptorType), m_HeapCapacity(heapCapacity), m_ShaderVisible(shaderVisible), m_Device(device)
     {
         ATOM_ENGINE_ASSERT(m_HeapCapacity > 0, "Heap capacity must be greater that 0!");

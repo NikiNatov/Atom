@@ -37,7 +37,7 @@ namespace Atom
     class DX12DescriptorHeap
     {
     public:
-        DX12DescriptorHeap(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible);
+        DX12DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible);
         ~DX12DescriptorHeap();
 
         DX12DescriptorHandle Allocate();
@@ -46,6 +46,7 @@ namespace Atom
         void ProcessDeferredReleases();
 
         inline bool IsShaderVisible() const { return m_GPUStartHandle.ptr != 0; }
+        inline ID3D12DescriptorHeap* GetD3DHeap() const { return m_D3DHeap; }
         inline D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_Type; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetCPUStartHandle() const { return m_CPUStartHandle; }
         inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUStartHandle() const { return m_GPUStartHandle; }
@@ -53,22 +54,22 @@ namespace Atom
         inline u32 GetSize() const { return m_Size; }
         inline u32 GetDescriptorSize() const { return m_DescriptorSize; }
     private:
-        wrl::ComPtr<ID3D12DescriptorHeap> m_D3DHeap;
-        D3D12_DESCRIPTOR_HEAP_TYPE        m_Type;
-        D3D12_CPU_DESCRIPTOR_HANDLE       m_CPUStartHandle{ 0 };
-        D3D12_GPU_DESCRIPTOR_HANDLE       m_GPUStartHandle{ 0 };
-        u32                               m_Capacity;
-        u32                               m_Size;
-        u32                               m_DescriptorSize;
-        Queue<u32>                        m_FreeSlots;
-        Vector<Vector<u32>>               m_DeferredReleaseDescriptors;
-        std::mutex                        m_Mutex;
+        ID3D12DescriptorHeap*       m_D3DHeap;
+        D3D12_DESCRIPTOR_HEAP_TYPE  m_Type;
+        D3D12_CPU_DESCRIPTOR_HANDLE m_CPUStartHandle{ 0 };
+        D3D12_GPU_DESCRIPTOR_HANDLE m_GPUStartHandle{ 0 };
+        u32                         m_Capacity;
+        u32                         m_Size;
+        u32                         m_DescriptorSize;
+        Queue<u32>                  m_FreeSlots;
+        Vector<Vector<u32>>         m_DeferredReleaseDescriptors;
+        std::mutex                  m_Mutex;
     };
 
     class DX12DescriptorAllocator
     {
     public:
-        DX12DescriptorAllocator(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapMaxCapacity, bool shaderVisible);
+        DX12DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapMaxCapacity, bool shaderVisible);
         ~DX12DescriptorAllocator();
 
         DX12DescriptorHandle Allocate();
@@ -81,7 +82,7 @@ namespace Atom
         D3D12_DESCRIPTOR_HEAP_TYPE      m_HeapType;
         u32                             m_HeapCapacity;
         bool                            m_ShaderVisible;
-        wrl::ComPtr<ID3D12Device>       m_Device;
+        ID3D12Device*                   m_Device;
         Vector<Ref<DX12DescriptorHeap>> m_HeapPool;
         Queue<u32>                      m_AvailableHeaps;
         std::mutex                      m_Mutex;

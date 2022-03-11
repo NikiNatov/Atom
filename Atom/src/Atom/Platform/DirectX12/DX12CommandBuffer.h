@@ -18,11 +18,11 @@ namespace Atom
         virtual void TransitionResource(const Ref<Texture2D>& texture, ResourceState beforeState, ResourceState afterState) override;
         virtual void End() override;
 
-        inline wrl::ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
+        inline ID3D12GraphicsCommandList6* GetCommandList() const { return m_CommandList; }
     private:
-        Vector<wrl::ComPtr<ID3D12CommandAllocator>> m_Allocators;
-        wrl::ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
-        Vector<u64>                                 m_FenceValues;
+        Vector<ID3D12CommandAllocator*> m_Allocators;
+        ID3D12GraphicsCommandList6*     m_CommandList;
+        Vector<u64>                     m_FenceValues;
     };
 }
 

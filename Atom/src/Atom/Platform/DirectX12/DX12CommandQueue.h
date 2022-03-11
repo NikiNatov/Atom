@@ -21,14 +21,14 @@ namespace Atom
         virtual u64 ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers) override;
         virtual CommandQueueType GetQueueType() const override;
 
-        inline wrl::ComPtr<ID3D12CommandQueue> GetD3DCommandQueue() const { return m_D3DCommandQueue; }
-        inline wrl::ComPtr<ID3D12Fence1> GetD3DFence() const { return m_D3DFence; }
+        inline ID3D12CommandQueue* GetD3DCommandQueue() const { return m_D3DCommandQueue; }
+        inline ID3D12Fence* GetD3DFence() const { return m_D3DFence; }
     private:
-        wrl::ComPtr<ID3D12CommandQueue> m_D3DCommandQueue;
-        CommandQueueType                m_Type;
-        wrl::ComPtr<ID3D12Fence1>       m_D3DFence;
-        HANDLE                          m_FenceEvent;
-        u64                             m_FenceValue = 0;
+        CommandQueueType    m_Type;
+        ID3D12CommandQueue* m_D3DCommandQueue;
+        ID3D12Fence*        m_D3DFence;
+        HANDLE              m_FenceEvent;
+        u64                 m_FenceValue = 0;
     };
 }
 #endif // ATOM_PLATFORM_WINDOWS#pragma once
