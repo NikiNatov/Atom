@@ -14,7 +14,7 @@ namespace Atom
     public:
         DX12Texture2D(const TextureDescription& description);
         DX12Texture2D(const String& filename, const TextureDescription& description);
-        DX12Texture2D(DX12Device& device, ID3D12Resource* resource, TextureFilter filter, TextureWrap wrap);
+        DX12Texture2D(DX12Device& device, wrl::ComPtr<ID3D12Resource2> resource, TextureFilter filter, TextureWrap wrap);
         ~DX12Texture2D();
 
         virtual void Release() override;
@@ -30,7 +30,7 @@ namespace Atom
         virtual TextureFilter GetFilter() const override;
         virtual TextureWrap GetWrap() const override;
         
-        inline ID3D12Resource* GetD3DResource() const { return m_D3DResource; }
+        inline wrl::ComPtr<ID3D12Resource2> GetD3DResource() const { return m_D3DResource; }
 
         inline const DX12DescriptorHandle& GetShaderResourceView() const 
         { 
@@ -57,11 +57,11 @@ namespace Atom
         };
 
         inline const DX12DescriptorHandle& GetSampler() const { return m_Sampler; };
-        static Ref<DX12Texture2D> CreateFromD3DResource(DX12Device& device, ID3D12Resource* resource, TextureFilter filter, TextureWrap wrap);
+        static Ref<DX12Texture2D> CreateFromD3DResource(DX12Device& device, wrl::ComPtr<ID3D12Resource2> resource, TextureFilter filter, TextureWrap wrap);
     private:
         void CreateViewsAndSampler();
     private:
-        ID3D12Resource*              m_D3DResource;
+        wrl::ComPtr<ID3D12Resource2> m_D3DResource;
         TextureDescription           m_Description;
         DX12DescriptorHandle         m_ShaderResourceView;
         Vector<DX12DescriptorHandle> m_UnorderedAccessViews;

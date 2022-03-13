@@ -74,7 +74,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12Texture2D::DX12Texture2D(DX12Device& device, ID3D12Resource* resource, TextureFilter filter, TextureWrap wrap)
+    DX12Texture2D::DX12Texture2D(DX12Device& device, wrl::ComPtr<ID3D12Resource2> resource, TextureFilter filter, TextureWrap wrap)
         : m_D3DResource(resource), m_Device(device)
     {
         // Set the description based on the d3d resource
@@ -100,13 +100,12 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12Texture2D::~DX12Texture2D()
     {
-        COMSafeRelease(m_D3DResource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12Texture2D::Release()
     {
-        COMSafeRelease(m_D3DResource);
+        m_D3DResource.Reset();
 
         m_ShaderResourceView.Release();
         m_Sampler.Release();
@@ -130,8 +129,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12Texture2D::DeferredRelease()
     {
-        m_Device.ReleaseResource(m_D3DResource);
-        m_D3DResource = nullptr;
+        m_Device.ReleaseResource(m_D3DResource.Detach());
 
         m_ShaderResourceView.DeferredRelease();
         m_Sampler.DeferredRelease();
@@ -212,7 +210,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<DX12Texture2D> DX12Texture2D::CreateFromD3DResource(DX12Device& device, ID3D12Resource* resource, TextureFilter filter, TextureWrap wrap)
+    Ref<DX12Texture2D> DX12Texture2D::CreateFromD3DResource(DX12Device& device, wrl::ComPtr<ID3D12Resource2> resource, TextureFilter filter, TextureWrap wrap)
     {
         return CreateRef<DX12Texture2D>(device, resource, filter, wrap);
     }
@@ -233,7 +231,7 @@ namespace Atom
             srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
             srvDesc.Texture2D.MostDetailedMip = 0;
 
-            m_Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource, &srvDesc, m_ShaderResourceView.GetCPUHandle());
+            m_Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_ShaderResourceView.GetCPUHandle());
         }
 
         // Create render target views
@@ -251,7 +249,7 @@ namespace Atom
                 rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
                 rtvDesc.Texture2D.MipSlice = i;
 
-                m_Device.GetD3DDevice()->CreateRenderTargetView(m_D3DResource, &rtvDesc, m_RenderTargetViews[i].GetCPUHandle());
+                m_Device.GetD3DDevice()->CreateRenderTargetView(m_D3DResource.Get(), &rtvDesc, m_RenderTargetViews[i].GetCPUHandle());
             }
         }
 
@@ -270,7 +268,7 @@ namespace Atom
                 uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
                 uavDesc.Texture2D.MipSlice = i;
 
-                m_Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource, nullptr, &uavDesc, m_UnorderedAccessViews[i].GetCPUHandle());
+                m_Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_UnorderedAccessViews[i].GetCPUHandle());
             }
         }
 
@@ -289,7 +287,7 @@ namespace Atom
                 dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
                 dsvDesc.Texture2D.MipSlice = i;
 
-                m_Device.GetD3DDevice()->CreateDepthStencilView(m_D3DResource, &dsvDesc, m_DepthStencilViews[i].GetCPUHandle());
+                m_Device.GetD3DDevice()->CreateDepthStencilView(m_D3DResource.Get(), &dsvDesc, m_DepthStencilViews[i].GetCPUHandle());
             }
         }
 

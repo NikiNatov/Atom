@@ -28,12 +28,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12CommandBuffer::~DX12CommandBuffer()
     {
-        for (auto allocator : m_Allocators)
-        {
-            COMSafeRelease(allocator);
-        }
-
-        COMSafeRelease(m_CommandList);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -41,7 +35,7 @@ namespace Atom
     {
         u32 frameIndex = Renderer::GetCurrentFrameIndex();
         DXCall(m_Allocators[frameIndex]->Reset());
-        DXCall(m_CommandList->Reset(m_Allocators[frameIndex], NULL));
+        DXCall(m_CommandList->Reset(m_Allocators[frameIndex].Get(), NULL));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -49,7 +43,7 @@ namespace Atom
     {
         DX12Texture2D* dx12Texture = texture->As<DX12Texture2D>();
 
-        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx12Texture->GetD3DResource(), 
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx12Texture->GetD3DResource().Get(), 
                                                             Utils::AtomResourceStateToD3D12(beforeState), 
                                                             Utils::AtomResourceStateToD3D12(afterState));
         m_CommandList->ResourceBarrier(1, &barrier);

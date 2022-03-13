@@ -9,7 +9,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12Device::DX12Device(GPUPreference gpuPreference)
     {
-        IDXGIAdapter* dxgiAdapter = nullptr;
+        wrl::ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
+
         u32 factoryCreateFlags = 0;
 
 #if defined(ATOM_DEBUG)
@@ -27,13 +28,11 @@ namespace Atom
             DXGI_ADAPTER_DESC desc;
             dxgiAdapter->GetDesc(&desc);
 
-            if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) && desc.DedicatedVideoMemory > currentMaxVideoMemory)
+            if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) && desc.DedicatedVideoMemory > currentMaxVideoMemory)
             {
                 currentMaxVideoMemory = desc.DedicatedVideoMemory;
-                DXCall(dxgiAdapter->QueryInterface(&m_DXGIAdapter));
+                DXCall(dxgiAdapter.As(&m_DXGIAdapter));
             }
-
-            COMSafeRelease(dxgiAdapter);
         }
 
         // Get the adapter description
@@ -42,11 +41,9 @@ namespace Atom
 #if defined(ATOM_DEBUG)
 
         // Enable debug layer
-        ID3D12Debug* debugInterface;
+        wrl::ComPtr<ID3D12Debug> debugInterface;
         DXCall(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
         debugInterface->EnableDebugLayer();
-
-        COMSafeRelease(debugInterface);
 
 #endif // ATOM_DEBUG
 
@@ -63,32 +60,29 @@ namespace Atom
         featureLevelInfo.pFeatureLevelsRequested = featureLevels;
 
         // Create a device with the minimum supported feature level
-        ID3D12Device* device = nullptr;
-        DXCall(D3D12CreateDevice(m_DXGIAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+        wrl::ComPtr<ID3D12Device> device = nullptr;
+        DXCall(D3D12CreateDevice(m_DXGIAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
 
         // Get the max supported feature level
         DXCall(device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featureLevelInfo, sizeof(featureLevelInfo)));
 
         // Create the main device with the max supported feature level
         ATOM_ENGINE_ASSERT(featureLevelInfo.MaxSupportedFeatureLevel >= D3D_FEATURE_LEVEL_11_0);
-        DXCall(D3D12CreateDevice(m_DXGIAdapter, featureLevelInfo.MaxSupportedFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
+        DXCall(D3D12CreateDevice(m_DXGIAdapter.Get(), featureLevelInfo.MaxSupportedFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
         DXCall(m_D3DDevice->SetName(L"Main Device"));
 
         // Get feature options
         DXCall(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_FeatureOptions, sizeof(m_FeatureOptions)));
-        COMSafeRelease(device);
 
 #if defined(ATOM_DEBUG)
 
         // Set up the message severity levels
-        ID3D12InfoQueue* infoQueue = nullptr;
-        DXCall(m_D3DDevice->QueryInterface(&infoQueue));
+        wrl::ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
+        DXCall(m_D3DDevice.As(&infoQueue));
 
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
-
-        COMSafeRelease(infoQueue);
 
 #endif // ATOM_DEBUG
 
@@ -110,9 +104,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12Device::~DX12Device()
     {
-        COMSafeRelease(m_DXGIFactory);
-        COMSafeRelease(m_DXGIAdapter);
-        COMSafeRelease(m_D3DDevice);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -120,10 +111,17 @@ namespace Atom
     {
         WaitIdle();
         ProcessDeferredReleases();
+#if defined(ATOM_DEBUG)
 
-        COMSafeRelease(m_DXGIFactory);
-        COMSafeRelease(m_DXGIAdapter);
-        COMSafeRelease(m_D3DDevice);
+        // Reset the message severity levels
+        wrl::ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
+        DXCall(m_D3DDevice.As(&infoQueue));
+
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false);
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+
+#endif // ATOM_DEBUG
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

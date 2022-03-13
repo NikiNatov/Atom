@@ -21,9 +21,6 @@
 
 namespace wrl = Microsoft::WRL;
 
-#define COMSafeRelease(pResource) \
-	if(pResource) { pResource->Release(); pResource = nullptr; }
-
 #if defined(ATOM_DEBUG)
 
 	#define DXCall(hr)													\

@@ -33,19 +33,14 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12CommandQueue::~DX12CommandQueue()
     {
-        COMSafeRelease(m_D3DCommandQueue);
-        COMSafeRelease(m_D3DFence);
-
         if (m_FenceEvent)
-        {
             CloseHandle(m_FenceEvent);
-        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     u64 DX12CommandQueue::Signal()
     {
-        DXCall(m_D3DCommandQueue->Signal(m_D3DFence, ++m_FenceValue));
+        DXCall(m_D3DCommandQueue->Signal(m_D3DFence.Get(), ++m_FenceValue));
         return m_FenceValue;
     }
 
@@ -71,7 +66,7 @@ namespace Atom
     u64 DX12CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
     {
         auto d3dCommandList = commandBuffer->As<DX12CommandBuffer>()->GetCommandList();
-        ID3D12CommandList* commandListArray[] = { d3dCommandList };
+        ID3D12CommandList* commandListArray[] = { d3dCommandList.Get() };
         m_D3DCommandQueue->ExecuteCommandLists(1, commandListArray);
         return Signal();
     }
@@ -85,7 +80,7 @@ namespace Atom
         for (auto list : commandBuffers)
         {
             auto d3dCommandList = list->As<DX12CommandBuffer>()->GetCommandList();
-            commandListArray.push_back(d3dCommandList);
+            commandListArray.push_back(d3dCommandList.Get());
         }
 
         m_D3DCommandQueue->ExecuteCommandLists(commandBuffers.size(), commandListArray.data());
