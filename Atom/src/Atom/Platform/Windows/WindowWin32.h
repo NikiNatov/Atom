@@ -26,7 +26,6 @@ namespace Atom
         virtual bool IsMinimized() const override { return m_Minimized; }
 
         virtual u64 GetWindowHandle() const override { return (u64)m_WindowHandle; }
-        virtual Device& GetDevice() const override { return *m_Device; };
         virtual const SwapChain& GetSwapChain() const override { return *m_SwapChain; };
     private:
         static LRESULT WINAPI WindowProcSetup(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -43,7 +42,6 @@ namespace Atom
         RECT            m_WindowRect;
         EventCallbackFn m_EventCallback;
 
-        Ref<Device>     m_Device;
         Ref<SwapChain>  m_SwapChain;
     };
 

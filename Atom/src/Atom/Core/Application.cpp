@@ -1,9 +1,10 @@
 #include "atompch.h"
 #include "Application.h"
 
-#include "Core.h"
-#include "Logger.h"
-#include "Atom/Renderer/API/Renderer.h"
+#include "Atom/Core/Core.h"
+#include "Atom/Core/Logger.h"
+
+#include "Atom/Renderer/Renderer.h"
 
 namespace Atom
 {
@@ -17,6 +18,7 @@ namespace Atom
         ms_Application = this;
 
         Renderer::SetAPI(RenderAPI::DirectX12);
+        Renderer::Initialize();
 
         WindowProperties properties;
         properties.Title = m_Specification.Name;
@@ -25,8 +27,6 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = Window::Create(properties);
-
-        Renderer::Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ namespace Atom
         while (m_Running)
         {
             Timestep ts = m_FrameTimer.GetElapsedTime();
-            ATOM_ENGINE_INFO("{0} ms", ts.GetMilliseconds());
+            //ATOM_ENGINE_INFO("{0} ms", ts.GetMilliseconds());
 
             m_FrameTimer.Reset();
 

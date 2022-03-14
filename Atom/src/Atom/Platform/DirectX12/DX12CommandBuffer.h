@@ -15,14 +15,15 @@ namespace Atom
         ~DX12CommandBuffer();
 
         virtual void Begin() override;
-        virtual void TransitionResource(const Ref<Texture2D>& texture, ResourceState beforeState, ResourceState afterState) override;
+        virtual void TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState) override;
+        virtual void ClearRenderTarget(const Ref<TextureViewRT>& renderTarget, const f32* color) override;
         virtual void End() override;
 
-        inline wrl::ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
+        inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
     private:
-        Vector<wrl::ComPtr<ID3D12CommandAllocator>> m_Allocators;
-        wrl::ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
-        Vector<u64>                                 m_FenceValues;
+        Vector<ComPtr<ID3D12CommandAllocator>> m_Allocators;
+        ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
+        Vector<u64>                            m_FenceValues;
     };
 }
 

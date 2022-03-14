@@ -97,6 +97,24 @@ namespace Atom { namespace Utils {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    static DXGI_FORMAT AtomTextureFormatToRTVFormat(TextureFormat format)
+    {
+        switch (format)
+        {
+            case TextureFormat::RGBA8:           return DXGI_FORMAT_R8G8B8A8_UNORM;
+            case TextureFormat::RG16F:           return DXGI_FORMAT_R16G16_FLOAT;
+            case TextureFormat::RGBA16F:         return DXGI_FORMAT_R16G16B16A16_FLOAT;
+            case TextureFormat::RG32F:           return DXGI_FORMAT_R32G32_FLOAT;
+            case TextureFormat::RGBA32F:         return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case TextureFormat::Depth24Stencil8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+            case TextureFormat::Depth32:         return DXGI_FORMAT_R32_FLOAT;
+        }
+
+        ATOM_ASSERT(false, "Unknown texture format!");
+        return DXGI_FORMAT_UNKNOWN;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     static DXGI_FORMAT AtomTextureFormatToDSVFormat(TextureFormat format)
     {
         switch (format)
@@ -108,6 +126,24 @@ namespace Atom { namespace Utils {
             case TextureFormat::RGBA32F:         return DXGI_FORMAT_R32G32B32A32_FLOAT;
             case TextureFormat::Depth24Stencil8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
             case TextureFormat::Depth32:         return DXGI_FORMAT_D32_FLOAT;
+        }
+
+        ATOM_ASSERT(false, "Unknown texture format!");
+        return DXGI_FORMAT_UNKNOWN;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static DXGI_FORMAT AtomTextureFormatToUAVFormat(TextureFormat format)
+    {
+        switch (format)
+        {
+            case TextureFormat::RGBA8:           return DXGI_FORMAT_R8G8B8A8_UNORM;
+            case TextureFormat::RG16F:           return DXGI_FORMAT_R16G16_FLOAT;
+            case TextureFormat::RGBA16F:         return DXGI_FORMAT_R16G16B16A16_FLOAT;
+            case TextureFormat::RG32F:           return DXGI_FORMAT_R32G32_FLOAT;
+            case TextureFormat::RGBA32F:         return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case TextureFormat::Depth24Stencil8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+            case TextureFormat::Depth32:         return DXGI_FORMAT_R32_FLOAT;
         }
 
         ATOM_ASSERT(false, "Unknown texture format!");

@@ -9,14 +9,14 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12SwapChain::DX12SwapChain(Device& device, u64 windowHandle, u32 width, u32 height)
-        : m_Width(width), m_Height(height), m_Device(*device.As<DX12Device>())
+    DX12SwapChain::DX12SwapChain(u64 windowHandle, u32 width, u32 height)
+        : m_Width(width), m_Height(height)
     {
-        auto dxgiFactory = m_Device.GetDXGIFactory();
-        auto gfxQueue = m_Device.GetCommandQueue(CommandQueueType::Graphics).As<DX12CommandQueue>()->GetD3DCommandQueue();
+        auto dxgiFactory = Renderer::GetDevice().As<DX12Device>()->GetDXGIFactory();
+        auto gfxQueue = Renderer::GetDevice().GetCommandQueue(CommandQueueType::Graphics).As<DX12CommandQueue>()->GetD3DCommandQueue();
 
         // Check for tearing support
-        wrl::ComPtr<IDXGIFactory5> factory;
+        ComPtr<IDXGIFactory5> factory;
         dxgiFactory.As(&factory);
         DXCall(factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &m_TearingSupported, sizeof(u32)));
 
@@ -30,8 +30,9 @@ namespace Atom
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.Flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 
-        wrl::ComPtr<IDXGISwapChain1> swapChain;
+        ComPtr<IDXGISwapChain1> swapChain;
         DXCall(dxgiFactory->CreateSwapChainForHwnd(gfxQueue.Get(), (HWND)windowHandle, &swapChainDesc, nullptr, nullptr, &swapChain));
 
         // Disable exclusive fullscreen mode
@@ -58,7 +59,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12SwapChain::Present(bool vsync)
     {
-        auto& gfxQueue = m_Device.GetCommandQueue(CommandQueueType::Graphics);
+        auto& gfxQueue = Renderer::GetDevice().GetCommandQueue(CommandQueueType::Graphics);
 
         // Present and signal the fence for the current frame
         DXCall(m_DXGISwapChain->Present(vsync, !vsync && m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0));
@@ -71,7 +72,7 @@ namespace Atom
         gfxQueue.WaitForFenceValue(m_FrameFenceValues[m_BackBufferIndex]);
 
         // Process deferred releases for descriptors
-        m_Device.ProcessDeferredReleases();
+        Renderer::GetDevice().ProcessDeferredReleases(m_BackBufferIndex);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -83,11 +84,11 @@ namespace Atom
             m_Height = height;
 
             // Wait for GPU to finish all work
-            m_Device.WaitIdle();
+            Renderer::GetDevice().WaitIdle();
 
-            for (auto& backBuffer : m_BackBuffers)
+            for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
             {
-                backBuffer->Release();
+                m_BackBuffers[i].reset();
             }
 
             u32 flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
@@ -123,23 +124,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<Texture>& DX12SwapChain::GetBackBuffer() const
+    {
+        return m_BackBuffers[m_BackBufferIndex];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void DX12SwapChain::RecreateBuffers()
     {
         // Recreate resources
         for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
         {
             // Get the back buffer resource
-            wrl::ComPtr<ID3D12Resource2> backBuffer;
+            ComPtr<ID3D12Resource2> backBuffer;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
-
-            m_BackBuffers[i] = DX12Texture2D::CreateFromD3DResource(m_Device, backBuffer, TextureFilter::Linear, TextureWrap::Repeat);
-
-            // Create RTV for the back buffer
-            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-            rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-            m_Device.GetD3DDevice()->CreateRenderTargetView(m_BackBuffers[i]->GetD3DResource().Get(), &rtvDesc, m_BackBuffers[i]->GetRenderTargetView(0).GetCPUHandle());
+            m_BackBuffers[i] = Texture::CreateSwapChainBuffer((u64)backBuffer.Detach());
         }
 
         // Recreate viewport

@@ -5,7 +5,7 @@
 #include "DX12DescriptorAllocator.h"
 #include "DX12Device.h"
 
-#include "Atom/Renderer/API/Renderer.h"
+#include "Atom/Renderer/Renderer.h"
 
 namespace Atom
 {
@@ -73,12 +73,14 @@ namespace Atom
     }
 
     // ----------------------------------------------------- DX12DescriptorHeap ----------------------------------------------------
-    DX12DescriptorHeap::DX12DescriptorHeap(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible)
+    DX12DescriptorHeap::DX12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible)
         : m_Type(type), m_Capacity(capacity), m_Size(0)
     {
         ATOM_ENGINE_ASSERT(capacity && 
             ((type != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER && capacity <= D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2) || 
             (type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER && capacity <= D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE)), "Invalid capacity!");
+
+        auto d3dDevice = Renderer::GetDevice().As<DX12Device>()->GetD3DDevice();
 
         // RTV and DSV heaps cannot be shader visible
         if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV || type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
@@ -93,7 +95,7 @@ namespace Atom
         heapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
-        DXCall(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_D3DHeap)));
+        DXCall(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_D3DHeap)));
 
         // Initialize the free slot indices
         for (u32 i = 0; i < m_Capacity; i++)
@@ -102,7 +104,7 @@ namespace Atom
         }
 
         // Get the descriptor size
-        m_DescriptorSize = device->GetDescriptorHandleIncrementSize(m_Type);
+        m_DescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(m_Type);
 
         // Get the CPU and GPU heap start handles
         m_CPUStartHandle = m_D3DHeap->GetCPUDescriptorHandleForHeapStart();
@@ -170,11 +172,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12DescriptorHeap::ProcessDeferredReleases()
+    void DX12DescriptorHeap::ProcessDeferredReleases(u32 frameIndex)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-
-        u32 frameIndex = Renderer::GetCurrentFrameIndex();
 
         if (!m_DeferredReleaseDescriptors[frameIndex].empty())
         {
@@ -191,14 +191,14 @@ namespace Atom
 
 
     // -------------------------------------------------- DX12DescriptorAllocator --------------------------------------------------
-    DX12DescriptorAllocator::DX12DescriptorAllocator(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapCapacity, bool shaderVisible)
-        : m_HeapType(descriptorType), m_HeapCapacity(heapCapacity), m_ShaderVisible(shaderVisible), m_Device(device)
+    DX12DescriptorAllocator::DX12DescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapCapacity, bool shaderVisible)
+        : m_HeapType(descriptorType), m_HeapCapacity(heapCapacity), m_ShaderVisible(shaderVisible)
     {
         ATOM_ENGINE_ASSERT(m_HeapCapacity > 0, "Heap capacity must be greater that 0!");
 
         // Create a starting heap
-        m_HeapPool.emplace_back(CreateRef<DX12DescriptorHeap>(m_Device, m_HeapType, m_HeapCapacity, m_ShaderVisible));
-        m_AvailableHeaps.push(m_HeapPool.size() - 1);
+        m_HeapPool.emplace_back(CreateRef<DX12DescriptorHeap>( m_HeapType, m_HeapCapacity, m_ShaderVisible));
+        m_AvailableHeaps.insert(m_HeapPool.size() - 1);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -214,17 +214,17 @@ namespace Atom
         if (m_AvailableHeaps.empty())
         {
             // If there are no available heaps, create a new one
-            m_HeapPool.emplace_back(CreateRef<DX12DescriptorHeap>(m_Device, m_HeapType, m_HeapCapacity, m_ShaderVisible));
-            m_AvailableHeaps.push(m_HeapPool.size() - 1);
+            m_HeapPool.emplace_back(CreateRef<DX12DescriptorHeap>(m_HeapType, m_HeapCapacity, m_ShaderVisible));
+            m_AvailableHeaps.insert(m_HeapPool.size() - 1);
         }
 
-        DX12DescriptorHeap& heap = *m_HeapPool[m_AvailableHeaps.front()];
+        DX12DescriptorHeap& heap = *m_HeapPool[*m_AvailableHeaps.begin()];
         DX12DescriptorHandle allocation = heap.Allocate();
 
         if (heap.GetSize() == heap.GetCapacity())
         {
             // If the heap gets full remove it from the available list
-            m_AvailableHeaps.pop();
+            m_AvailableHeaps.erase(m_AvailableHeaps.begin());
         }
 
         ATOM_ENGINE_ASSERT(allocation.IsValid(), "Descriptor allocation failed!");
@@ -232,18 +232,18 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12DescriptorAllocator::ProcessDeferredReleases()
+    void DX12DescriptorAllocator::ProcessDeferredReleases(u32 frameIndex)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
 
         for (u32 i = 0 ; i < m_HeapPool.size(); i++)
         {
-            m_HeapPool[i]->ProcessDeferredReleases();
+            m_HeapPool[i]->ProcessDeferredReleases(frameIndex);
 
             // If space has been freed in the heap, add it to the available heaps
             if (m_HeapPool[i]->GetSize() < m_HeapPool[i]->GetCapacity())
             {
-                m_AvailableHeaps.push(i);
+                m_AvailableHeaps.insert(i);
             }
         }
     }

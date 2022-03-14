@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Renderer.h"
+#include "Atom/Renderer/Renderer.h"
 
 namespace Atom
 {
@@ -29,7 +29,7 @@ namespace Atom
 
         IMPL_API_CAST(CommandQueue)
 
-        static Scope<CommandQueue> Create(Device& device, CommandQueueType type);
+        static Scope<CommandQueue> Create(CommandQueueType type);
     };
 
 }

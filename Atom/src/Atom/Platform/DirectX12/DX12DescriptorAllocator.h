@@ -37,13 +37,13 @@ namespace Atom
     class DX12DescriptorHeap
     {
     public:
-        DX12DescriptorHeap(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible);
+        DX12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, u32 capacity, bool shaderVisible);
         ~DX12DescriptorHeap();
 
         DX12DescriptorHandle Allocate();
         void ReleaseDescriptor(DX12DescriptorHandle& descriptor);
         void DeferredReleaseDescriptor(DX12DescriptorHandle& descriptor);
-        void ProcessDeferredReleases();
+        void ProcessDeferredReleases(u32 frameIndex);
 
         inline bool IsShaderVisible() const { return m_GPUStartHandle.ptr != 0; }
         inline D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_Type; }
@@ -53,7 +53,7 @@ namespace Atom
         inline u32 GetSize() const { return m_Size; }
         inline u32 GetDescriptorSize() const { return m_DescriptorSize; }
     private:
-        wrl::ComPtr<ID3D12DescriptorHeap> m_D3DHeap;
+        ComPtr<ID3D12DescriptorHeap> m_D3DHeap;
         D3D12_DESCRIPTOR_HEAP_TYPE        m_Type;
         D3D12_CPU_DESCRIPTOR_HANDLE       m_CPUStartHandle{ 0 };
         D3D12_GPU_DESCRIPTOR_HANDLE       m_GPUStartHandle{ 0 };
@@ -68,11 +68,11 @@ namespace Atom
     class DX12DescriptorAllocator
     {
     public:
-        DX12DescriptorAllocator(wrl::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapMaxCapacity, bool shaderVisible);
+        DX12DescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE descriptorType, u32 heapMaxCapacity, bool shaderVisible);
         ~DX12DescriptorAllocator();
 
         DX12DescriptorHandle Allocate();
-        void ProcessDeferredReleases();
+        void ProcessDeferredReleases(u32 frameIndex);
 
         inline D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_HeapType; }
         inline u32 GetHeapCapacity() const { return m_HeapCapacity; }
@@ -81,9 +81,8 @@ namespace Atom
         D3D12_DESCRIPTOR_HEAP_TYPE      m_HeapType;
         u32                             m_HeapCapacity;
         bool                            m_ShaderVisible;
-        wrl::ComPtr<ID3D12Device>       m_Device;
         Vector<Ref<DX12DescriptorHeap>> m_HeapPool;
-        Queue<u32>                      m_AvailableHeaps;
+        Set<u32>                        m_AvailableHeaps;
         std::mutex                      m_Mutex;
     };
 }

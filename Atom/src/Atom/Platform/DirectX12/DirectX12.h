@@ -19,7 +19,8 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
-namespace wrl = Microsoft::WRL;
+template<typename T>
+using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 #if defined(ATOM_DEBUG)
 

@@ -52,8 +52,7 @@ namespace Atom
 		ATOM_ENGINE_ASSERT(m_WindowHandle, "Failed to create the window!");
 
 		// Create rendering context
-		m_Device = Device::Create(GPUPreference::HighPerformance);
-		m_SwapChain = SwapChain::Create(*m_Device, (u64)m_WindowHandle, m_Width, m_Height);
+		m_SwapChain = SwapChain::Create((u64)m_WindowHandle, m_Width, m_Height);
 
 		ShowWindow(m_WindowHandle, SW_MAXIMIZE);
     }
@@ -61,8 +60,6 @@ namespace Atom
 	// -----------------------------------------------------------------------------------------------------------------------------
 	WindowWin32::~WindowWin32()
 	{
-		m_Device->Release();
-
 		UnregisterClass(m_WindowClass.lpszClassName, s_hInstance);
 		DestroyWindow(m_WindowHandle);
 	}
@@ -97,7 +94,7 @@ namespace Atom
 	// -----------------------------------------------------------------------------------------------------------------------------
 	void WindowWin32::SetMinimized(bool state)
 	{
-		m_Minimized = true;
+		m_Minimized = state;
 	}
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -5,13 +5,13 @@
 
 namespace Atom
 {
-    Ref<SwapChain> SwapChain::Create(Device& device, u64 windowHandle, u32 width, u32 height)
+    Ref<SwapChain> SwapChain::Create(u64 windowHandle, u32 width, u32 height)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12SwapChain>(device, windowHandle, width, height);
+            case RenderAPI::DirectX12: return CreateRef<DX12SwapChain>(windowHandle, width, height);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }

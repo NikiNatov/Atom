@@ -5,6 +5,10 @@
 #include "DX12CommandBuffer.h"
 #include "DX12Device.h"
 #include "DX12Texture.h"
+#include "DX12TextureView.h"
+#include "DX12SwapChain.h"
+
+#include "Atom/Core/Application.h"
 
 namespace Atom
 {
@@ -39,14 +43,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::TransitionResource(const Ref<Texture2D>& texture, ResourceState beforeState, ResourceState afterState)
+    void DX12CommandBuffer::TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState)
     {
-        DX12Texture2D* dx12Texture = texture->As<DX12Texture2D>();
+        DX12Texture* dx12Texture = texture->As<DX12Texture>();
 
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx12Texture->GetD3DResource().Get(), 
                                                             Utils::AtomResourceStateToD3D12(beforeState), 
                                                             Utils::AtomResourceStateToD3D12(afterState));
         m_CommandList->ResourceBarrier(1, &barrier);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12CommandBuffer::ClearRenderTarget(const Ref<TextureViewRT>& renderTarget, const f32* color)
+    {
+        auto dx12RenderTarget = renderTarget->As<DX12TextureViewRT>();
+        m_CommandList->ClearRenderTargetView(dx12RenderTarget->GetDescriptor().GetCPUHandle(), color, 0, nullptr);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

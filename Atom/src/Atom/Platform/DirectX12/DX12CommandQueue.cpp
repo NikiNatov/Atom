@@ -9,10 +9,10 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12CommandQueue::DX12CommandQueue(Device& device, CommandQueueType type)
+    DX12CommandQueue::DX12CommandQueue(CommandQueueType type)
         : m_Type(type)
     {
-        auto d3dDevice = device.As<DX12Device>()->GetD3DDevice();
+        auto d3dDevice = Renderer::GetDevice().As<DX12Device>()->GetD3DDevice();
 
         // Create command queue
         D3D12_COMMAND_QUEUE_DESC desc = {};

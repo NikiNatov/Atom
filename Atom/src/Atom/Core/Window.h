@@ -3,7 +3,6 @@
 #include "Core.h"
 #include "Events/Events.h"
 
-#include "Atom/Renderer/API/Device.h"
 #include "Atom/Renderer/API/SwapChain.h"
 
 namespace Atom
@@ -44,7 +43,6 @@ namespace Atom
         virtual bool IsMinimized() const = 0;
 
         virtual u64 GetWindowHandle() const = 0;
-        virtual Device& GetDevice() const = 0;
         virtual const SwapChain& GetSwapChain() const = 0;
 
         static Scope<Window> Create(const WindowProperties& properties);

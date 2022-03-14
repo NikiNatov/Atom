@@ -6,13 +6,13 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Texture2D::Create(const TextureDescription& description)
+    Ref<Texture> Texture::CreateTexture2D(const TextureDescription& description)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12Texture2D>(description);
+            case RenderAPI::DirectX12: return CreateRef<DX12Texture>(TextureType::Texture2D, description);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }
@@ -22,13 +22,29 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Texture2D::CreateFromFile(const String& filename, const TextureDescription& description)
+    Ref<Texture> Texture::CreateTextureCube(const TextureDescription& description)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12Texture2D>(filename, description);
+            case RenderAPI::DirectX12: return CreateRef<DX12Texture>(TextureType::TextureCube, description);
+#endif // ATOM_PLATFORM_WINDOWS
+
+        }
+
+        ATOM_ASSERT(false, "Unknown API!");
+        return nullptr;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Texture> Texture::CreateSwapChainBuffer(u64 bufferHandle)
+    {
+        switch (Renderer::GetAPI())
+        {
+
+#if defined(ATOM_PLATFORM_WINDOWS)
+            case RenderAPI::DirectX12: return CreateRef<DX12Texture>(TextureType::SwapChainBuffer, bufferHandle);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }

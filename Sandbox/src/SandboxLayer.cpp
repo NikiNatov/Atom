@@ -22,13 +22,12 @@ namespace Atom
         TextureDescription desc;
         desc.Width = 512;
         desc.Height = 512;
-        m_Texture = Texture2D::Create(desc);
+        m_Texture = Texture::CreateTexture2D(desc);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnDetach()
     {
-        //m_Texture->DeferredRelease();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

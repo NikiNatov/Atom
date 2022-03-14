@@ -1,10 +1,17 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Renderer.h"
+#include "Atom/Renderer/Renderer.h"
 
 namespace Atom
 {
+    enum class TextureType
+    {
+        Texture2D,
+        TextureCube,
+        SwapChainBuffer
+    };
+
     enum class TextureFormat
     {
         RGBA8,
@@ -46,7 +53,7 @@ namespace Atom
         TextureWrap Wrap = TextureWrap::Repeat;
     };
 
-    class DX12Texture2D;
+    class DX12Texture;
 
     class Texture
     {
@@ -56,6 +63,7 @@ namespace Atom
         virtual void Release() = 0;
         virtual void DeferredRelease() = 0;
         virtual const String& GetDebugName() const = 0;
+        virtual TextureType GetType() const = 0;
         virtual TextureFormat GetFormat() const = 0;
         virtual u32 GetWidth() const = 0;
         virtual u32 GetHeight() const = 0;
@@ -63,19 +71,11 @@ namespace Atom
         virtual u8 GetUsageFlags() const = 0;
         virtual TextureFilter GetFilter() const = 0;
         virtual TextureWrap GetWrap() const = 0;
-    };
 
-    class Texture2D : public Texture
-    {
-    public:
-        virtual ~Texture2D() = default;
+        IMPL_API_CAST(Texture)
 
-        virtual void SetData(const byte* data) = 0;
-        virtual byte* GetData() const = 0;
-
-        IMPL_API_CAST(Texture2D)
-
-        static Ref<Texture2D> Create(const TextureDescription& description);
-        static Ref<Texture2D> CreateFromFile(const String& filename, const TextureDescription& description);
+        static Ref<Texture> CreateTexture2D(const TextureDescription& description);
+        static Ref<Texture> CreateTextureCube(const TextureDescription& description);
+        static Ref<Texture> CreateSwapChainBuffer(u64 bufferHandle);
     };
 }

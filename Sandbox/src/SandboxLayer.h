@@ -2,7 +2,6 @@
 
 #include <Atom.h>
 
-
 namespace Atom
 {
     class SandboxLayer : public Layer
@@ -18,7 +17,7 @@ namespace Atom
         virtual void OnEvent(Event& event) override;
     private:
         Ref<CommandBuffer> m_CommandBuffer;
-        Ref<Texture2D> m_Texture;
+        Ref<Texture> m_Texture;
     };
 
 }

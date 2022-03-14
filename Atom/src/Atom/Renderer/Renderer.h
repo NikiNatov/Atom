@@ -5,7 +5,6 @@
 namespace Atom
 {
     class Device;
-    class CommandQueue;
     class CommandBuffer;
 
     enum class RenderAPI
@@ -14,23 +13,27 @@ namespace Atom
         DirectX12
     };
 
+    struct RendererConfig
+    {
+        u32 FramesInFlight = 3;
+        RenderAPI API = RenderAPI::None;
+    };
+
     class Renderer
     {
     public:
-        Renderer() = default;
-
         static void Initialize();
         static void BeginFrame(const Ref<CommandBuffer>& commandBuffer);
         static void EndFrame(const Ref<CommandBuffer>& commandBuffer);
 
-        static u32 GetCurrentFrameIndex();
+        static void SetAPI(RenderAPI api);
+        static RenderAPI GetAPI();
         static Device& GetDevice();
-        static u32 GetFramesInFlight() { return FRAMES_IN_FLIGHT; }
-
-        static void SetAPI(RenderAPI api) { ms_RenderAPI = api; }
-        static RenderAPI GetAPI() { return ms_RenderAPI; }
+        static u32 GetCurrentFrameIndex();
+        static u32 GetFramesInFlight();
     private:
-        static RenderAPI          ms_RenderAPI;
-        static constexpr u32      FRAMES_IN_FLIGHT = 3;
+        static Ref<Device>   ms_Device;
+        static RenderAPI     ms_RenderAPI;
+        static constexpr u32 FRAMES_IN_FLIGHT = 3;
     };
 }

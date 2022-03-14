@@ -6,13 +6,13 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Scope<CommandQueue> CommandQueue::Create(Device& device, CommandQueueType type)
+    Scope<CommandQueue> CommandQueue::Create(CommandQueueType type)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateScope<DX12CommandQueue>(device, type);
+            case RenderAPI::DirectX12: return CreateScope<DX12CommandQueue>(type);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }
