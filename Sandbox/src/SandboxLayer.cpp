@@ -17,12 +17,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnAttach()
     {
+        Ref<Shader> shader = Shader::Create("assets/shaders/Shader.hlsl");
         m_CommandBuffer = CommandBuffer::Create();
-
-        TextureDescription desc;
-        desc.Width = 512;
-        desc.Height = 512;
-        m_Texture = Texture::CreateTexture2D(desc);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

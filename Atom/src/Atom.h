@@ -18,4 +18,5 @@
 #include "Atom/Renderer/API/CommandBuffer.h"
 #include "Atom/Renderer/API/Texture.h"
 #include "Atom/Renderer/API/TextureView.h"
+#include "Atom/Renderer/API/Shader.h"
 #include "Atom/Renderer/Renderer.h"

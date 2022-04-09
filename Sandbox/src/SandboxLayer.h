@@ -17,7 +17,6 @@ namespace Atom
         virtual void OnEvent(Event& event) override;
     private:
         Ref<CommandBuffer> m_CommandBuffer;
-        Ref<Texture> m_Texture;
     };
 
 }

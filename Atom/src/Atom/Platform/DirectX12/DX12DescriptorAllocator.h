@@ -54,15 +54,15 @@ namespace Atom
         inline u32 GetDescriptorSize() const { return m_DescriptorSize; }
     private:
         ComPtr<ID3D12DescriptorHeap> m_D3DHeap;
-        D3D12_DESCRIPTOR_HEAP_TYPE        m_Type;
-        D3D12_CPU_DESCRIPTOR_HANDLE       m_CPUStartHandle{ 0 };
-        D3D12_GPU_DESCRIPTOR_HANDLE       m_GPUStartHandle{ 0 };
-        u32                               m_Capacity;
-        u32                               m_Size;
-        u32                               m_DescriptorSize;
-        Queue<u32>                        m_FreeSlots;
-        Vector<Vector<u32>>               m_DeferredReleaseDescriptors;
-        std::mutex                        m_Mutex;
+        D3D12_DESCRIPTOR_HEAP_TYPE   m_Type;
+        D3D12_CPU_DESCRIPTOR_HANDLE  m_CPUStartHandle{ 0 };
+        D3D12_GPU_DESCRIPTOR_HANDLE  m_GPUStartHandle{ 0 };
+        u32                          m_Capacity;
+        u32                          m_Size;
+        u32                          m_DescriptorSize;
+        Queue<u32>                   m_FreeSlots;
+        Vector<Vector<u32>>          m_DeferredReleaseDescriptors;
+        std::mutex                   m_Mutex;
     };
 
     class DX12DescriptorAllocator

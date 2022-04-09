@@ -95,7 +95,6 @@ namespace Atom
     void DX12Texture::DeferredRelease()
     {
         Renderer::GetDevice().As<DX12Device>()->ReleaseResource(m_D3DResource.Detach());
-        m_D3DResource = nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
