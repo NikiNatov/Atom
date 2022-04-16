@@ -5,6 +5,7 @@
 #include "DX12SwapChain.h"
 #include "DX12Device.h"
 #include "DX12CommandQueue.h"
+#include "DX12TextureView.h"
 
 namespace Atom
 {
@@ -41,10 +42,10 @@ namespace Atom
         DXCall(swapChain.As(&m_DXGISwapChain));
         m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
-
         // Create the back buffers
         u32 framesInFlight = Renderer::GetFramesInFlight();
         m_BackBuffers.resize(framesInFlight, nullptr);
+        m_BackBufferRTVs.resize(framesInFlight, nullptr);
         RecreateBuffers();
 
         // Initialize fence values
@@ -89,6 +90,8 @@ namespace Atom
             for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
             {
                 m_BackBuffers[i].reset();
+                m_BackBufferRTVs[i]->As<DX12TextureViewRT>()->GetDescriptor().Release();
+                m_BackBufferRTVs[i].reset();
             }
 
             u32 flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
@@ -130,6 +133,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<TextureViewRT>& DX12SwapChain::GetBackBufferRTV() const
+    {
+        return m_BackBufferRTVs[m_BackBufferIndex];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void DX12SwapChain::RecreateBuffers()
     {
         // Recreate resources
@@ -139,6 +148,7 @@ namespace Atom
             ComPtr<ID3D12Resource2> backBuffer;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
             m_BackBuffers[i] = Texture::CreateSwapChainBuffer((u64)backBuffer.Detach());
+            m_BackBufferRTVs[i] = TextureViewRT::Create(m_BackBuffers[i]);
         }
 
         // Recreate viewport

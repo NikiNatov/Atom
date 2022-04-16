@@ -22,7 +22,8 @@ namespace Atom
 		  m_Height(properties.Height),
 		  m_VSync(properties.VSync),
 		  m_EventCallback(properties.EventCallback),
-		  m_Minimized(false)
+		  m_Minimized(false),
+		  m_NeedsResize(false)
     {
 		s_hInstance = (HINSTANCE)&__ImageBase;
 
@@ -190,21 +191,28 @@ namespace Atom
 			}
 			case WM_SIZE:
 			{
+				window->m_NeedsResize = wParam != SIZE_MINIMIZED;
+				window->m_Width = LOWORD(lParam);
+				window->m_Height = HIWORD(lParam);
+
 				if (wParam == SIZE_MINIMIZED)
 					window->SetMinimized(true);
 				else if (wParam == SIZE_RESTORED)
 					window->SetMinimized(false);
 
-				window->m_Width = LOWORD(lParam);
-				window->m_Height = HIWORD(lParam);
-
-				window->m_SwapChain->Resize(window->m_Width, window->m_Height);
-
-				WindowResizedEvent e(window->m_Width, window->m_Height);
-				window->m_EventCallback(e);
 				break;
 			}
         }
+
+		// Make sure we resize the swap chain only when the mouse button is not pressed
+		if (window->m_NeedsResize && GetAsyncKeyState(VK_LBUTTON) >= 0)
+		{
+			window->m_SwapChain->Resize(window->m_Width, window->m_Height);
+
+			WindowResizedEvent e(window->m_Width, window->m_Height);
+			window->m_EventCallback(e);
+			window->m_NeedsResize = false;
+		}
 
         return DefWindowProc(hWnd, Msg, wParam, lParam);
     }

@@ -52,7 +52,10 @@ namespace Atom
         resourceDesc.Flags |= (m_Description.UsageFlags & TextureUsage::DepthBuffer) ? D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL : D3D12_RESOURCE_FLAG_NONE;
 
         DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_D3DResource)));
+
+#if defined (ATOM_DEBUG)
         DXCall(m_D3DResource->SetName(WString(m_Description.DebugName.begin(), m_Description.DebugName.end()).c_str()));
+#endif
 
     }
     
@@ -65,8 +68,11 @@ namespace Atom
         // Set the description based on the d3d resource
         D3D12_RESOURCE_DESC desc = m_D3DResource->GetDesc();
         char name[100]{ 0 };
+
+#if defined (ATOM_DEBUG)
         u32 bufferSize = sizeof(name) - 1;
         m_D3DResource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &bufferSize, name);
+#endif
 
         m_Description.DebugName = name;
         m_Description.Width = desc.Width;

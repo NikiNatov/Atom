@@ -36,6 +36,7 @@ namespace Atom
         u32             m_Height;
         bool            m_VSync;
         bool            m_Minimized;
+        bool            m_NeedsResize;
 
         HWND            m_WindowHandle;
         WNDCLASSEX      m_WindowClass;

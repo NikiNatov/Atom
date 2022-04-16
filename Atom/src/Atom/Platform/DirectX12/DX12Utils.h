@@ -2,7 +2,6 @@
 
 #include "Atom/Core/Core.h"
 
-
 #if defined(ATOM_PLATFORM_WINDOWS)
 
 #include "DirectX12.h"
@@ -11,6 +10,7 @@
 #include "Atom/Renderer/API/CommandQueue.h"
 #include "Atom/Renderer/API/Texture.h"
 #include "Atom/Renderer/API/CommandBuffer.h"
+#include "Atom/Renderer/API/GraphicsPipeline.h"
 
 namespace Atom { namespace Utils {
 
@@ -191,6 +191,20 @@ namespace Atom { namespace Utils {
 
         ATOM_ASSERT(false, "Unknown resource state!");
         return D3D12_RESOURCE_STATE_COMMON;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static D3D12_PRIMITIVE_TOPOLOGY_TYPE AtomTopologyToD3D12(Topology topology)
+    {
+        switch (topology)
+        {
+            case Topology::Triangles: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            case Topology::Points:    return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+            case Topology::Lines:	  return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+        }
+
+        ATOM_ASSERT(false, "Unknown topology type!");
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
     }
 }}
 #endif // ATOM_PLATFORM_WINDOWS

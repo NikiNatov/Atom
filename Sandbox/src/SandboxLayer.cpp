@@ -17,7 +17,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnAttach()
     {
-        Ref<Shader> shader = Shader::Create("assets/shaders/Shader.hlsl");
         m_CommandBuffer = CommandBuffer::Create();
     }
 

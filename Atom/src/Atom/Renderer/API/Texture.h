@@ -7,6 +7,7 @@ namespace Atom
 {
     enum class TextureType
     {
+        None = 0,
         Texture2D,
         TextureCube,
         SwapChainBuffer
@@ -14,6 +15,7 @@ namespace Atom
 
     enum class TextureFormat
     {
+        None = 0,
         RGBA8,
         RG16F, RGBA16F,
         RG32F, RGBA32F,
@@ -23,6 +25,7 @@ namespace Atom
 
     enum class TextureFilter
     {
+        None = 0,
         Linear, 
         Nearest,
         Anisotropic
@@ -30,6 +33,7 @@ namespace Atom
 
     enum class TextureWrap
     {
+        None = 0,
         Clamp, Repeat
     };
 

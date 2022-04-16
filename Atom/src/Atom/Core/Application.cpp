@@ -27,6 +27,8 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = Window::Create(properties);
+
+        Renderer::CreatePipelines();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

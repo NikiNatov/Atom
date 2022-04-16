@@ -17,7 +17,7 @@ namespace Atom
 
         virtual const Texture* GetTextureResource() const override;
 
-        inline const DX12DescriptorHandle& GetDescriptor() const { return m_Descriptor; }
+        inline DX12DescriptorHandle& GetDescriptor() { return m_Descriptor; }
     private:
         Texture*                        m_Texture;
         D3D12_SHADER_RESOURCE_VIEW_DESC m_Description{};
@@ -34,7 +34,7 @@ namespace Atom
         virtual u32 GetMipLevel() const override;
         virtual u32 GetCubeFace() const override;
 
-        inline const DX12DescriptorHandle& GetDescriptor() const { return m_Descriptor; }
+        inline DX12DescriptorHandle& GetDescriptor() { return m_Descriptor; }
     private:
         Texture*                      m_Texture;
         D3D12_RENDER_TARGET_VIEW_DESC m_Description{};
@@ -53,7 +53,7 @@ namespace Atom
         virtual u32 GetMipLevel() const override;
         virtual u32 GetCubeFace() const override;
 
-        inline const DX12DescriptorHandle& GetDescriptor() const { return m_Descriptor; }
+        inline DX12DescriptorHandle& GetDescriptor() { return m_Descriptor; }
     private:
         Texture*                      m_Texture;
         D3D12_DEPTH_STENCIL_VIEW_DESC m_Description{};
@@ -72,7 +72,7 @@ namespace Atom
         virtual u32 GetMipLevel() const override;
         virtual u32 GetCubeFace() const override;
 
-        inline const DX12DescriptorHandle& GetDescriptor() const { return m_Descriptor; }
+        inline DX12DescriptorHandle& GetDescriptor() { return m_Descriptor; }
     private:
         Texture*                         m_Texture;
         D3D12_UNORDERED_ACCESS_VIEW_DESC m_Description{};

@@ -60,6 +60,8 @@ namespace Atom
         if (IsValid())
         {
             m_Heap->ReleaseDescriptor(*this);
+            m_CPUHandle.ptr = 0;
+            m_GPUHandle.ptr = 0;
         }
     }
 
@@ -69,6 +71,8 @@ namespace Atom
         if (IsValid())
         {
             m_Heap->DeferredReleaseDescriptor(*this);
+            m_CPUHandle.ptr = 0;
+            m_GPUHandle.ptr = 0;
         }
     }
 

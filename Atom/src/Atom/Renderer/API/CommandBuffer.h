@@ -6,7 +6,8 @@
 namespace Atom
 {
     class Texture;
-    class TextureViewRT;
+    class GraphicsPipeline;
+    class Framebuffer;
     class DX12CommandBuffer;
 
     enum class ResourceState
@@ -25,7 +26,9 @@ namespace Atom
 
         virtual void Begin() = 0;
         virtual void TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState) = 0;
-        virtual void ClearRenderTarget(const Ref<TextureViewRT>& renderTarget, const f32* color) = 0;
+        virtual void BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear = false) = 0;
+        virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) = 0;
+        virtual void Draw(u32 count) = 0;
         virtual void End() = 0;
 
         IMPL_API_CAST(CommandBuffer)

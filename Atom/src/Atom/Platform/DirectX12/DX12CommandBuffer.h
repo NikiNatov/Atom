@@ -16,7 +16,9 @@ namespace Atom
 
         virtual void Begin() override;
         virtual void TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState) override;
-        virtual void ClearRenderTarget(const Ref<TextureViewRT>& renderTarget, const f32* color) override;
+        virtual void BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear = false) override;
+        virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) override;
+        virtual void Draw(u32 count) override;
         virtual void End() override;
 
         inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }

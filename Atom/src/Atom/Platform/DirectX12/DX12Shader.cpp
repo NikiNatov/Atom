@@ -66,6 +66,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Reflect on the shader data and build resource set
+        ATOM_INFO("Shader \"{0}\" Resources:", m_Name);
         Reflect(m_VSData);
         Reflect(m_PSData);
         CreateRootSignature();
@@ -122,8 +123,6 @@ namespace Atom
 
         D3D12_SHADER_DESC shaderDesc = {};
         DXCall(reflection->GetDesc(&shaderDesc));
-
-        ATOM_INFO("Shader \"{0}\" Resources:", m_Name);
 
         for (u32 i = 0; i < shaderDesc.BoundResources; i++)
         {
