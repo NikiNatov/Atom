@@ -4,6 +4,7 @@
 
 #include "DX12Texture.h"
 #include "DX12Device.h"
+#include "DX12ResourceStateTracker.h"
 
 namespace Atom
 {
@@ -57,6 +58,7 @@ namespace Atom
         DXCall(m_D3DResource->SetName(WString(m_Description.DebugName.begin(), m_Description.DebugName.end()).c_str()));
 #endif
 
+        DX12ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
     }
     
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -84,6 +86,8 @@ namespace Atom
         m_Description.UsageFlags |= desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ? TextureUsage::UnorderedAccess : 0;
         m_Description.Filter = TextureFilter::Linear;
         m_Description.Wrap = TextureWrap::Repeat;
+
+        DX12ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -69,6 +69,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    bool DX12Framebuffer::IsSwapChainTarget() const
+    {
+        return m_Description.SwapChainFrameBuffer;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     const Ref<Texture>& DX12Framebuffer::GetAttachmnt(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)

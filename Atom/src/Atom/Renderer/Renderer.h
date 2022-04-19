@@ -7,6 +7,7 @@ namespace Atom
     class Device;
     class CommandBuffer;
     class GraphicsPipeline;
+    class Framebuffer;
 
     enum class RenderAPI
     {
@@ -24,8 +25,10 @@ namespace Atom
     {
     public:
         static void Initialize();
-        static void CreatePipelines();
         static void BeginFrame(const Ref<CommandBuffer>& commandBuffer);
+        static void BeginRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer, bool clear = true);
+        static void EndRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer);
+        static void Draw(const Ref<CommandBuffer>& commandBuffer, const Ref<GraphicsPipeline>& pipeline, u32 count);
         static void EndFrame(const Ref<CommandBuffer>& commandBuffer);
 
         static void SetAPI(RenderAPI api);
@@ -34,9 +37,8 @@ namespace Atom
         static u32 GetCurrentFrameIndex();
         static u32 GetFramesInFlight();
     private:
-        static Ref<Device>           ms_Device;
-        static RenderAPI             ms_RenderAPI;
-        static Ref<GraphicsPipeline> ms_DefaultPipeline;
-        static constexpr u32         FRAMES_IN_FLIGHT = 3;
+        static Ref<Device>   ms_Device;
+        static RenderAPI     ms_RenderAPI;
+        static constexpr u32 FRAMES_IN_FLIGHT = 3;
     };
 }

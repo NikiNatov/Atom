@@ -5,6 +5,7 @@
 #include "Atom/Core/Logger.h"
 
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/API/Device.h"
 
 namespace Atom
 {
@@ -27,13 +28,13 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = Window::Create(properties);
-
-        Renderer::CreatePipelines();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Application::~Application()
     {
+        Renderer::GetDevice().WaitIdle();
+
         for (auto layer : m_LayerStack)
             layer->OnDetach();
     }

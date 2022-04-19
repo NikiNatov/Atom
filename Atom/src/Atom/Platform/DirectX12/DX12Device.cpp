@@ -3,6 +3,7 @@
 #if defined(ATOM_PLATFORM_WINDOWS)
 
 #include "DX12Device.h"
+#include "DX12ResourceStateTracker.h"
 
 namespace Atom
 {
@@ -169,6 +170,7 @@ namespace Atom
         // Release resources
         for (auto resource : m_DeferredReleaseResources[frameIndex])
         {
+            DX12ResourceStateTracker::RemoveGlobalResourceState((ID3D12Resource*)resource);
             resource->Release();
         }
 

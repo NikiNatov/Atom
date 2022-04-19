@@ -183,7 +183,6 @@ namespace Atom { namespace Utils {
         switch (state)
         {
             case ResourceState::Common:              return D3D12_RESOURCE_STATE_COMMON;
-            case ResourceState::Present:             return D3D12_RESOURCE_STATE_PRESENT;
             case ResourceState::RenderTarget:        return D3D12_RESOURCE_STATE_RENDER_TARGET;
             case ResourceState::UnorderedAccess:     return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
             case ResourceState::PixelShaderResource: return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;

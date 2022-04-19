@@ -39,9 +39,9 @@ namespace Atom
     private:
         ApplicationSpecification m_Specification;
         bool                     m_Running = true;
-        LayerStack               m_LayerStack;
         Timer                    m_FrameTimer;
         Scope<Window>            m_Window;
+        LayerStack               m_LayerStack;
     private:
         static Application*      ms_Application;
     };

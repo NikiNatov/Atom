@@ -65,25 +65,22 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     u64 DX12CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
     {
-        auto d3dCommandList = commandBuffer->As<DX12CommandBuffer>()->GetCommandList();
-        ID3D12CommandList* commandListArray[] = { d3dCommandList.Get() };
-        m_D3DCommandQueue->ExecuteCommandLists(1, commandListArray);
-        return Signal();
+        return ExecuteCommandLists({ commandBuffer });
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     u64 DX12CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
     {
         Vector<ID3D12CommandList*> commandListArray;
-        commandListArray.reserve(commandBuffers.size());
 
-        for (auto list : commandBuffers)
+        for (auto& buffer : commandBuffers)
         {
-            auto d3dCommandList = list->As<DX12CommandBuffer>()->GetCommandList();
-            commandListArray.push_back(d3dCommandList.Get());
+            DX12CommandBuffer* dx12CommandBuffer = buffer->As<DX12CommandBuffer>();
+            commandListArray.push_back(dx12CommandBuffer->GetPendingCommandList().Get());
+            commandListArray.push_back(dx12CommandBuffer->GetCommandList().Get());
         }
 
-        m_D3DCommandQueue->ExecuteCommandLists(commandBuffers.size(), commandListArray.data());
+        m_D3DCommandQueue->ExecuteCommandLists(commandListArray.size(), commandListArray.data());
         return Signal();
     }
 

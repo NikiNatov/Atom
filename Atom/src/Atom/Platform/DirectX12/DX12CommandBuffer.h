@@ -5,6 +5,7 @@
 #if defined(ATOM_PLATFORM_WINDOWS)
 
 #include "DirectX12.h"
+#include "DX12ResourceStateTracker.h"
 
 namespace Atom
 {
@@ -15,17 +16,20 @@ namespace Atom
         ~DX12CommandBuffer();
 
         virtual void Begin() override;
-        virtual void TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState) override;
         virtual void BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear = false) override;
+        virtual void EndRenderPass(const Ref<Framebuffer>& framebuffer) override;
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) override;
         virtual void Draw(u32 count) override;
         virtual void End() override;
 
         inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
+        inline ComPtr<ID3D12GraphicsCommandList6> GetPendingCommandList() const { return m_PendingCommandList; }
     private:
         Vector<ComPtr<ID3D12CommandAllocator>> m_Allocators;
         ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
-        Vector<u64>                            m_FenceValues;
+        Vector<ComPtr<ID3D12CommandAllocator>> m_PendingAllocators;
+        ComPtr<ID3D12GraphicsCommandList6>     m_PendingCommandList;
+        DX12ResourceStateTracker               m_ResourceStateTracker;
     };
 }
 

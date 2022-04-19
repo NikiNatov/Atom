@@ -19,6 +19,7 @@ namespace Atom
         virtual u32 GetWidth() const override;
         virtual u32 GetHeight() const override;
         virtual const f32* GetClearColor() const override;
+        virtual bool IsSwapChainTarget() const override;
         virtual const Ref<Texture>& GetAttachmnt(AttachmentPoint attachment) const override;
         virtual const Ref<TextureViewRT>& GetRTV(AttachmentPoint attachment) const override;
         virtual const Ref<TextureViewDS>& GetDSV() const override;

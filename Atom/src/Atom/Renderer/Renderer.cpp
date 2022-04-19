@@ -13,7 +13,6 @@ namespace Atom
 {
     RenderAPI Renderer::ms_RenderAPI = RenderAPI::None;
     Ref<Device> Renderer::ms_Device = nullptr;
-    Ref<GraphicsPipeline> Renderer::ms_DefaultPipeline = nullptr;
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize()
@@ -23,52 +22,35 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::CreatePipelines()
-    {
-        FramebufferDescription fbDesc;
-        fbDesc.SwapChainFrameBuffer = true;
-        fbDesc.ClearColor[0] = 0.2f;
-        fbDesc.ClearColor[1] = 0.2f;
-        fbDesc.ClearColor[2] = 0.2f;
-        fbDesc.ClearColor[3] = 1.0f;
-        fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
-        fbDesc.Attachments[AttachmentPoint::DepthStencil] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
-
-        GraphicsPipelineDescription pipelineDesc;
-        pipelineDesc.Topology = Topology::Triangles;
-        pipelineDesc.Shader = Shader::Create("assets/shaders/Shader.hlsl");
-        pipelineDesc.Framebuffer = Framebuffer::Create(fbDesc);
-        pipelineDesc.Layout = {
-            { "POSITION", ShaderDataType::Float3 },
-            { "NORMAL", ShaderDataType::Float3 },
-            { "TEXCOORD", ShaderDataType::Float2 }
-        };
-        pipelineDesc.EnableDepthTest = false;
-        pipelineDesc.EnableBlend = true;
-        pipelineDesc.Wireframe = false;
-        pipelineDesc.BackfaceCulling = false;
-
-        ms_DefaultPipeline = GraphicsPipeline::Create(pipelineDesc);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::BeginFrame(const Ref<CommandBuffer>& commandBuffer)
     {
         commandBuffer->Begin();
-        commandBuffer->TransitionResource(ms_DefaultPipeline->GetFramebuffer()->GetAttachmnt(AttachmentPoint::Color0), ResourceState::Present, ResourceState::RenderTarget);
-        commandBuffer->BeginRenderPass(ms_DefaultPipeline->GetFramebuffer(), true);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::BeginRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer, bool clear)
+    {
+        commandBuffer->BeginRenderPass(framebuffer, clear);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::EndRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer)
+    {
+        commandBuffer->EndRenderPass(framebuffer);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::Draw(const Ref<CommandBuffer>& commandBuffer, const Ref<GraphicsPipeline>& pipeline, u32 count)
+    {
+        commandBuffer->SetGraphicsPipeline(pipeline);
+        commandBuffer->Draw(count);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::EndFrame(const Ref<CommandBuffer>& commandBuffer)
     {
-        commandBuffer->SetGraphicsPipeline(ms_DefaultPipeline);
-        commandBuffer->Draw(4);
-
-        commandBuffer->TransitionResource(Application::Get().GetWindow().GetSwapChain().GetBackBuffer(), ResourceState::RenderTarget, ResourceState::Present);
         commandBuffer->End();
-
-        ms_Device->GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(commandBuffer);
+        auto fence = ms_Device->GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

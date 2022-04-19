@@ -8,6 +8,8 @@
 
 namespace Atom
 {
+    class CommandBuffer;
+
     class DX12CommandQueue : public CommandQueue
     {
     public:
@@ -29,6 +31,7 @@ namespace Atom
         ComPtr<ID3D12Fence1>       m_D3DFence;
         HANDLE                     m_FenceEvent;
         u64                        m_FenceValue = 0;
+        Vector<ID3D12CommandList*> m_QueuedCommandLists;
     };
 }
 #endif // ATOM_PLATFORM_WINDOWS

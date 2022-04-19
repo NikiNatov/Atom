@@ -25,8 +25,8 @@ namespace Atom
         virtual ~CommandBuffer() = default;
 
         virtual void Begin() = 0;
-        virtual void TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState) = 0;
         virtual void BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear = false) = 0;
+        virtual void EndRenderPass(const Ref<Framebuffer>& framebuffer) = 0;
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) = 0;
         virtual void Draw(u32 count) = 0;
         virtual void End() = 0;

@@ -16,7 +16,8 @@ namespace Atom
         virtual void OnImGuiRender() override;
         virtual void OnEvent(Event& event) override;
     private:
-        Ref<CommandBuffer> m_CommandBuffer;
+        Ref<CommandBuffer>    m_CommandBuffer = nullptr;
+        Ref<GraphicsPipeline> m_DefaultPipeline = nullptr;
     };
 
 }

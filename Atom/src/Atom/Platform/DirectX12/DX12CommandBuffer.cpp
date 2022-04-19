@@ -16,19 +16,21 @@ namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     DX12CommandBuffer::DX12CommandBuffer()
+        : m_ResourceStateTracker(*this)
     {
         auto d3dDevice = Renderer::GetDevice().As<DX12Device>()->GetD3DDevice();
-        u32 framesInFlight = Renderer::GetFramesInFlight();
 
-        // Create command allocators for each frame
+        u32 framesInFlight = Renderer::GetFramesInFlight();
         m_Allocators.resize(framesInFlight);
+        m_PendingAllocators.resize(framesInFlight);
         for (u32 i = 0; i < framesInFlight; i++)
         {
             DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_Allocators[i])));
+            DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_PendingAllocators[i])));
         }
-
-        // Create command list
+        
         DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
+        DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -39,26 +41,38 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12CommandBuffer::Begin()
     {
-        u32 frameIndex = Renderer::GetCurrentFrameIndex();
-        DXCall(m_Allocators[frameIndex]->Reset());
-        DXCall(m_CommandList->Reset(m_Allocators[frameIndex].Get(), NULL));
-    }
+        u32 currentFrame = Renderer::GetCurrentFrameIndex();
+        DXCall(m_Allocators[currentFrame]->Reset());
+        DXCall(m_CommandList->Reset(m_Allocators[currentFrame].Get(), NULL));
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::TransitionResource(const Ref<Texture>& texture, ResourceState beforeState, ResourceState afterState)
-    {
-        DX12Texture* dx12Texture = texture->As<DX12Texture>();
+        DXCall(m_PendingAllocators[currentFrame]->Reset());
+        DXCall(m_PendingCommandList->Reset(m_PendingAllocators[currentFrame].Get(), NULL));
 
-        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx12Texture->GetD3DResource().Get(), 
-                                                            Utils::AtomResourceStateToD3D12(beforeState), 
-                                                            Utils::AtomResourceStateToD3D12(afterState));
-        m_CommandList->ResourceBarrier(1, &barrier);
+        m_ResourceStateTracker.ClearStates();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12CommandBuffer::BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear)
     {
         auto dx12FrameBuffer = framebuffer->As<DX12Framebuffer>();
+
+        // Transition all resources to render target state
+        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
+        {
+            auto renderTarget = dx12FrameBuffer->GetRTV((AttachmentPoint)i);
+            if (renderTarget)
+            {
+                auto dx12RenderTarget = renderTarget->As<DX12TextureViewRT>();
+                m_ResourceStateTracker.AddTransition(dx12RenderTarget->GetTextureResource()->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            }
+        }
+
+        auto depthBuffer = dx12FrameBuffer->GetDSV();
+        if (depthBuffer)
+        {
+            auto dx12DepthBuffer = depthBuffer->As<DX12TextureViewDS>();
+            m_ResourceStateTracker.AddTransition(dx12DepthBuffer->GetTextureResource()->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        }
 
         if (clear)
         {
@@ -104,7 +118,6 @@ namespace Atom
         // Set depth buffer
         D3D12_CPU_DESCRIPTOR_HANDLE* dsvHandle = nullptr;
 
-        auto depthBuffer = dx12FrameBuffer->GetDSV();
         if (depthBuffer)
         {
             auto dx12DepthBuffer = depthBuffer->As<DX12TextureViewDS>();
@@ -114,6 +127,25 @@ namespace Atom
         m_CommandList->RSSetViewports(1, &dx12FrameBuffer->GetViewport());
         m_CommandList->RSSetScissorRects(1, &dx12FrameBuffer->GetScissorRect());
         m_CommandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), false, dsvHandle);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12CommandBuffer::EndRenderPass(const Ref<Framebuffer>& framebuffer)
+    {
+        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
+        {
+            auto colorAttachment = framebuffer->GetAttachmnt((AttachmentPoint)i);
+            if (colorAttachment)
+            {
+                m_ResourceStateTracker.AddTransition(colorAttachment->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COMMON);
+            }
+        }
+
+        auto depthBuffer = framebuffer->GetAttachmnt(AttachmentPoint::DepthStencil);
+        if (depthBuffer)
+        {
+            m_ResourceStateTracker.AddTransition(depthBuffer->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_READ);
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -129,13 +161,19 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12CommandBuffer::Draw(u32 count)
     {
+        m_ResourceStateTracker.CommitBarriers();
         m_CommandList->DrawInstanced(count, 1, 0, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12CommandBuffer::End()
     {
+        m_ResourceStateTracker.CommitBarriers();
         DXCall(m_CommandList->Close());
+
+        m_ResourceStateTracker.CommitPendingBarriers();
+        m_ResourceStateTracker.UpdateGlobalStates();
+        DXCall(m_PendingCommandList->Close());
     }
 }
 

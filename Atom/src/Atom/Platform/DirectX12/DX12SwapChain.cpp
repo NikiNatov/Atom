@@ -6,6 +6,7 @@
 #include "DX12Device.h"
 #include "DX12CommandQueue.h"
 #include "DX12TextureView.h"
+#include "DX12ResourceStateTracker.h"
 
 namespace Atom
 {
@@ -89,6 +90,8 @@ namespace Atom
 
             for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
             {
+                DX12ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->As<DX12Texture>()->GetD3DResource().Get());
+
                 m_BackBuffers[i].reset();
                 m_BackBufferRTVs[i]->As<DX12TextureViewRT>()->GetDescriptor().Release();
                 m_BackBufferRTVs[i].reset();
@@ -145,10 +148,12 @@ namespace Atom
         for (u32 i = 0 ; i < m_BackBuffers.size(); i++)
         {
             // Get the back buffer resource
-            ComPtr<ID3D12Resource2> backBuffer;
+            ComPtr<ID3D12Resource2> backBuffer = nullptr;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
             m_BackBuffers[i] = Texture::CreateSwapChainBuffer((u64)backBuffer.Detach());
             m_BackBufferRTVs[i] = TextureViewRT::Create(m_BackBuffers[i]);
+
+            DX12ResourceStateTracker::AddGlobalResourceState(m_BackBuffers[i]->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_PRESENT);
         }
 
         // Recreate viewport
