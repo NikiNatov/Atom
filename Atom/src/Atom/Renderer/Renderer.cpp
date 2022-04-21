@@ -22,32 +22,32 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginFrame(const Ref<CommandBuffer>& commandBuffer)
+    void Renderer::BeginFrame(CommandBuffer* commandBuffer)
     {
         commandBuffer->Begin();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer, bool clear)
+    void Renderer::BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear)
     {
         commandBuffer->BeginRenderPass(framebuffer, clear);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer)
+    void Renderer::EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer)
     {
         commandBuffer->EndRenderPass(framebuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Draw(const Ref<CommandBuffer>& commandBuffer, const Ref<GraphicsPipeline>& pipeline, u32 count)
+    void Renderer::Draw(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, u32 count)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
         commandBuffer->Draw(count);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndFrame(const Ref<CommandBuffer>& commandBuffer)
+    void Renderer::EndFrame(CommandBuffer* commandBuffer)
     {
         commandBuffer->End();
         auto fence = ms_Device->GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(commandBuffer);

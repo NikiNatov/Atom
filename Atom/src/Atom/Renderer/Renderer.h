@@ -25,11 +25,11 @@ namespace Atom
     {
     public:
         static void Initialize();
-        static void BeginFrame(const Ref<CommandBuffer>& commandBuffer);
-        static void BeginRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer, bool clear = true);
-        static void EndRenderPass(const Ref<CommandBuffer>& commandBuffer, const Ref<Framebuffer>& framebuffer);
-        static void Draw(const Ref<CommandBuffer>& commandBuffer, const Ref<GraphicsPipeline>& pipeline, u32 count);
-        static void EndFrame(const Ref<CommandBuffer>& commandBuffer);
+        static void BeginFrame(CommandBuffer* commandBuffer);
+        static void BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear = true);
+        static void EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer);
+        static void Draw(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, u32 count);
+        static void EndFrame(CommandBuffer* commandBuffer);
 
         static void SetAPI(RenderAPI api);
         static RenderAPI GetAPI();

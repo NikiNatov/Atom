@@ -20,8 +20,8 @@ namespace Atom
         virtual u32 GetHeight() const = 0;
         virtual u32 GetCurrentBackBufferIndex() const = 0;
         virtual u32 GetBackBufferCount() const = 0;
-        virtual const Ref<Texture>& GetBackBuffer() const = 0;
-        virtual const Ref<TextureViewRT>& GetBackBufferRTV() const = 0;
+        virtual const Texture* GetBackBuffer() const = 0;
+        virtual const TextureViewRT* GetBackBufferRTV() const = 0;
 
         IMPL_API_CAST(SwapChain)
 

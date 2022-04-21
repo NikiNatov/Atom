@@ -101,8 +101,8 @@ namespace Atom
         virtual ~GraphicsPipeline() = default;
 
         virtual const PipelineLayout& GetLayout() const = 0;
-        virtual const Ref<Shader>& GetShader() const = 0;
-        virtual const Ref<Framebuffer>& GetFramebuffer() const = 0;
+        virtual const Shader* GetShader() const = 0;
+        virtual const Framebuffer* GetFramebuffer() const = 0;
         virtual Topology GetTopology() const = 0;
         virtual bool IsDepthTestingEnabled() const = 0;
         virtual bool IsBlendingEnabled() const = 0;

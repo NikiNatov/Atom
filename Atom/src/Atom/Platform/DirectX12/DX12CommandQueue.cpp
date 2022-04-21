@@ -68,13 +68,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 DX12CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
+    u64 DX12CommandQueue::ExecuteCommandList(const CommandBuffer* commandBuffer)
     {
         return ExecuteCommandLists({ commandBuffer });
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 DX12CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
+    u64 DX12CommandQueue::ExecuteCommandLists(const Vector<const CommandBuffer*>& commandBuffers)
     {
         Vector<ID3D12CommandList*> commandListArray;
 

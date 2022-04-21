@@ -23,8 +23,8 @@ namespace Atom
         virtual u64 Signal() = 0;
         virtual void WaitForFenceValue(u64 value) = 0;
         virtual void Flush() = 0;
-        virtual u64 ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer) = 0;
-        virtual u64 ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers) = 0;
+        virtual u64 ExecuteCommandList(const CommandBuffer* commandBuffer) = 0;
+        virtual u64 ExecuteCommandLists(const Vector<const CommandBuffer*>& commandBuffers) = 0;
         virtual CommandQueueType GetQueueType() const = 0;
 
         IMPL_API_CAST(CommandQueue)

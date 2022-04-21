@@ -15,8 +15,8 @@ namespace Atom
         ~DX12GraphicsPipeline();
 
         virtual const PipelineLayout& GetLayout() const override;
-        virtual const Ref<Shader>& GetShader() const override;
-        virtual const Ref<Framebuffer>& GetFramebuffer() const override;
+        virtual const Shader* GetShader() const override;
+        virtual const Framebuffer* GetFramebuffer() const override;
         virtual Topology GetTopology() const override;
         virtual bool IsDepthTestingEnabled() const override;
         virtual bool IsBlendingEnabled() const override;

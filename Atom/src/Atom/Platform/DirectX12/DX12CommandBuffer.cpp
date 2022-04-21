@@ -57,7 +57,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear)
+    void DX12CommandBuffer::BeginRenderPass(const Framebuffer* framebuffer, bool clear)
     {
         auto dx12FrameBuffer = framebuffer->As<DX12Framebuffer>();
 
@@ -97,7 +97,7 @@ namespace Atom
                 auto dx12DepthBuffer = depthBuffer->As<DX12TextureViewDS>();
 
                 D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
-                if (dx12FrameBuffer->GetAttachmnt(AttachmentPoint::DepthStencil)->GetFormat() == TextureFormat::Depth24Stencil8)
+                if (dx12FrameBuffer->GetAttachment(AttachmentPoint::DepthStencil)->GetFormat() == TextureFormat::Depth24Stencil8)
                 {
                     clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
                 }
@@ -135,18 +135,18 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::EndRenderPass(const Ref<Framebuffer>& framebuffer)
+    void DX12CommandBuffer::EndRenderPass(const Framebuffer* framebuffer)
     {
         for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
         {
-            auto colorAttachment = framebuffer->GetAttachmnt((AttachmentPoint)i);
+            auto colorAttachment = framebuffer->GetAttachment((AttachmentPoint)i);
             if (colorAttachment)
             {
                 m_ResourceStateTracker.AddTransition(colorAttachment->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COMMON);
             }
         }
 
-        auto depthBuffer = framebuffer->GetAttachmnt(AttachmentPoint::DepthStencil);
+        auto depthBuffer = framebuffer->GetAttachment(AttachmentPoint::DepthStencil);
         if (depthBuffer)
         {
             m_ResourceStateTracker.AddTransition(depthBuffer->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_READ);
@@ -154,7 +154,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline)
+    void DX12CommandBuffer::SetGraphicsPipeline(const GraphicsPipeline* pipeline)
     {
         auto dx12Pipeline = pipeline->As<DX12GraphicsPipeline>();
 

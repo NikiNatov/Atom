@@ -60,9 +60,9 @@ namespace Atom
         virtual u32 GetHeight() const = 0;
         virtual const f32* GetClearColor() const = 0;
         virtual bool IsSwapChainTarget() const = 0;
-        virtual const Ref<Texture>& GetAttachmnt(AttachmentPoint attachment) const = 0;
-        virtual const Ref<TextureViewRT>& GetRTV(AttachmentPoint attachment) const = 0;
-        virtual const Ref<TextureViewDS>& GetDSV() const = 0;
+        virtual const Texture* GetAttachment(AttachmentPoint attachment) const = 0;
+        virtual const TextureViewRT* GetRTV(AttachmentPoint attachment) const = 0;
+        virtual const TextureViewDS* GetDSV() const = 0;
 
         IMPL_API_CAST(Framebuffer)
 

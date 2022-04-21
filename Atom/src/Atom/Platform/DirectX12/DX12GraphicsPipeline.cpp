@@ -131,14 +131,14 @@ namespace Atom
 
         for (u8 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
         {
-            auto& colorAttachment = m_Description.Framebuffer->GetAttachmnt((AttachmentPoint)i);
+            auto colorAttachment = m_Description.Framebuffer->GetAttachment((AttachmentPoint)i);
             if (colorAttachment)
             {
                 m_D3DDescription.RTVFormats[i] = Utils::AtomTextureFormatToRTVFormat(colorAttachment->GetFormat());
             }
         }
 
-        auto& depthAttachment = m_Description.Framebuffer->GetAttachmnt(AttachmentPoint::DepthStencil);
+        auto depthAttachment = m_Description.Framebuffer->GetAttachment(AttachmentPoint::DepthStencil);
         if (depthAttachment)
         {
             m_D3DDescription.DSVFormat = Utils::AtomTextureFormatToDSVFormat(depthAttachment->GetFormat());
@@ -166,15 +166,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Shader>& DX12GraphicsPipeline::GetShader() const
+    const Shader* DX12GraphicsPipeline::GetShader() const
     {
-        return m_Description.Shader;
+        return m_Description.Shader.get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Framebuffer>& DX12GraphicsPipeline::GetFramebuffer() const
+    const Framebuffer* DX12GraphicsPipeline::GetFramebuffer() const
     {
-        return m_Description.Framebuffer;
+        return m_Description.Framebuffer.get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

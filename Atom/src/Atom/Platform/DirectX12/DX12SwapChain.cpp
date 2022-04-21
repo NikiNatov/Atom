@@ -130,15 +130,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Texture>& DX12SwapChain::GetBackBuffer() const
+    const Texture* DX12SwapChain::GetBackBuffer() const
     {
-        return m_BackBuffers[m_BackBufferIndex];
+        return m_BackBuffers[m_BackBufferIndex].get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<TextureViewRT>& DX12SwapChain::GetBackBufferRTV() const
+    const TextureViewRT* DX12SwapChain::GetBackBufferRTV() const
     {
-        return m_BackBufferRTVs[m_BackBufferIndex];
+        return m_BackBufferRTVs[m_BackBufferIndex].get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -75,14 +75,14 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Texture>& DX12Framebuffer::GetAttachmnt(AttachmentPoint attachment) const
+    const Texture* DX12Framebuffer::GetAttachment(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
             return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain().GetBackBuffer() : nullptr;
         }
 
-        return m_Attachments[attachment];
+        return m_Attachments[attachment].get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -108,7 +108,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<TextureViewRT>& DX12Framebuffer::GetRTV(AttachmentPoint attachment) const
+    const TextureViewRT* DX12Framebuffer::GetRTV(AttachmentPoint attachment) const
     {
         ATOM_ENGINE_ASSERT(attachment != AttachmentPoint::DepthStencil, "Depth attachment does not have RTV!");
 
@@ -117,18 +117,18 @@ namespace Atom
             return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain().GetBackBufferRTV() : nullptr;
         }
 
-        return m_ColorAttachmentRTVs[attachment];
+        return m_ColorAttachmentRTVs[attachment].get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<TextureViewDS>& DX12Framebuffer::GetDSV() const
+    const TextureViewDS* DX12Framebuffer::GetDSV() const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
             return nullptr;
         }
 
-        return m_DepthAttachmentDSV;
+        return m_DepthAttachmentDSV.get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

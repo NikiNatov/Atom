@@ -22,8 +22,8 @@ namespace Atom
         virtual u32 GetHeight() const override;
         virtual u32 GetCurrentBackBufferIndex() const override;
         virtual u32 GetBackBufferCount() const override;
-        virtual const Ref<Texture>& GetBackBuffer() const override;
-        virtual const Ref<TextureViewRT>& GetBackBufferRTV() const override;
+        virtual const Texture* GetBackBuffer() const override;
+        virtual const TextureViewRT* GetBackBufferRTV() const override;
 
         inline ComPtr<IDXGISwapChain4> GetDXGISwapChain() const { return m_DXGISwapChain; }
         inline const D3D12_VIEWPORT& GetViewport() const { return m_Viewport; }

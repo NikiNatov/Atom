@@ -57,11 +57,12 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnUpdate(Timestep ts)
     {
-        Renderer::BeginFrame(m_CommandBuffer);
-        Renderer::BeginRenderPass(m_CommandBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::Draw(m_CommandBuffer, m_DefaultPipeline, 3);
-        Renderer::EndRenderPass(m_CommandBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::EndFrame(m_CommandBuffer);
+        CommandBuffer* cmdBuffer = m_CommandBuffer.get();
+        Renderer::BeginFrame(cmdBuffer);
+        Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
+        Renderer::Draw(cmdBuffer, m_DefaultPipeline.get(), 3);
+        Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
+        Renderer::EndFrame(cmdBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

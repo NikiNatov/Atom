@@ -16,9 +16,9 @@ namespace Atom
         ~DX12CommandBuffer();
 
         virtual void Begin() override;
-        virtual void BeginRenderPass(const Ref<Framebuffer>& framebuffer, bool clear = false) override;
-        virtual void EndRenderPass(const Ref<Framebuffer>& framebuffer) override;
-        virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) override;
+        virtual void BeginRenderPass(const Framebuffer* framebuffer, bool clear = false) override;
+        virtual void EndRenderPass(const Framebuffer* framebuffer) override;
+        virtual void SetGraphicsPipeline(const GraphicsPipeline* pipeline) override;
         virtual void Draw(u32 count) override;
         virtual void End() override;
 
