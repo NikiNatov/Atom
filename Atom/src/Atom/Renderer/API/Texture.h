@@ -47,7 +47,6 @@ namespace Atom
 
     struct TextureDescription
     {
-        String DebugName = "";
         TextureFormat Format = TextureFormat::RGBA8;
         u32 Width = 0;
         u32 Height = 0;
@@ -66,7 +65,6 @@ namespace Atom
 
         virtual void Release() = 0;
         virtual void DeferredRelease() = 0;
-        virtual const String& GetDebugName() const = 0;
         virtual TextureType GetType() const = 0;
         virtual TextureFormat GetFormat() const = 0;
         virtual u32 GetWidth() const = 0;
@@ -78,8 +76,8 @@ namespace Atom
 
         IMPL_API_CAST(Texture)
 
-        static Ref<Texture> CreateTexture2D(const TextureDescription& description);
-        static Ref<Texture> CreateTextureCube(const TextureDescription& description);
-        static Ref<Texture> CreateSwapChainBuffer(u64 bufferHandle);
+        static Ref<Texture> CreateTexture2D(const TextureDescription& description, const char* debugName = "Unnamed Texture2D");
+        static Ref<Texture> CreateTextureCube(const TextureDescription& description, const char* debugName = "Unnamed TextureCube");
+        static Ref<Texture> CreateSwapChainBuffer(u64 bufferHandle, const char* debugName = "Unnamed Texture");
     };
 }

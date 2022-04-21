@@ -11,7 +11,7 @@ namespace Atom
     class DX12GraphicsPipeline : public GraphicsPipeline
     {
     public:
-        DX12GraphicsPipeline(const GraphicsPipelineDescription& description);
+        DX12GraphicsPipeline(const GraphicsPipelineDescription& description, const char* debugName = "Unnamed Graphics Pipeline");
         ~DX12GraphicsPipeline();
 
         virtual const PipelineLayout& GetLayout() const override;

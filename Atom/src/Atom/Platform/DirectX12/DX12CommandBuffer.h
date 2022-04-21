@@ -12,7 +12,7 @@ namespace Atom
     class DX12CommandBuffer : public CommandBuffer
     {
     public:
-        DX12CommandBuffer();
+        DX12CommandBuffer(const char* debugName = "Unnamed Command Buffer");
         ~DX12CommandBuffer();
 
         virtual void Begin() override;

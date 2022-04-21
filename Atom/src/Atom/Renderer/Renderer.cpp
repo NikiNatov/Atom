@@ -17,7 +17,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize()
     {
-        ms_Device = Device::Create(GPUPreference::HighPerformance);
+        ms_Device = Device::Create(GPUPreference::HighPerformance, "Main Device");
         ms_Device->Initialize();
     }
 

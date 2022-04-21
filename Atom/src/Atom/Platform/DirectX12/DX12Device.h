@@ -13,7 +13,7 @@ namespace Atom
     class DX12Device : public Device
     {
     public:
-        DX12Device(GPUPreference gpuPreference);
+        DX12Device(GPUPreference gpuPreference, const char* debugName = "Unnamed Device");
         ~DX12Device();
 
         virtual void Initialize() override;

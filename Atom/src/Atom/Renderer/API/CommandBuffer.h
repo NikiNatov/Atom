@@ -33,6 +33,6 @@ namespace Atom
 
         IMPL_API_CAST(CommandBuffer)
 
-        static Ref<CommandBuffer> Create();
+        static Ref<CommandBuffer> Create(const char* debugName = "Unnamed Command Buffer");
     };
 }

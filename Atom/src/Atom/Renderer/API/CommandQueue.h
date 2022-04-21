@@ -29,7 +29,7 @@ namespace Atom
 
         IMPL_API_CAST(CommandQueue)
 
-        static Scope<CommandQueue> Create(CommandQueueType type);
+        static Scope<CommandQueue> Create(CommandQueueType type, const char* debugName = "Unnamed Command Queue");
     };
 
 }

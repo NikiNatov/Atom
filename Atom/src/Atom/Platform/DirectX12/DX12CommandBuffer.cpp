@@ -15,7 +15,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12CommandBuffer::DX12CommandBuffer()
+    DX12CommandBuffer::DX12CommandBuffer(const char* debugName)
         : m_ResourceStateTracker(*this)
     {
         auto d3dDevice = Renderer::GetDevice().As<DX12Device>()->GetD3DDevice();
@@ -31,6 +31,11 @@ namespace Atom
         
         DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
         DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
+
+#if defined (ATOM_DEBUG)
+        String name = debugName;
+        DXCall(m_CommandList->SetName(STRING_TO_WSTRING(name).c_str()));
+#endif
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -12,13 +12,12 @@ namespace Atom
     class DX12Texture : public Texture
     {
     public:
-        DX12Texture(TextureType type, const TextureDescription& description);
-        DX12Texture(TextureType type, u64 textureHandle);
+        DX12Texture(TextureType type, const TextureDescription& description, const char* debugName);
+        DX12Texture(TextureType type, u64 textureHandle, const char* debugName);
         ~DX12Texture();
 
         virtual void Release() override;
         virtual void DeferredRelease() override;
-        virtual const String& GetDebugName() const override;
         virtual TextureType GetType() const override;
         virtual TextureFormat GetFormat() const override;
         virtual u32 GetWidth() const override;

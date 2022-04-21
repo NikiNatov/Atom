@@ -30,7 +30,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12GraphicsPipeline::DX12GraphicsPipeline(const GraphicsPipelineDescription& description)
+    DX12GraphicsPipeline::DX12GraphicsPipeline(const GraphicsPipelineDescription& description, const char* debugName)
         : m_Description(description)
     {
         //////////////////////////////////////////////////////////////////////
@@ -147,6 +147,11 @@ namespace Atom
         m_D3DDescription.SampleDesc.Count = 1;
 
         DXCall(device->GetD3DDevice()->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
+
+#if defined (ATOM_DEBUG)
+        String name = debugName;
+        DXCall(m_D3DPipeline->SetName(STRING_TO_WSTRING(name).c_str()));
+#endif
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

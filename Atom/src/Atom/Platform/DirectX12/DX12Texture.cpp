@@ -9,7 +9,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12Texture::DX12Texture(TextureType type, const TextureDescription& description)
+    DX12Texture::DX12Texture(TextureType type, const TextureDescription& description, const char* debugName)
         : m_Type(type), m_Description(description)
     {
         ATOM_ENGINE_ASSERT(m_Description.Width && m_Description.Height, "Texture dimensions cannot be 0!");
@@ -55,28 +55,21 @@ namespace Atom
         DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_D3DResource)));
 
 #if defined (ATOM_DEBUG)
-        DXCall(m_D3DResource->SetName(WString(m_Description.DebugName.begin(), m_Description.DebugName.end()).c_str()));
+        String name = debugName;
+        DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
         DX12ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
     }
     
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12Texture::DX12Texture(TextureType type, u64 textureHandle)
+    DX12Texture::DX12Texture(TextureType type, u64 textureHandle, const char* debugName)
         : m_Type(type)
     {
         m_D3DResource.Attach((ID3D12Resource*)textureHandle);
 
         // Set the description based on the d3d resource
         D3D12_RESOURCE_DESC desc = m_D3DResource->GetDesc();
-        char name[100]{ 0 };
-
-#if defined (ATOM_DEBUG)
-        u32 bufferSize = sizeof(name) - 1;
-        m_D3DResource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &bufferSize, name);
-#endif
-
-        m_Description.DebugName = name;
         m_Description.Width = desc.Width;
         m_Description.Height = desc.Height;
         m_Description.Format = Utils::DXGITextureFormatToAtomFormat(desc.Format);
@@ -86,6 +79,11 @@ namespace Atom
         m_Description.UsageFlags |= desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ? TextureUsage::UnorderedAccess : 0;
         m_Description.Filter = TextureFilter::Linear;
         m_Description.Wrap = TextureWrap::Repeat;
+
+#if defined (ATOM_DEBUG)
+        String name = debugName;
+        DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
+#endif
 
         DX12ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
     }
@@ -105,12 +103,6 @@ namespace Atom
     void DX12Texture::DeferredRelease()
     {
         Renderer::GetDevice().As<DX12Device>()->ReleaseResource(m_D3DResource.Detach());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const String& DX12Texture::GetDebugName() const
-    {
-        return m_Description.DebugName;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

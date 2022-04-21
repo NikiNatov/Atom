@@ -36,6 +36,8 @@
     #define ATOM_DEBUG_BREAK()
 #endif
 
+#define STRING_TO_WSTRING(str) WString(str.begin(), str.end())
+
 #define ATOM_EXPAND_MACRO(x) x
 #define ATOM_MACRO_TO_STR(x) #x
 

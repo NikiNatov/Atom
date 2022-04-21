@@ -32,6 +32,6 @@ namespace Atom
 
         IMPL_API_CAST(Device)
 
-        static Ref<Device> Create(GPUPreference gpuPreference);
+        static Ref<Device> Create(GPUPreference gpuPreference, const char* debugName = "Unnamed Device");
     };
 }

@@ -5,13 +5,13 @@
 
 namespace Atom
 {
-    Ref<Device> Device::Create(GPUPreference gpuPreference)
+    Ref<Device> Device::Create(GPUPreference gpuPreference, const char* debugName)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12Device>(gpuPreference);
+            case RenderAPI::DirectX12: return CreateRef<DX12Device>(gpuPreference, debugName);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }

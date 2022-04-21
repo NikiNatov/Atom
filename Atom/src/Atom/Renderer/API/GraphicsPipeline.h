@@ -111,6 +111,6 @@ namespace Atom
 
         IMPL_API_CAST(GraphicsPipeline)
 
-        static Ref<GraphicsPipeline> Create(const GraphicsPipelineDescription& description);
+        static Ref<GraphicsPipeline> Create(const GraphicsPipelineDescription& description, const char* debugName = "Unnamed Graphics Pipeline");
     };
 }

@@ -6,13 +6,13 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<CommandBuffer> CommandBuffer::Create()
+    Ref<CommandBuffer> CommandBuffer::Create(const char* debugName)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12CommandBuffer>();
+            case RenderAPI::DirectX12: return CreateRef<DX12CommandBuffer>(debugName);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }

@@ -5,13 +5,13 @@
 
 namespace Atom
 {
-    Ref<GraphicsPipeline> GraphicsPipeline::Create(const GraphicsPipelineDescription& description)
+    Ref<GraphicsPipeline> GraphicsPipeline::Create(const GraphicsPipelineDescription& description, const char* debugName)
     {
         switch (Renderer::GetAPI())
         {
 
 #if defined(ATOM_PLATFORM_WINDOWS)
-            case RenderAPI::DirectX12: return CreateRef<DX12GraphicsPipeline>(description);
+            case RenderAPI::DirectX12: return CreateRef<DX12GraphicsPipeline>(description, debugName);
 #endif // ATOM_PLATFORM_WINDOWS
 
         }

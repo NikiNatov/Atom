@@ -150,7 +150,7 @@ namespace Atom
             // Get the back buffer resource
             ComPtr<ID3D12Resource2> backBuffer = nullptr;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
-            m_BackBuffers[i] = Texture::CreateSwapChainBuffer((u64)backBuffer.Detach());
+            m_BackBuffers[i] = Texture::CreateSwapChainBuffer((u64)backBuffer.Detach(), fmt::format("SwapChainBackBuffer[{}]", i).c_str());
             m_BackBufferRTVs[i] = TextureViewRT::Create(m_BackBuffers[i]);
 
             DX12ResourceStateTracker::AddGlobalResourceState(m_BackBuffers[i]->As<DX12Texture>()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_PRESENT);

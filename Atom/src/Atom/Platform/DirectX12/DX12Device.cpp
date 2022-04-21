@@ -8,7 +8,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12Device::DX12Device(GPUPreference gpuPreference)
+    DX12Device::DX12Device(GPUPreference gpuPreference, const char* debugName)
     {
         ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
 
@@ -70,12 +70,14 @@ namespace Atom
         // Create the main device with the max supported feature level
         ATOM_ENGINE_ASSERT(featureLevelInfo.MaxSupportedFeatureLevel >= D3D_FEATURE_LEVEL_11_0);
         DXCall(D3D12CreateDevice(m_DXGIAdapter.Get(), featureLevelInfo.MaxSupportedFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
-        DXCall(m_D3DDevice->SetName(L"Main Device"));
 
         // Get feature options
         DXCall(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_FeatureOptions, sizeof(m_FeatureOptions)));
 
 #if defined(ATOM_DEBUG)
+
+        String name = debugName;
+        DXCall(m_D3DDevice->SetName(STRING_TO_WSTRING(name).c_str()));
 
         // Set up the message severity levels
         ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
@@ -142,9 +144,9 @@ namespace Atom
     void DX12Device::Initialize()
     {
         // Create command queues
-        m_GraphicsQueue = CommandQueue::Create(CommandQueueType::Graphics);
-        m_ComputeQueue = CommandQueue::Create(CommandQueueType::Compute);
-        m_CopyQueue = CommandQueue::Create(CommandQueueType::Copy);
+        m_GraphicsQueue = CommandQueue::Create(CommandQueueType::Graphics, "GraphicsQueue");
+        m_ComputeQueue = CommandQueue::Create(CommandQueueType::Compute, "ComputeQueue");
+        m_CopyQueue = CommandQueue::Create(CommandQueueType::Copy, "CopyQueue");
 
         // Create descriptor allocators
         m_RtvAllocator = CreateScope<DX12DescriptorAllocator>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512, false);

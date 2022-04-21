@@ -13,7 +13,7 @@ namespace Atom
     class DX12CommandQueue : public CommandQueue
     {
     public:
-        DX12CommandQueue(CommandQueueType type);
+        DX12CommandQueue(CommandQueueType type, const char* debugName = "Unnamed Command Queue");
         ~DX12CommandQueue();
 
         virtual u64 Signal() override;

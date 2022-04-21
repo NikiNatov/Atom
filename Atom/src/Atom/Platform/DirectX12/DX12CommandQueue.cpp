@@ -9,7 +9,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    DX12CommandQueue::DX12CommandQueue(CommandQueueType type)
+    DX12CommandQueue::DX12CommandQueue(CommandQueueType type, const char* debugName)
         : m_Type(type)
     {
         auto d3dDevice = Renderer::GetDevice().As<DX12Device>()->GetD3DDevice();
@@ -28,6 +28,11 @@ namespace Atom
 
         // Create event
         m_FenceEvent = CreateEvent(0, false, false, 0);
+
+#if defined (ATOM_DEBUG)
+        String name = debugName;
+        DXCall(m_D3DCommandQueue->SetName(STRING_TO_WSTRING(name).c_str()));
+#endif
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -149,7 +149,6 @@ namespace Atom
                 bool isDepthAttachment = i == AttachmentPoint::DepthStencil;
 
                 TextureDescription attachmentDesc;
-                attachmentDesc.DebugName = "";
                 attachmentDesc.Format = m_Description.Attachments[i].Format;
                 attachmentDesc.Width = m_Description.Width;
                 attachmentDesc.Height = m_Description.Height;
@@ -158,7 +157,7 @@ namespace Atom
                 attachmentDesc.Wrap = m_Description.Attachments[i].Wrap;
                 attachmentDesc.UsageFlags = TextureUsage::ShaderResource | (isDepthAttachment ? TextureUsage::DepthBuffer : TextureUsage::RenderTarget);
 
-                m_Attachments[i] = Texture::CreateTexture2D(attachmentDesc);
+                m_Attachments[i] = Texture::CreateTexture2D(attachmentDesc, isDepthAttachment ? "DepthBuffer" : fmt::format("ColorAttachment[{}]", i).c_str());
 
                 if (isDepthAttachment)
                 {
