@@ -38,8 +38,6 @@ namespace Atom
         pipelineDesc.Framebuffer = Framebuffer::Create(fbDesc);
         pipelineDesc.Layout = {
             { "POSITION", ShaderDataType::Float3 },
-            { "NORMAL", ShaderDataType::Float3 },
-            { "TEXCOORD", ShaderDataType::Float2 }
         };
         pipelineDesc.EnableDepthTest = false;
         pipelineDesc.EnableBlend = true;
@@ -47,6 +45,39 @@ namespace Atom
         pipelineDesc.BackfaceCulling = false;
 
         m_DefaultPipeline = GraphicsPipeline::Create(pipelineDesc);
+
+        struct Vertex
+        {
+            f32 x, y, z;
+
+            Vertex(f32 x, f32 y, f32 z)
+                : x(x), y(y), z(z)
+            {}
+        };
+
+        // Create buffers
+        Vertex vertices[] = {
+            Vertex(-0.5f, -0.5f, 0.0f),
+            Vertex( 0.5f, -0.5f, 0.0f),
+            Vertex( 0.5f,  0.5f, 0.0f),
+            Vertex(-0.5f,  0.5f, 0.0f),
+        };
+
+        VertexBufferDescription vbDesc;
+        vbDesc.VertexCount = _countof(vertices);
+        vbDesc.VertexStride = sizeof(Vertex);
+        vbDesc.Data = vertices;
+
+        m_QuadVertexBuffer = VertexBuffer::Create(vbDesc, "QuadVertexBuffer");
+
+        u32 indices[] = { 0, 1, 2, 2, 3, 0 };
+
+        IndexBufferDescription ibDesc;
+        ibDesc.IndexCount = _countof(indices);
+        ibDesc.Format = IndexBufferFormat::U32;
+        ibDesc.Data = indices;
+
+        m_QuadIndexBuffer = IndexBuffer::Create(ibDesc, "QuadIndexBuffer");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -60,7 +91,7 @@ namespace Atom
         CommandBuffer* cmdBuffer = m_CommandBuffer.get();
         Renderer::BeginFrame(cmdBuffer);
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::Draw(cmdBuffer, m_DefaultPipeline.get(), 3);
+        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         Renderer::EndFrame(cmdBuffer);
     }

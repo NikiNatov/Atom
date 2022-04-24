@@ -9,6 +9,7 @@
 #include "DX12SwapChain.h"
 #include "DX12GraphicsPipeline.h"
 #include "DX12Framebuffer.h"
+#include "DX12Buffer.h"
 
 #include "Atom/Core/Application.h"
 
@@ -159,15 +160,31 @@ namespace Atom
         auto dx12Pipeline = pipeline->As<DX12GraphicsPipeline>();
 
         m_CommandList->SetGraphicsRootSignature(dx12Pipeline->GetD3DDescription().pRootSignature);
-        m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_CommandList->IASetPrimitiveTopology(Utils::D3D12TopologyTypeToD3D12Topology(dx12Pipeline->GetD3DDescription().PrimitiveTopologyType));
         m_CommandList->SetPipelineState(dx12Pipeline->GetD3DPipeline().Get());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DX12CommandBuffer::Draw(u32 count)
+    void DX12CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
+    {
+        auto dx12VertexBuffer = vertexBuffer->As<DX12VertexBuffer>();
+        m_ResourceStateTracker.AddTransition(dx12VertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        m_CommandList->IASetVertexBuffers(0, 1, &dx12VertexBuffer->GetBufferView());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
+    {
+        auto dx12IndexBuffer = indexBuffer->As<DX12IndexBuffer>();
+        m_ResourceStateTracker.AddTransition(dx12IndexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+        m_CommandList->IASetIndexBuffer(&dx12IndexBuffer->GetBufferView());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DX12CommandBuffer::DrawIndexed(u32 indexCount)
     {
         m_ResourceStateTracker.CommitBarriers();
-        m_CommandList->DrawInstanced(count, 1, 0, 0);
+        m_CommandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -19,7 +19,9 @@ namespace Atom
         virtual void BeginRenderPass(const Framebuffer* framebuffer, bool clear = false) override;
         virtual void EndRenderPass(const Framebuffer* framebuffer) override;
         virtual void SetGraphicsPipeline(const GraphicsPipeline* pipeline) override;
-        virtual void Draw(u32 count) override;
+        virtual void SetVertexBuffer(const VertexBuffer* vertexBuffer) override;
+        virtual void SetIndexBuffer(const IndexBuffer* indexBuffer) override;
+        virtual void DrawIndexed(u32 indexCount) override;
         virtual void End() override;
 
         inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }

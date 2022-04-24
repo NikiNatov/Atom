@@ -8,6 +8,8 @@ namespace Atom
     class CommandBuffer;
     class GraphicsPipeline;
     class Framebuffer;
+    class VertexBuffer;
+    class IndexBuffer;
 
     enum class RenderAPI
     {
@@ -28,7 +30,7 @@ namespace Atom
         static void BeginFrame(CommandBuffer* commandBuffer);
         static void BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear = true);
         static void EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer);
-        static void Draw(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, u32 count);
+        static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer);
         static void EndFrame(CommandBuffer* commandBuffer);
 
         static void SetAPI(RenderAPI api);

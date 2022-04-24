@@ -21,4 +21,5 @@
 #include "Atom/Renderer/API/Shader.h"
 #include "Atom/Renderer/API/GraphicsPipeline.h"
 #include "Atom/Renderer/API/Framebuffer.h"
+#include "Atom/Renderer/API/Buffer.h"
 #include "Atom/Renderer/Renderer.h"

@@ -11,6 +11,7 @@
 #include "Atom/Renderer/API/Texture.h"
 #include "Atom/Renderer/API/CommandBuffer.h"
 #include "Atom/Renderer/API/GraphicsPipeline.h"
+#include "Atom/Renderer/API/Buffer.h"
 
 namespace Atom { namespace Utils {
 
@@ -204,6 +205,33 @@ namespace Atom { namespace Utils {
 
         ATOM_ASSERT(false, "Unknown topology type!");
         return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static D3D12_PRIMITIVE_TOPOLOGY D3D12TopologyTypeToD3D12Topology(D3D12_PRIMITIVE_TOPOLOGY_TYPE type)
+    {
+        switch (type)
+        {
+            case D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT:    return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+            case D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE:     return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+            case D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        }
+
+        ATOM_ASSERT(false, "Unknown topology type!");
+        return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static DXGI_FORMAT AtomIndexBufferFormatToD3D12(IndexBufferFormat format)
+    {
+        switch (format)
+        {
+            case IndexBufferFormat::U16: return DXGI_FORMAT_R16_UINT;
+            case IndexBufferFormat::U32: return DXGI_FORMAT_R32_UINT;
+        }
+
+        ATOM_ASSERT(false, "Unknown index buffer format!");
+        return DXGI_FORMAT_UNKNOWN;
     }
 }}
 #endif // ATOM_PLATFORM_WINDOWS

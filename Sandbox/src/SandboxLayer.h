@@ -18,6 +18,8 @@ namespace Atom
     private:
         Ref<CommandBuffer>    m_CommandBuffer = nullptr;
         Ref<GraphicsPipeline> m_DefaultPipeline = nullptr;
+        Ref<VertexBuffer>     m_QuadVertexBuffer = nullptr;
+        Ref<IndexBuffer>      m_QuadIndexBuffer = nullptr;
     };
 
 }

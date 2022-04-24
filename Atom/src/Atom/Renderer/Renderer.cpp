@@ -8,6 +8,7 @@
 #include "Atom/Renderer/API/TextureView.h"
 #include "Atom/Renderer/API/GraphicsPipeline.h"
 #include "Atom/Renderer/API/Framebuffer.h"
+#include "Atom/Renderer/API/Buffer.h"
 
 namespace Atom
 {
@@ -40,10 +41,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Draw(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, u32 count)
+    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
-        commandBuffer->Draw(count);
+        commandBuffer->SetVertexBuffer(vertexBuffer);
+        commandBuffer->SetIndexBuffer(indexBuffer);
+        commandBuffer->DrawIndexed(indexBuffer->GetIndexCount());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

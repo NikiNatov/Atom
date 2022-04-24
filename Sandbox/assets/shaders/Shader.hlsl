@@ -1,42 +1,24 @@
-struct VSIn
+struct VSInput
 {
-    uint vertexId : SV_VertexID;
+    float3 Position : POSITION;
 };
 
-struct VSOut
+struct PSInput
 {
-    float4 pos : SV_Position;
-    float4 color : color;
+    float4 PositionSV : SV_POSITION;
+    float3 Position   : POSITION;
 };
 
-struct PSOut
+PSInput VSMain(in VSInput input)
 {
-    float4 color : SV_Target;
-};
-
-VSOut VSMain(VSIn input)
-{
-    VSOut output;
-
-    if (input.vertexId == 0)
-        output.pos = float4(0.0, 0.5, 0.0, 1.0);
-    else if (input.vertexId == 1)
-        output.pos = float4(-0.5, -0.5, 0.0, 1.0);
-    else if (input.vertexId == 2)
-        output.pos = float4(0.5, -0.5, 0.0, 1.0);
-    else
-        output.pos = float4(0.0, 0.0, 0.0, 1.0);
-
-    output.color = clamp(output.pos, 0, 1);
+    PSInput output;
+    output.Position = input.Position;
+    output.PositionSV = float4(input.Position, 1.0);
 
     return output;
 }
 
-PSOut PSMain(VSOut input)
+float4 PSMain(in PSInput input) : SV_TARGET
 {
-    PSOut output;
-
-    output.color = input.color;
-
-    return output;
+    return float4(input.Position + 0.5, 1.0);
 }
