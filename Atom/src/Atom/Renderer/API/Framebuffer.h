@@ -4,6 +4,8 @@
 #include "Atom/Renderer/Renderer.h"
 #include "Texture.h"
 
+#include <glm/glm.hpp>
+
 namespace Atom
 {
     class TextureViewRT;
@@ -45,7 +47,7 @@ namespace Atom
         u32                   Width = 0;
         u32                   Height = 0;
         bool                  SwapChainFrameBuffer = false;
-        f32                   ClearColor[4]{ 0 };
+        glm::vec4             ClearColor { 0 };
         FramebufferAttachment Attachments[AttachmentPoint::NumAttachments];
         Ref<Texture>          OverrideAttachments[AttachmentPoint::NumAttachments];
     };
@@ -58,7 +60,7 @@ namespace Atom
         virtual void Resize(u32 width, u32 height) = 0;
         virtual u32 GetWidth() const = 0;
         virtual u32 GetHeight() const = 0;
-        virtual const f32* GetClearColor() const = 0;
+        virtual const glm::vec4& GetClearColor() const = 0;
         virtual bool IsSwapChainTarget() const = 0;
         virtual const Texture* GetAttachment(AttachmentPoint attachment) const = 0;
         virtual const TextureViewRT* GetRTV(AttachmentPoint attachment) const = 0;

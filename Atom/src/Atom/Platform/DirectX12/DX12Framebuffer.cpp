@@ -63,7 +63,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const f32* DX12Framebuffer::GetClearColor() const
+    const glm::vec4& DX12Framebuffer::GetClearColor() const
     {
         return m_Description.ClearColor;
     }

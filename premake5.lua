@@ -12,6 +12,7 @@ workspace "Atom"
 
 	IncludeDirs = {}
 	IncludeDirs["spd_log"] = "Atom/vendor/spdlog/include"
+	IncludeDirs["glm"] = "Atom/vendor/glm"
 
 project "Atom"
 	location "Atom"
@@ -37,7 +38,8 @@ project "Atom"
 	includedirs
 	{
 		"%{prj.name}/src",
-		"%{IncludeDirs.spd_log}"
+		"%{IncludeDirs.spd_log}",
+		"%{IncludeDirs.glm}"
 	}
 
 	defines
@@ -81,7 +83,8 @@ project "Sandbox"
 	{
 		"Atom/src",
 		"Atom/vendor",
-		"%{IncludeDirs.spd_log}"
+		"%{IncludeDirs.spd_log}",
+		"%{IncludeDirs.glm}"
 	}
 
 	links

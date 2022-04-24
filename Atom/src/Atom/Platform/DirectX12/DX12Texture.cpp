@@ -96,6 +96,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DX12Texture::Release()
     {
+        DX12ResourceStateTracker::RemoveGlobalResourceState(m_D3DResource.Get());
         m_D3DResource.Reset();
     }
 

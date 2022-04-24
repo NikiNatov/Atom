@@ -18,7 +18,7 @@ namespace Atom
         virtual void Resize(u32 width, u32 height) override;
         virtual u32 GetWidth() const override;
         virtual u32 GetHeight() const override;
-        virtual const f32* GetClearColor() const override;
+        virtual const glm::vec4& GetClearColor() const override;
         virtual bool IsSwapChainTarget() const override;
         virtual const Texture* GetAttachment(AttachmentPoint attachment) const override;
         virtual const TextureViewRT* GetRTV(AttachmentPoint attachment) const override;

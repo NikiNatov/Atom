@@ -13,6 +13,8 @@
 
 #include "Atom/Core/Application.h"
 
+#include <glm\gtc\type_ptr.hpp>
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -88,7 +90,7 @@ namespace Atom
                 if (renderTarget)
                 {
                     auto dx12RenderTarget = renderTarget->As<DX12TextureViewRT>();
-                    m_CommandList->ClearRenderTargetView(dx12RenderTarget->GetDescriptor().GetCPUHandle(), dx12FrameBuffer->GetClearColor(), 0, nullptr);
+                    m_CommandList->ClearRenderTargetView(dx12RenderTarget->GetDescriptor().GetCPUHandle(), glm::value_ptr(dx12FrameBuffer->GetClearColor()), 0, nullptr);
                 }
             }
 

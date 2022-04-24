@@ -1,4 +1,5 @@
 #include "SandboxLayer.h"
+#include <glm/glm.hpp>
 
 namespace Atom
 {
@@ -25,10 +26,7 @@ namespace Atom
         fbDesc.SwapChainFrameBuffer = true;
         fbDesc.Width = 1980;
         fbDesc.Height = 1080;
-        fbDesc.ClearColor[0] = 0.2f;
-        fbDesc.ClearColor[1] = 0.2f;
-        fbDesc.ClearColor[2] = 0.2f;
-        fbDesc.ClearColor[3] = 1.0f;
+        fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
         fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
         fbDesc.Attachments[AttachmentPoint::DepthStencil] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
 
@@ -48,10 +46,10 @@ namespace Atom
 
         struct Vertex
         {
-            f32 x, y, z;
+            glm::vec3 Position;
 
             Vertex(f32 x, f32 y, f32 z)
-                : x(x), y(y), z(z)
+                : Position(x, y, z)
             {}
         };
 
