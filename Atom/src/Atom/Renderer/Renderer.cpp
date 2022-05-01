@@ -2,29 +2,33 @@
 #include "Renderer.h"
 
 #include "Atom/Core/Application.h"
-#include "Atom/Renderer/API/Device.h"
-#include "Atom/Renderer/API/CommandBuffer.h"
-#include "Atom/Renderer/API/Texture.h"
-#include "Atom/Renderer/API/TextureView.h"
-#include "Atom/Renderer/API/GraphicsPipeline.h"
-#include "Atom/Renderer/API/Framebuffer.h"
-#include "Atom/Renderer/API/Buffer.h"
+#include "Atom/Renderer/Device.h"
+#include "Atom/Renderer/CommandBuffer.h"
+#include "Atom/Renderer/CommandQueue.h"
+#include "Atom/Renderer/Texture.h"
+#include "Atom/Renderer/TextureView.h"
+#include "Atom/Renderer/GraphicsPipeline.h"
+#include "Atom/Renderer/Framebuffer.h"
+#include "Atom/Renderer/Buffer.h"
 
 namespace Atom
 {
-    RenderAPI Renderer::ms_RenderAPI = RenderAPI::None;
+    RendererConfig Renderer::ms_Config;
     Ref<Device> Renderer::ms_Device = nullptr;
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Initialize()
+    void Renderer::Initialize(const RendererConfig& config)
     {
-        ms_Device = Device::Create(GPUPreference::HighPerformance, "Main Device");
+        ms_Config = config;
+        ms_Device = CreateRef<Device>(GPUPreference::HighPerformance, "Main Device");
         ms_Device->Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::BeginFrame(CommandBuffer* commandBuffer)
     {
+        ms_Device->ProcessDeferredReleases(GetCurrentFrameIndex());
+
         commandBuffer->Begin();
     }
 
@@ -53,36 +57,30 @@ namespace Atom
     void Renderer::EndFrame(CommandBuffer* commandBuffer)
     {
         commandBuffer->End();
-        auto fence = ms_Device->GetCommandQueue(CommandQueueType::Graphics).ExecuteCommandList(commandBuffer);
+        auto fence = ms_Device->GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::SetAPI(RenderAPI api)
+    Device* Renderer::GetDevice()
     {
-        ms_RenderAPI = api;
+        return ms_Device.get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderAPI Renderer::GetAPI()
+    const RendererConfig& Renderer::GetConfig()
     {
-        return ms_RenderAPI;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Device& Renderer::GetDevice()
-    {
-        return *ms_Device;
+        return ms_Config;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     u32 Renderer::GetCurrentFrameIndex()
     {
-        return Application::Get().GetWindow().GetSwapChain().GetCurrentBackBufferIndex();
+        return Application::Get().GetWindow().GetSwapChain()->GetCurrentBackBufferIndex();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     u32 Renderer::GetFramesInFlight()
     {
-        return FRAMES_IN_FLIGHT;
+        return ms_Config.FramesInFlight;
     }
 }

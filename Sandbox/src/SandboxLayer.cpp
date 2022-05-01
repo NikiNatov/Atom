@@ -19,7 +19,7 @@ namespace Atom
     void SandboxLayer::OnAttach()
     {
         // Create command buffers
-        m_CommandBuffer = CommandBuffer::Create();
+        m_CommandBuffer = CreateRef<CommandBuffer>();
 
         // Create pipeline
         FramebufferDescription fbDesc;
@@ -32,8 +32,8 @@ namespace Atom
 
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Topology = Topology::Triangles;
-        pipelineDesc.Shader = Shader::Create("assets/shaders/Shader.hlsl");
-        pipelineDesc.Framebuffer = Framebuffer::Create(fbDesc);
+        pipelineDesc.Shader = CreateRef<Shader>("assets/shaders/Shader.hlsl");
+        pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
         pipelineDesc.Layout = {
             { "POSITION", ShaderDataType::Float3 },
         };
@@ -42,7 +42,7 @@ namespace Atom
         pipelineDesc.Wireframe = false;
         pipelineDesc.BackfaceCulling = false;
 
-        m_DefaultPipeline = GraphicsPipeline::Create(pipelineDesc);
+        m_DefaultPipeline = CreateRef<GraphicsPipeline>(pipelineDesc);
 
         struct Vertex
         {
@@ -66,7 +66,7 @@ namespace Atom
         vbDesc.VertexStride = sizeof(Vertex);
         vbDesc.Data = vertices;
 
-        m_QuadVertexBuffer = VertexBuffer::Create(vbDesc, "QuadVertexBuffer");
+        m_QuadVertexBuffer = CreateRef<VertexBuffer>(vbDesc, "QuadVertexBuffer");
 
         u32 indices[] = { 0, 1, 2, 2, 3, 0 };
 
@@ -75,7 +75,7 @@ namespace Atom
         ibDesc.Format = IndexBufferFormat::U32;
         ibDesc.Data = indices;
 
-        m_QuadIndexBuffer = IndexBuffer::Create(ibDesc, "QuadIndexBuffer");
+        m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, "QuadIndexBuffer");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

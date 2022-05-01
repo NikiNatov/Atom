@@ -3,7 +3,9 @@
 #include "Application.h"
 #include "Logger.h"
 
-int main(int argc, char** argv)
+#include "AtomWin.h"
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 #if defined (ATOM_DEBUG)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -16,4 +18,6 @@ int main(int argc, char** argv)
     app->Run();
 
     delete app;
+
+    return 0;
 }

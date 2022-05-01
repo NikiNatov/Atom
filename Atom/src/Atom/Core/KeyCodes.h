@@ -2,16 +2,12 @@
 
 #include "Core.h"
 
-#if defined(ATOM_PLATFORM_WINDOWS)
-#include <Windows.h>
-#endif // ATOM_PLATFORM_WINDOWS
+#include "AtomWin.h"
 
 namespace Atom
 {
 	enum class Key : s32
 	{
-		#if defined(ATOM_PLATFORM_WINDOWS)
-
 		Backspace = VK_BACK,
 		Tab = VK_TAB,
 		Clear = VK_CLEAR,
@@ -102,7 +98,5 @@ namespace Atom
 		F11 = VK_F11,
 		F12 = VK_F12,
 		NumLock = VK_NUMLOCK
-
-		#endif // ATOM_PLATFORM_WINDOWS
 	};
 }

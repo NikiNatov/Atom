@@ -5,7 +5,7 @@
 #include "Atom/Core/Logger.h"
 
 #include "Atom/Renderer/Renderer.h"
-#include "Atom/Renderer/API/Device.h"
+#include "Atom/Renderer/Device.h"
 
 namespace Atom
 {
@@ -18,7 +18,6 @@ namespace Atom
         ATOM_ENGINE_ASSERT(ms_Application == nullptr, "Application already exists!");
         ms_Application = this;
 
-        Renderer::SetAPI(RenderAPI::DirectX12);
         Renderer::Initialize();
 
         WindowProperties properties;
@@ -27,13 +26,13 @@ namespace Atom
         properties.Height = m_Specification.WindowHeight;
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
-        m_Window = Window::Create(properties);
+        m_Window = CreateScope<Window>(properties);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Application::~Application()
     {
-        Renderer::GetDevice().WaitIdle();
+        Renderer::GetDevice()->WaitIdle();
 
         for (auto layer : m_LayerStack)
             layer->OnDetach();

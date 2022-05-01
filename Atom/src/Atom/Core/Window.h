@@ -3,7 +3,7 @@
 #include "Core.h"
 #include "Events/Events.h"
 
-#include "Atom/Renderer/API/SwapChain.h"
+#include "Atom/Renderer/SwapChain.h"
 
 namespace Atom
 {
@@ -28,23 +28,38 @@ namespace Atom
     class Window
     {
     public:
-        virtual ~Window() = default;
+        Window(const WindowProperties& properties);
+        ~Window();
 
-        virtual void ProcessEvents() = 0;
-        virtual void SwapBuffers() = 0;
-        virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
-        virtual void SetMinimized(bool state) = 0;
-        virtual void ToggleVSync() = 0;
+        void ProcessEvents();
+        void SwapBuffers();
+        void SetEventCallback(const EventCallbackFn& callback);
+        void SetMinimized(bool state);
+        void ToggleVSync();
 
-        virtual const String& GetTitle() const = 0;
-        virtual u32 GetWidth() const = 0;
-        virtual u32 GetHeight() const = 0;
-        virtual bool IsVSyncOn() const = 0;
-        virtual bool IsMinimized() const = 0;
+        const String& GetTitle() const { return m_Title; }
+        u32 GetWidth() const { return m_Width; }
+        u32 GetHeight() const { return m_Height; }
+        bool IsVSyncOn() const { return m_VSync; }
+        bool IsMinimized() const { return m_Minimized; }
+        HWND GetWindowHandle() const { return m_WindowHandle; }
+        const SwapChain* GetSwapChain() const { return m_SwapChain.get(); };
+    private:
+        static LRESULT WINAPI WindowProcSetup(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+        static LRESULT WINAPI WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+    private:
+        String          m_Title;
+        u32             m_Width;
+        u32             m_Height;
+        bool            m_VSync;
+        bool            m_Minimized;
+        bool            m_NeedsResize;
 
-        virtual u64 GetWindowHandle() const = 0;
-        virtual const SwapChain& GetSwapChain() const = 0;
+        HWND            m_WindowHandle;
+        WNDCLASSEX      m_WindowClass;
+        RECT            m_WindowRect;
+        EventCallbackFn m_EventCallback;
 
-        static Scope<Window> Create(const WindowProperties& properties);
+        Ref<SwapChain>  m_SwapChain;
     };
 }

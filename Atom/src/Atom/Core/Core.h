@@ -18,20 +18,16 @@
 
 // Platform
 #ifdef _WIN32
-    #ifdef _WIN64
-        #define ATOM_PLATFORM_WINDOWS
-    #else
+    #ifndef _WIN64
         #error "Atom only supports x64 builds"
     #endif
 #else
-    #error "Atom only supports Windows for now"
+    #error "Atom only supports Windows!"
 #endif
 
 // Unility
 #if defined(ATOM_DEBUG)
-    #if defined(ATOM_PLATFORM_WINDOWS)
-        #define ATOM_DEBUG_BREAK() __debugbreak()
-    #endif
+    #define ATOM_DEBUG_BREAK() __debugbreak()
 #else
     #define ATOM_DEBUG_BREAK()
 #endif
@@ -47,20 +43,6 @@
 #define KB(bytes) (bytes / 1024)
 #define MB(bytes) (KB(bytes) / 1024)
 #define GB(bytes) (MB(bytes) / 1024)
-
-#define IMPL_API_CAST(classType) \
-template<typename T> \
-T* As() const \
-{ \
-    ATOM_ENGINE_ASSERT(false, "Type not supported!"); \
-    return nullptr; \
-} \
-template<> \
-DX12##classType* As() const \
-{ \
-    ATOM_ENGINE_ASSERT(Renderer::GetAPI() == RenderAPI::DirectX12, "Invalid cast! Selected RendererAPI does not match the cast type!"); \
-    return (DX12##classType*)(this); \
-} \
 
 // Asserts
 #if defined(ATOM_DEBUG)
