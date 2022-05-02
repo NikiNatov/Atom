@@ -7,11 +7,11 @@ namespace Atom
 {
     enum class DescriptorHeapType
     {
-        ShaderResources,
-        RenderTargets,
-        DepthStencils,
-        Samplers,
-        TypeCount = Samplers
+        ShaderResource,
+        RenderTarget,
+        DepthStencil,
+        Sampler,
+        TypeCount = Sampler
     };
 
     class DescriptorHeap

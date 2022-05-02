@@ -17,7 +17,6 @@
 #include "Atom/Renderer/SwapChain.h"
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/Texture.h"
-#include "Atom/Renderer/TextureView.h"
 #include "Atom/Renderer/Shader.h"
 #include "Atom/Renderer/GraphicsPipeline.h"
 #include "Atom/Renderer/Framebuffer.h"

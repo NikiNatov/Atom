@@ -12,13 +12,13 @@ namespace Atom
     DescriptorHeap::DescriptorHeap(DescriptorHeapType type, u32 capacity, bool shaderVisible, const char* debugName)
         : m_Type(type), m_Capacity(capacity), m_Size(0)
     {
-        ATOM_ENGINE_ASSERT(capacity && ((m_Type != DescriptorHeapType::Samplers && capacity <= D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2) ||
-                                        (m_Type == DescriptorHeapType::Samplers && capacity <= D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE)), "Invalid capacity!");
+        ATOM_ENGINE_ASSERT(capacity && ((m_Type != DescriptorHeapType::Sampler && capacity <= D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2) ||
+                                        (m_Type == DescriptorHeapType::Sampler && capacity <= D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE)), "Invalid capacity!");
 
         auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
 
         // RTV and DSV heaps cannot be shader visible
-        if (m_Type == DescriptorHeapType::RenderTargets || m_Type == DescriptorHeapType::DepthStencils)
+        if (m_Type == DescriptorHeapType::RenderTarget || m_Type == DescriptorHeapType::DepthStencil)
         {
             shaderVisible = false;
         }

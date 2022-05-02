@@ -3,7 +3,6 @@
 #include "SwapChain.h"
 #include "Device.h"
 #include "CommandQueue.h"
-#include "TextureView.h"
 #include "Texture.h"
 #include "ResourceStateTracker.h"
 #include "Renderer.h"
@@ -46,7 +45,6 @@ namespace Atom
         // Create the back buffers
         u32 framesInFlight = Renderer::GetFramesInFlight();
         m_BackBuffers.resize(framesInFlight, nullptr);
-        m_BackBufferRTVs.resize(framesInFlight, nullptr);
         RecreateBuffers();
 
         // Initialize fence values
@@ -88,10 +86,7 @@ namespace Atom
             for (u32 i = 0; i < m_BackBuffers.size(); i++)
             {
                 ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetD3DResource().Get());
-
                 m_BackBuffers[i].reset();
-                Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::RenderTargets)->ReleaseDescriptor(m_BackBufferRTVs[i]->GetDescriptor(), false);
-                m_BackBufferRTVs[i].reset();
             }
 
             u32 flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
@@ -127,15 +122,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Texture* SwapChain::GetBackBuffer() const
+    const RenderTexture2D* SwapChain::GetBackBuffer() const
     {
         return m_BackBuffers[m_BackBufferIndex].get();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const TextureViewRT* SwapChain::GetBackBufferRTV() const
-    {
-        return m_BackBufferRTVs[m_BackBufferIndex].get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -147,10 +136,7 @@ namespace Atom
             // Get the back buffer resource
             ComPtr<ID3D12Resource2> backBuffer = nullptr;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
-            m_BackBuffers[i] = CreateRef<Texture>(TextureType::SwapChainBuffer, backBuffer.Detach(), fmt::format("SwapChainBackBuffer[{}]", i).c_str());
-            m_BackBufferRTVs[i] = CreateRef<TextureViewRT>(m_BackBuffers[i]);
-
-            ResourceStateTracker::AddGlobalResourceState(m_BackBuffers[i]->GetD3DResource().Get(), D3D12_RESOURCE_STATE_PRESENT);
+            m_BackBuffers[i] = CreateRef<RenderTexture2D>(backBuffer.Detach(), true, fmt::format("SwapChainBackBuffer[{}]", i).c_str());
         }
 
         // Recreate viewport

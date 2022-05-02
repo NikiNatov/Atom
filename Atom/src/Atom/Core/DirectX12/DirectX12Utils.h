@@ -223,10 +223,10 @@ namespace Atom { namespace Utils {
     {
         switch (type)
         {
-            case DescriptorHeapType::ShaderResources: return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-            case DescriptorHeapType::RenderTargets:   return D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-            case DescriptorHeapType::DepthStencils:   return D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-            case DescriptorHeapType::Samplers:        return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+            case DescriptorHeapType::ShaderResource: return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+            case DescriptorHeapType::RenderTarget:   return D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+            case DescriptorHeapType::DepthStencil:   return D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+            case DescriptorHeapType::Sampler:        return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
         }
 
         ATOM_ASSERT(false, "Unknown heap type!");

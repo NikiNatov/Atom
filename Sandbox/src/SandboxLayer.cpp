@@ -28,7 +28,7 @@ namespace Atom
         fbDesc.Height = 1080;
         fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
         fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
-        fbDesc.Attachments[AttachmentPoint::DepthStencil] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
+        fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
 
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Topology = Topology::Triangles;

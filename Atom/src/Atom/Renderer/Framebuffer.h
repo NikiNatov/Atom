@@ -21,8 +21,8 @@ namespace Atom
         Color5,
         Color6,
         Color7,
-        DepthStencil,
-        NumColorAttachments = DepthStencil,
+        Depth,
+        NumColorAttachments = Depth,
         NumAttachments
     };
 
@@ -62,9 +62,8 @@ namespace Atom
         u32 GetHeight() const;
         const glm::vec4& GetClearColor() const;
         bool IsSwapChainTarget() const;
-        const Texture* GetAttachment(AttachmentPoint attachment) const;
-        const TextureViewRT* GetRTV(AttachmentPoint attachment) const;
-        const TextureViewDS* GetDSV() const;
+        const RenderTexture2D* GetColorAttachment(AttachmentPoint attachment) const;
+        const DepthBuffer* GetDepthAttachment() const;
 
         const D3D12_VIEWPORT& GetViewport() const;
         const D3D12_RECT& GetScissorRect() const;
@@ -74,8 +73,7 @@ namespace Atom
         FramebufferDescription m_Description;
         D3D12_VIEWPORT         m_Viewport{};
         D3D12_RECT             m_ScissorRect{};
-        Ref<Texture>           m_Attachments[AttachmentPoint::NumAttachments]{ nullptr };
-        Ref<TextureViewRT>     m_ColorAttachmentRTVs[AttachmentPoint::NumColorAttachments]{ nullptr };
-        Ref<TextureViewDS>     m_DepthAttachmentDSV = nullptr;
+        Ref<RenderTexture2D>   m_ColorAttachments[AttachmentPoint::NumColorAttachments]{ nullptr };
+        Ref<DepthBuffer>       m_DepthAttachment;
     };
 }

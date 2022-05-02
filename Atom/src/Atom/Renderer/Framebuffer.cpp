@@ -5,7 +5,6 @@
 #include "Framebuffer.h"
 #include "Device.h"
 #include "SwapChain.h"
-#include "TextureView.h"
 
 namespace Atom
 {
@@ -74,14 +73,20 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Texture* Framebuffer::GetAttachment(AttachmentPoint attachment) const
+    const RenderTexture2D* Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
             return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain()->GetBackBuffer() : nullptr;
         }
 
-        return m_Attachments[attachment].get();
+        return m_ColorAttachments[attachment].get();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const DepthBuffer* Framebuffer::GetDepthAttachment() const
+    {
+        return m_DepthAttachment.get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -107,45 +112,16 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const TextureViewRT* Framebuffer::GetRTV(AttachmentPoint attachment) const
-    {
-        ATOM_ENGINE_ASSERT(attachment != AttachmentPoint::DepthStencil, "Depth attachment does not have RTV!");
-
-        if (m_Description.SwapChainFrameBuffer)
-        {
-            return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain()->GetBackBufferRTV() : nullptr;
-        }
-
-        return m_ColorAttachmentRTVs[attachment].get();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const TextureViewDS* Framebuffer::GetDSV() const
-    {
-        if (m_Description.SwapChainFrameBuffer)
-        {
-            return nullptr;
-        }
-
-        return m_DepthAttachmentDSV.get();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     void Framebuffer::Invalidate()
     {
         for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
-            m_Attachments[i] = nullptr;
-
-        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
-            m_ColorAttachmentRTVs[i] = nullptr;
-
-        m_DepthAttachmentDSV = nullptr;
+            m_ColorAttachments[i] = nullptr;
 
         for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
         {
             if (m_Description.Attachments[i].Format != TextureFormat::None)
             {
-                bool isDepthAttachment = i == AttachmentPoint::DepthStencil;
+                bool isDepthAttachment = i == AttachmentPoint::Depth;
 
                 TextureDescription attachmentDesc;
                 attachmentDesc.Format = m_Description.Attachments[i].Format;
@@ -154,17 +130,15 @@ namespace Atom
                 attachmentDesc.MipLevels = 1;
                 attachmentDesc.Filter = m_Description.Attachments[i].Filter;
                 attachmentDesc.Wrap = m_Description.Attachments[i].Wrap;
-                attachmentDesc.UsageFlags = TextureUsage::ShaderResource | (isDepthAttachment ? TextureUsage::DepthBuffer : TextureUsage::RenderTarget);
-
-                m_Attachments[i] = CreateRef<Texture>(TextureType::Texture2D, attachmentDesc, isDepthAttachment ? "DepthBuffer" : fmt::format("ColorAttachment[{}]", i).c_str());
+                attachmentDesc.UsageFlags = (isDepthAttachment ? TextureBindFlags::DepthStencil : TextureBindFlags::RenderTarget);
 
                 if (isDepthAttachment)
                 {
-                    m_DepthAttachmentDSV = CreateRef<TextureViewDS>(m_Attachments[i]);
+                    m_DepthAttachment = CreateRef<DepthBuffer>(attachmentDesc, "DepthBuffer");
                 }
                 else
                 {
-                    m_ColorAttachmentRTVs[i] = CreateRef<TextureViewRT>(m_Attachments[i]);
+                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, fmt::format("ColorAttachment[{}]", i).c_str());
                 }
             }
         }

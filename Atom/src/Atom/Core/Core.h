@@ -44,6 +44,30 @@
 #define MB(bytes) (KB(bytes) / 1024)
 #define GB(bytes) (MB(bytes) / 1024)
 
+#define IMPL_ENUM_OPERATORS(EnumType) \
+static EnumType operator&(EnumType a, EnumType b) \
+{ \
+    return (EnumType)((u8)a & (u8)b); \
+} \
+static EnumType operator|(EnumType a, EnumType b) \
+{ \
+    return (EnumType)((u8)a | (u8)b); \
+} \
+static EnumType& operator|=(EnumType& a, EnumType b) \
+{ \
+    a = (EnumType)((u8)a | (u8)b); \
+    return a; \
+} \
+static EnumType& operator&=(EnumType& a, EnumType b) \
+{ \
+    a = (EnumType)((u8)a & (u8)b); \
+    return a; \
+} \
+static bool IsSet(EnumType flags) \
+{ \
+    return (u8)flags != 0; \
+} \
+
 // Asserts
 #if defined(ATOM_DEBUG)
     #define ATOM_ASSERT_IMPL(type, condition, msg, ...) { if(!(condition)) { ATOM##type##ERROR(msg, __VA_ARGS__); ATOM_DEBUG_BREAK(); } }

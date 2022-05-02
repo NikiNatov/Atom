@@ -152,10 +152,10 @@ namespace Atom
         m_CopyQueue = CreateScope<CommandQueue>(CommandQueueType::Copy, "CopyQueue");
 
         // Create descriptor heaps
-        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResources, Renderer::GetConfig().MaxDescriptorsPerHeap, "ShaderResourceCPUHeap");
-        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTargets, Renderer::GetConfig().MaxDescriptorsPerHeap, "RenderTargetsCPUHeap");
-        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencils, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
-        m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Samplers, 1024, "SamplerCPUHeap");
+        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, "ShaderResourceCPUHeap");
+        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTarget, Renderer::GetConfig().MaxDescriptorsPerHeap, "RenderTargetsCPUHeap");
+        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
+        m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
 
         m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
@@ -227,10 +227,10 @@ namespace Atom
     {
         switch (type)
         {
-            case DescriptorHeapType::ShaderResources: return m_SRVHeap.get();
-            case DescriptorHeapType::RenderTargets:   return m_RTVHeap.get();
-            case DescriptorHeapType::DepthStencils:   return m_DSVHeap.get();
-            case DescriptorHeapType::Samplers:        return m_SamplerHeap.get();
+            case DescriptorHeapType::ShaderResource: return m_SRVHeap.get();
+            case DescriptorHeapType::RenderTarget:   return m_RTVHeap.get();
+            case DescriptorHeapType::DepthStencil:   return m_DSVHeap.get();
+            case DescriptorHeapType::Sampler:        return m_SamplerHeap.get();
         }
 
         ATOM_ENGINE_ASSERT(false, "Unknown heap type!");

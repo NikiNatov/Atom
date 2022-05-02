@@ -6,7 +6,6 @@
 #include "CommandBuffer.h"
 #include "Device.h"
 #include "Texture.h"
-#include "TextureView.h"
 #include "SwapChain.h"
 #include "GraphicsPipeline.h"
 #include "Framebuffer.h"
@@ -62,65 +61,46 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::BeginRenderPass(const Framebuffer* framebuffer, bool clear)
     {
-        // Transition all resources to render target state
-        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
-        {
-            auto renderTarget = framebuffer->GetRTV((AttachmentPoint)i);
-            if (renderTarget)
-            {
-                m_ResourceStateTracker.AddTransition(renderTarget->GetTextureResource()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-            }
-        }
-
-        auto depthBuffer = framebuffer->GetDSV();
-        if (depthBuffer)
-        {
-            m_ResourceStateTracker.AddTransition(depthBuffer->GetTextureResource()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        }
-
-        if (clear)
-        {
-            for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
-            {
-                auto renderTarget = framebuffer->GetRTV((AttachmentPoint)i);
-                if (renderTarget)
-                {
-                    m_CommandList->ClearRenderTargetView(renderTarget->GetDescriptor(), glm::value_ptr(framebuffer->GetClearColor()), 0, nullptr);
-                }
-            }
-
-            auto depthBuffer = framebuffer->GetDSV();
-            if (depthBuffer)
-            {
-                D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
-                if (framebuffer->GetAttachment(AttachmentPoint::DepthStencil)->GetFormat() == TextureFormat::Depth24Stencil8)
-                {
-                    clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
-                }
-
-                m_CommandList->ClearDepthStencilView(depthBuffer->GetDescriptor(), clearFlags, 0.0f, 0xff, 0, nullptr);
-            }
-        }
-
         // Set color attachments
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
         rtvHandles.reserve(AttachmentPoint::NumColorAttachments);
 
         for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
         {
-            auto renderTarget = framebuffer->GetRTV((AttachmentPoint)i);
-            if (renderTarget)
+            auto colorAttachment = framebuffer->GetColorAttachment((AttachmentPoint)i);
+            if (colorAttachment)
             {
-                rtvHandles.push_back(renderTarget->GetDescriptor());
+                m_ResourceStateTracker.AddTransition(colorAttachment->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+                if (clear)
+                {
+                    m_CommandList->ClearRenderTargetView(colorAttachment->GetRTV(), glm::value_ptr(framebuffer->GetClearColor()), 0, nullptr);
+                }
+
+                rtvHandles.push_back(colorAttachment->GetRTV());
             }
         }
 
         // Set depth buffer
         D3D12_CPU_DESCRIPTOR_HANDLE* dsvHandle = nullptr;
+        auto depthBuffer = framebuffer->GetDepthAttachment();
 
         if (depthBuffer)
         {
-            dsvHandle = &depthBuffer->GetDescriptor();
+            m_ResourceStateTracker.AddTransition(depthBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+            if (clear)
+            {
+                D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
+                if (depthBuffer->GetFormat() == TextureFormat::Depth24Stencil8)
+                {
+                    clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
+                }
+
+                m_CommandList->ClearDepthStencilView(depthBuffer->GetDSV(), clearFlags, 0.0f, 0xff, 0, nullptr);
+            }
+
+            dsvHandle = &depthBuffer->GetDSV();
         }
 
         m_CommandList->RSSetViewports(1, &framebuffer->GetViewport());
@@ -133,14 +113,14 @@ namespace Atom
     {
         for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
         {
-            auto colorAttachment = framebuffer->GetAttachment((AttachmentPoint)i);
+            auto colorAttachment = framebuffer->GetColorAttachment((AttachmentPoint)i);
             if (colorAttachment)
             {
                 m_ResourceStateTracker.AddTransition(colorAttachment->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COMMON);
             }
         }
 
-        auto depthBuffer = framebuffer->GetAttachment(AttachmentPoint::DepthStencil);
+        auto depthBuffer = framebuffer->GetDepthAttachment();
         if (depthBuffer)
         {
             m_ResourceStateTracker.AddTransition(depthBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_READ);
