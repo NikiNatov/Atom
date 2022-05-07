@@ -64,7 +64,7 @@ project "Atom"
 
 project "Sandbox"
 	location "Sandbox"
-	kind "WindowedApp"
+	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
 	staticruntime "on"

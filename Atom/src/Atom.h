@@ -25,3 +25,4 @@
 #include "Atom/Renderer/ResourceStateTracker.h"
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/Camera.h"
+#include "Atom/Renderer/EditorCamera.h"

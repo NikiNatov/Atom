@@ -3,6 +3,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/Logger.h"
+#include "Atom/Core/Input.h"
 
 #include "Atom/Renderer/Renderer.h"
 
@@ -26,6 +27,8 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = CreateScope<Window>(properties);
+
+        Input::Initialize(m_Window->GetWindowHandle());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

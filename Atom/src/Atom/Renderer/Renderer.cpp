@@ -41,11 +41,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer)
+    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer, const ConstantBuffer* constantBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
         commandBuffer->SetVertexBuffer(vertexBuffer);
         commandBuffer->SetIndexBuffer(indexBuffer);
+        // TODO: Find a better way of setting constant buffers
+        commandBuffer->SetConstantBuffer(0, constantBuffer);
         commandBuffer->DrawIndexed(indexBuffer->GetElementCount());
     }
 

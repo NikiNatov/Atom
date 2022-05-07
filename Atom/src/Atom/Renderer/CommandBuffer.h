@@ -10,8 +10,10 @@ namespace Atom
     class Texture;
     class GraphicsPipeline;
     class Framebuffer;
+    class Buffer;
     class VertexBuffer;
     class IndexBuffer;
+    class ConstantBuffer;
 
     class CommandBuffer
     {
@@ -25,6 +27,8 @@ namespace Atom
         void SetGraphicsPipeline(const GraphicsPipeline* pipeline);
         void SetVertexBuffer(const VertexBuffer* vertexBuffer);
         void SetIndexBuffer(const IndexBuffer* indexBuffer);
+        void UploadBufferData(const void* data, u32 size, const Buffer* buffer);
+        void SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer);
         void DrawIndexed(u32 indexCount);
         void End();
 
@@ -36,5 +40,7 @@ namespace Atom
         Vector<ComPtr<ID3D12CommandAllocator>> m_PendingAllocators;
         ComPtr<ID3D12GraphicsCommandList6>     m_PendingCommandList;
         ResourceStateTracker                   m_ResourceStateTracker;
+        Vector<ComPtr<ID3D12Resource>>         m_UploadBuffers;
+        bool                                   m_IsRecording = false;
     };
 }

@@ -26,6 +26,7 @@ namespace Atom
         Buffer(BufferType type, const BufferDescription& description, const char* debugName = "Unnamed Buffer");
         virtual ~Buffer();
 
+        void SetData(CommandBuffer* commandBuffer, const void* data, u32 size);
         BufferType GetType() const;
         u32 GetElementSize() const;
         u32 GetElementCount() const;
@@ -71,5 +72,18 @@ namespace Atom
     private:
         D3D12_INDEX_BUFFER_VIEW m_View {};
         IndexBufferFormat       m_Format;
+    };
+
+    class ConstantBuffer : public Buffer
+    {
+    public:
+        ConstantBuffer(const BufferDescription& description, const char* debugName = "Unnamed Constant Buffer");
+        ~ConstantBuffer();
+
+        inline D3D12_CPU_DESCRIPTOR_HANDLE GetCBV() const { return m_CBVDescriptor; }
+    private:
+        virtual void CreateViews() override;
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE m_CBVDescriptor;
     };
 }

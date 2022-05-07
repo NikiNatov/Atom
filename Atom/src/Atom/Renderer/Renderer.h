@@ -12,6 +12,7 @@ namespace Atom
     class Framebuffer;
     class VertexBuffer;
     class IndexBuffer;
+    class ConstantBuffer;
 
     struct RendererConfig
     {
@@ -26,7 +27,7 @@ namespace Atom
         static void BeginFrame(CommandBuffer* commandBuffer);
         static void BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear = true);
         static void EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer);
-        static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer);
+        static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer, const ConstantBuffer* constantBuffer);
         static void EndFrame(CommandBuffer* commandBuffer);
 
         static const RendererConfig& GetConfig();

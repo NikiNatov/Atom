@@ -25,10 +25,12 @@ namespace Atom
         u32 framesInFlight = Renderer::GetFramesInFlight();
         m_Allocators.resize(framesInFlight);
         m_PendingAllocators.resize(framesInFlight);
+        m_UploadBuffers.resize(framesInFlight);
         for (u32 i = 0; i < framesInFlight; i++)
         {
             DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_Allocators[i])));
             DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_PendingAllocators[i])));
+            m_UploadBuffers[i] = nullptr;
         }
 
         DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
@@ -56,6 +58,7 @@ namespace Atom
         DXCall(m_PendingCommandList->Reset(m_PendingAllocators[currentFrame].Get(), NULL));
 
         m_ResourceStateTracker.ClearStates();
+        m_IsRecording = true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -150,6 +153,39 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::UploadBufferData(const void* data, u32 size, const Buffer* buffer)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (data)
+        {
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(buffer->GetSize());
+
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_UploadBuffers[Renderer::GetCurrentFrameIndex()])));
+
+#if defined (ATOM_DEBUG)
+            DXCall(m_UploadBuffers[Renderer::GetCurrentFrameIndex()]->SetName(L"Upload Buffer"));
+#endif
+
+            D3D12_SUBRESOURCE_DATA subresourceData = {};
+            subresourceData.pData = data;
+            subresourceData.RowPitch = size;
+            subresourceData.SlicePitch = subresourceData.RowPitch;
+
+            m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), m_UploadBuffers[Renderer::GetCurrentFrameIndex()].Get(), 0, 0, 1, &subresourceData);
+            m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), Utils::GetInitialStateFromBufferType(buffer->GetType()));
+            m_ResourceStateTracker.CommitBarriers();
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer)
+    {
+        m_CommandList->SetGraphicsRootConstantBufferView(slot, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::DrawIndexed(u32 indexCount)
     {
         m_ResourceStateTracker.CommitBarriers();
@@ -165,5 +201,7 @@ namespace Atom
         m_ResourceStateTracker.CommitPendingBarriers();
         m_ResourceStateTracker.UpdateGlobalStates();
         DXCall(m_PendingCommandList->Close());
+
+        m_IsRecording = false;
     }
 }

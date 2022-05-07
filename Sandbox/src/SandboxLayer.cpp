@@ -3,6 +3,13 @@
 
 namespace Atom
 {
+    struct CameraCB
+    {
+        glm::mat4 ViewMatrix = glm::mat4(1.0f);
+        glm::mat4 ProjMatrix = glm::mat4(1.0f);
+        f32 p[32] {0};
+    };
+
     // -----------------------------------------------------------------------------------------------------------------------------
     SandboxLayer::SandboxLayer()
         : Layer("SandboxLayer")
@@ -76,6 +83,13 @@ namespace Atom
         ibDesc.Data = indices;
 
         m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "QuadIndexBuffer");
+
+        BufferDescription cbDesc;
+        cbDesc.ElementCount = 1;
+        cbDesc.ElementSize = sizeof(CameraCB);
+        cbDesc.Data = nullptr;
+
+        m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -86,10 +100,17 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnUpdate(Timestep ts)
     {
+        m_Camera.OnUpdate(ts);
+
+        CameraCB cameraCB;
+        cameraCB.ProjMatrix = m_Camera.GetProjectionMatrix();
+        cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
+
         CommandBuffer* cmdBuffer = m_CommandBuffer.get();
         Renderer::BeginFrame(cmdBuffer);
+        m_CameraCB->SetData(cmdBuffer, &cameraCB, sizeof(CameraCB));
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get());
+        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         Renderer::EndFrame(cmdBuffer);
     }
@@ -102,5 +123,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnEvent(Event& event)
     {
+        m_Camera.OnEvent(event);
     }
 }
