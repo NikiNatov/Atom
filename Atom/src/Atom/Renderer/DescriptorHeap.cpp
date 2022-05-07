@@ -15,7 +15,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(capacity && ((m_Type != DescriptorHeapType::Sampler && capacity <= D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2) ||
                                         (m_Type == DescriptorHeapType::Sampler && capacity <= D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE)), "Invalid capacity!");
 
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         // RTV and DSV heaps cannot be shader visible
         if (m_Type == DescriptorHeapType::RenderTarget || m_Type == DescriptorHeapType::DepthStencil)

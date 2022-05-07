@@ -13,8 +13,8 @@ namespace Atom
     SwapChain::SwapChain(HWND windowHandle, u32 width, u32 height)
         : m_Width(width), m_Height(height)
     {
-        auto dxgiFactory = Renderer::GetDevice()->GetDXGIFactory();
-        auto gfxQueue = Renderer::GetDevice()->GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue();
+        auto dxgiFactory = Device::Get().GetDXGIFactory();
+        auto gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue();
 
         // Check for tearing support
         ComPtr<IDXGIFactory5> factory;
@@ -59,7 +59,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SwapChain::Present(bool vsync)
     {
-        auto gfxQueue = Renderer::GetDevice()->GetCommandQueue(CommandQueueType::Graphics);
+        auto gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
 
         // Present and signal the fence for the current frame
         DXCall(m_DXGISwapChain->Present(vsync, !vsync && m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0));
@@ -81,7 +81,7 @@ namespace Atom
             m_Height = height;
 
             // Wait for GPU to finish all work
-            Renderer::GetDevice()->WaitIdle();
+            Device::Get().WaitIdle();
 
             for (u32 i = 0; i < m_BackBuffers.size(); i++)
             {

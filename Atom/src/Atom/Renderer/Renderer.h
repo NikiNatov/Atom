@@ -29,7 +29,6 @@ namespace Atom
         static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer);
         static void EndFrame(CommandBuffer* commandBuffer);
 
-        static Device* GetDevice();
         static const RendererConfig& GetConfig();
         static u32 GetCurrentFrameIndex();
         static u32 GetFramesInFlight();

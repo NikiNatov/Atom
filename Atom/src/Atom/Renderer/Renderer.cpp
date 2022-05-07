@@ -13,20 +13,17 @@
 namespace Atom
 {
     RendererConfig Renderer::ms_Config;
-    Ref<Device> Renderer::ms_Device = nullptr;
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize(const RendererConfig& config)
     {
         ms_Config = config;
-        ms_Device = CreateRef<Device>(GPUPreference::HighPerformance, "Main Device");
-        ms_Device->Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::BeginFrame(CommandBuffer* commandBuffer)
     {
-        ms_Device->ProcessDeferredReleases(GetCurrentFrameIndex());
+        Device::Get().ProcessDeferredReleases(GetCurrentFrameIndex());
 
         commandBuffer->Begin();
     }
@@ -49,20 +46,14 @@ namespace Atom
         commandBuffer->SetGraphicsPipeline(pipeline);
         commandBuffer->SetVertexBuffer(vertexBuffer);
         commandBuffer->SetIndexBuffer(indexBuffer);
-        commandBuffer->DrawIndexed(indexBuffer->GetIndexCount());
+        commandBuffer->DrawIndexed(indexBuffer->GetElementCount());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::EndFrame(CommandBuffer* commandBuffer)
     {
         commandBuffer->End();
-        auto fence = ms_Device->GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(commandBuffer);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Device* Renderer::GetDevice()
-    {
-        return ms_Device.get();
+        auto fence = Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

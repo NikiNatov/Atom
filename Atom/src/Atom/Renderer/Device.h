@@ -21,7 +21,6 @@ namespace Atom
         Device(GPUPreference gpuPreference, const char* debugName = "Unnamed Device");
         ~Device();
 
-        void Initialize();
         void WaitIdle() const;
         void ReleaseResource(ID3D12Resource* resource, bool deferredRelease);
         void ProcessDeferredReleases(u32 frameIndex);
@@ -31,6 +30,8 @@ namespace Atom
         inline ComPtr<IDXGIFactory7> GetDXGIFactory() const { return m_DXGIFactory; }
         inline ComPtr<IDXGIAdapter4> GetDXGIAdapter() const { return m_DXGIAdapter; }
         inline ComPtr<ID3D12Device6> GetD3DDevice() const { return m_D3DDevice; }
+    public:
+        static Device& Get() { return *ms_Instance; }
     private:
         DXGI_ADAPTER_DESC3                m_Description;
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 m_FeatureOptions;
@@ -52,5 +53,7 @@ namespace Atom
         // Resource release
         Vector<Vector<ID3D12Resource*>>   m_DeferredReleaseResources;
         std::mutex                        m_DeferredReleaseMutex;
+    private:
+        static Device*                    ms_Instance;
     };
 }

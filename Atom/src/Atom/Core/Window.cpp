@@ -45,7 +45,8 @@ namespace Atom
 		ATOM_ENGINE_ASSERT(m_WindowHandle, "Failed to create the window!");
 
 		// Create rendering context
-		m_SwapChain = CreateRef<SwapChain>(m_WindowHandle, m_Width, m_Height);
+		m_GfxDevice = CreateScope<Device>(GPUPreference::HighPerformance, "Main Device");
+		m_SwapChain = CreateScope<SwapChain>(m_WindowHandle, m_Width, m_Height);
 
 		ShowWindow(m_WindowHandle, SW_MAXIMIZE);
 	}
@@ -55,6 +56,10 @@ namespace Atom
 	{
 		UnregisterClass(m_WindowClass.lpszClassName, s_hInstance);
 		DestroyWindow(m_WindowHandle);
+
+		// Make sure the swapchain is destroyed before the device
+		m_SwapChain.reset();
+		m_GfxDevice.reset();
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------------------

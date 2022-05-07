@@ -4,6 +4,7 @@
 #include "Events/Events.h"
 
 #include "Atom/Renderer/SwapChain.h"
+#include "Atom/Renderer/Device.h"
 
 namespace Atom
 {
@@ -48,18 +49,19 @@ namespace Atom
         static LRESULT WINAPI WindowProcSetup(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
         static LRESULT WINAPI WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
     private:
-        String          m_Title;
-        u32             m_Width;
-        u32             m_Height;
-        bool            m_VSync;
-        bool            m_Minimized;
-        bool            m_NeedsResize;
+        String           m_Title;
+        u32              m_Width;
+        u32              m_Height;
+        bool             m_VSync;
+        bool             m_Minimized;
+        bool             m_NeedsResize;
+                         
+        HWND             m_WindowHandle;
+        WNDCLASSEX       m_WindowClass;
+        RECT             m_WindowRect;
+        EventCallbackFn  m_EventCallback;
 
-        HWND            m_WindowHandle;
-        WNDCLASSEX      m_WindowClass;
-        RECT            m_WindowRect;
-        EventCallbackFn m_EventCallback;
-
-        Ref<SwapChain>  m_SwapChain;
+        Scope<Device>    m_GfxDevice;
+        Scope<SwapChain> m_SwapChain;
     };
 }

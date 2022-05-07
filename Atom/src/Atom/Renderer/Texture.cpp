@@ -1,11 +1,11 @@
 #include "atompch.h"
 
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
+#include "Atom/Core/Application.h"
 
 #include "Texture.h"
 #include "Device.h"
 #include "ResourceStateTracker.h"
-#include "Renderer.h"
 
 namespace Atom
 {
@@ -33,7 +33,7 @@ namespace Atom
             ((m_Description.Format == TextureFormat::Depth24Stencil8) || (m_Description.Format == TextureFormat::Depth32))),
             "Texture with UnorderedAccess usage flag cannot have a depth format!");
 
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         // Create the resource
         D3D12_HEAP_PROPERTIES heapProperties = {};
@@ -92,7 +92,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::~Texture()
     {
-        Renderer::GetDevice()->ReleaseResource(m_D3DResource.Detach(), m_Type != TextureType::SwapChainBuffer);
+        Device::Get().ReleaseResource(m_D3DResource.Detach(), m_Type != TextureType::SwapChainBuffer);
     }
 
     
@@ -162,13 +162,13 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture2D::~Texture2D()
     {
-        Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
+        Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
 
         if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
         {
             for (u32 i = 0; i < m_Description.MipLevels; i++)
             {
-                Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[i], true);
+                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[i], true);
             }
         }
     }
@@ -189,7 +189,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Texture2D::CreateViews()
     {
-        auto dx12Device = Renderer::GetDevice();
+        auto& dx12Device = Device::Get();
 
         // Create SRV
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -199,8 +199,8 @@ namespace Atom
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
 
-        m_SRVDescriptor = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-        dx12Device->GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+        m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
 
         // Create UAVs
         if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
@@ -213,8 +213,8 @@ namespace Atom
                 uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
                 uavDesc.Texture2D.MipSlice = mip;
 
-                m_UAVDescriptors[mip] = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-                dx12Device->GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_UAVDescriptors[mip]);
+                m_UAVDescriptors[mip] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+                dx12Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_UAVDescriptors[mip]);
             }
         }
     }
@@ -239,11 +239,11 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     RenderTexture2D::~RenderTexture2D()
     {
-        Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, m_Type != TextureType::SwapChainBuffer);
+        Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, m_Type != TextureType::SwapChainBuffer);
 
         for (u32 i = 0; i < m_Description.MipLevels; i++)
         {
-            Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->ReleaseDescriptor(m_RTVDescriptors[i], m_Type != TextureType::SwapChainBuffer);
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->ReleaseDescriptor(m_RTVDescriptors[i], m_Type != TextureType::SwapChainBuffer);
         }
     }
 
@@ -263,7 +263,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderTexture2D::CreateViews()
     {
-        auto dx12Device = Renderer::GetDevice();
+        auto& dx12Device = Device::Get();
 
         // Create SRV
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -273,8 +273,8 @@ namespace Atom
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
 
-        m_SRVDescriptor = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-        dx12Device->GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+        m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
 
         // Create RTVs
         m_RTVDescriptors.resize(m_Description.MipLevels);
@@ -285,8 +285,8 @@ namespace Atom
             rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             rtvDesc.Texture2D.MipSlice = mip;
 
-            m_RTVDescriptors[mip] = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->AllocateDescriptor();
-            dx12Device->GetD3DDevice()->CreateRenderTargetView(m_D3DResource.Get(), &rtvDesc, m_RTVDescriptors[mip]);
+            m_RTVDescriptors[mip] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->AllocateDescriptor();
+            dx12Device.GetD3DDevice()->CreateRenderTargetView(m_D3DResource.Get(), &rtvDesc, m_RTVDescriptors[mip]);
         }
     }
 
@@ -314,11 +314,11 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DepthBuffer::~DepthBuffer()
     {
-        Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
+        Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
 
         for (u32 i = 0; i < m_Description.MipLevels; i++)
         {
-            Renderer::GetDevice()->GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->ReleaseDescriptor(m_DSVDescriptors[i], true);
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->ReleaseDescriptor(m_DSVDescriptors[i], true);
         }
     }
 
@@ -338,7 +338,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void DepthBuffer::CreateViews()
     {
-        auto dx12Device = Renderer::GetDevice();
+        auto& dx12Device = Device::Get();
 
         // Create SRV
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -348,8 +348,8 @@ namespace Atom
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
 
-        m_SRVDescriptor = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-        dx12Device->GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+        m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
 
         // Create DSVs
         m_DSVDescriptors.resize(m_Description.MipLevels);
@@ -360,8 +360,8 @@ namespace Atom
             dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
             dsvDesc.Texture2D.MipSlice = mip;
 
-            m_DSVDescriptors[mip] = dx12Device->GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->AllocateDescriptor();
-            dx12Device->GetD3DDevice()->CreateDepthStencilView(m_D3DResource.Get(), &dsvDesc, m_DSVDescriptors[mip]);
+            m_DSVDescriptors[mip] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->AllocateDescriptor();
+            dx12Device.GetD3DDevice()->CreateDepthStencilView(m_D3DResource.Get(), &dsvDesc, m_DSVDescriptors[mip]);
         }
     }
 }

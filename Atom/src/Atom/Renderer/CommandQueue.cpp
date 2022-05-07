@@ -1,6 +1,7 @@
 #include "atompch.h"
 
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
+#include "Atom/Core/Application.h"
 
 #include "CommandQueue.h"
 #include "CommandBuffer.h"
@@ -13,7 +14,7 @@ namespace Atom
     CommandQueue::CommandQueue(CommandQueueType type, const char* debugName)
         : m_Type(type)
     {
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         // Create command queue
         D3D12_COMMAND_QUEUE_DESC desc = {};

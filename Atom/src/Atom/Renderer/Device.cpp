@@ -10,9 +10,14 @@
 
 namespace Atom
 {
+    Device* Device::ms_Instance = nullptr;
+
     // -----------------------------------------------------------------------------------------------------------------------------
     Device::Device(GPUPreference gpuPreference, const char* debugName)
     {
+        ATOM_ENGINE_ASSERT(ms_Instance == nullptr, "Device already exists!");
+        ms_Instance = this;
+
         ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
 
         u32 factoryCreateFlags = 0;
@@ -88,9 +93,22 @@ namespace Atom
 
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+        //infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 
 #endif // ATOM_DEBUG
+
+        // Create command queues
+        m_GraphicsQueue = CreateScope<CommandQueue>(CommandQueueType::Graphics, "GraphicsQueue");
+        m_ComputeQueue = CreateScope<CommandQueue>(CommandQueueType::Compute, "ComputeQueue");
+        m_CopyQueue = CreateScope<CommandQueue>(CommandQueueType::Copy, "CopyQueue");
+
+        // Create descriptor heaps
+        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, "ShaderResourceCPUHeap");
+        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTarget, Renderer::GetConfig().MaxDescriptorsPerHeap, "RenderTargetsCPUHeap");
+        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
+        m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
+
+        m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -140,24 +158,6 @@ namespace Atom
         DXCall(dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL)));
 
 #endif // ATOM_DEBUG
-
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Device::Initialize()
-    {
-        // Create command queues
-        m_GraphicsQueue = CreateScope<CommandQueue>(CommandQueueType::Graphics, "GraphicsQueue");
-        m_ComputeQueue = CreateScope<CommandQueue>(CommandQueueType::Compute, "ComputeQueue");
-        m_CopyQueue = CreateScope<CommandQueue>(CommandQueueType::Copy, "CopyQueue");
-
-        // Create descriptor heaps
-        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, "ShaderResourceCPUHeap");
-        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTarget, Renderer::GetConfig().MaxDescriptorsPerHeap, "RenderTargetsCPUHeap");
-        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
-        m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
-
-        m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -179,6 +179,7 @@ namespace Atom
     {
         if (!deferredRelease)
         {
+            ResourceStateTracker::RemoveGlobalResourceState(resource);
             resource->Release();
             return;
         }

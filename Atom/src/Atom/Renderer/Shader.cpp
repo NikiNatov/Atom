@@ -2,7 +2,6 @@
 
 #include "Shader.h"
 #include "Device.h"
-#include "Renderer.h"
 
 #include <filesystem>
 #include <winnt.h>
@@ -44,7 +43,7 @@ namespace Atom
     Shader::Shader(const String& filepath)
         : m_Name(std::filesystem::path(filepath).stem().string()), m_Filepath(filepath)
     {
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
 #if defined(ATOM_DEBUG)
         UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -224,6 +223,14 @@ namespace Atom
             rootParameters.push_back(param);
         }
 
+        // Create root descriptors for constant buffers
+        for (auto& [slot, cb] : m_DescriptorTable.ConstantBuffers)
+        {
+            CD3DX12_ROOT_PARAMETER1 param;
+            param.InitAsConstantBufferView(slot, cb.ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+            rootParameters.push_back(param);
+        }
+
         // Create resource descriptor table
         Vector<CD3DX12_DESCRIPTOR_RANGE1> ranges;
 
@@ -231,12 +238,6 @@ namespace Atom
         {
             CD3DX12_DESCRIPTOR_RANGE1 range;
             range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, m_DescriptorTable.ResourcesRO.size(), 0, 0);
-            ranges.push_back(range);
-        }
-        if (!m_DescriptorTable.ConstantBuffers.empty())
-        {
-            CD3DX12_DESCRIPTOR_RANGE1 range;
-            range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, m_DescriptorTable.ConstantBuffers.size(), 0, 0);
             ranges.push_back(range);
         }
         if (!m_DescriptorTable.ResourcesRW.empty())
@@ -265,7 +266,7 @@ namespace Atom
         }
 
         // Create root signature
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;

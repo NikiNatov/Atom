@@ -5,7 +5,6 @@
 #include "Atom/Core/Logger.h"
 
 #include "Atom/Renderer/Renderer.h"
-#include "Atom/Renderer/Device.h"
 
 namespace Atom
 {
@@ -32,7 +31,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Application::~Application()
     {
-        Renderer::GetDevice()->WaitIdle();
+        Device::Get().WaitIdle();
 
         for (auto layer : m_LayerStack)
             layer->OnDetach();

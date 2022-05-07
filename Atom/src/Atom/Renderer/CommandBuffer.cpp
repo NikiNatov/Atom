@@ -20,7 +20,7 @@ namespace Atom
     CommandBuffer::CommandBuffer(const char* debugName)
         : m_ResourceStateTracker(*this)
     {
-        auto d3dDevice = Renderer::GetDevice()->GetD3DDevice();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         u32 framesInFlight = Renderer::GetFramesInFlight();
         m_Allocators.resize(framesInFlight);

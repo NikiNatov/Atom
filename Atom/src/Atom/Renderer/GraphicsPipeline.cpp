@@ -5,7 +5,6 @@
 #include "GraphicsPipeline.h"
 #include "Device.h"
 #include "Framebuffer.h"
-#include "Renderer.h"
 
 namespace Atom
 {
@@ -117,7 +116,7 @@ namespace Atom
         ///                            Create PSO                           //
         //////////////////////////////////////////////////////////////////////
         Shader* shader = m_Description.Shader.get();
-        Device* device = Renderer::GetDevice();
+        Device& device = Device::Get();
 
         m_D3DDescription.InputLayout = inputLayoutDesc;
         m_D3DDescription.pRootSignature = shader->GetRootSignature().Get();
@@ -147,7 +146,7 @@ namespace Atom
 
         m_D3DDescription.SampleDesc.Count = 1;
 
-        DXCall(device->GetD3DDevice()->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
+        DXCall(device.GetD3DDevice()->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;

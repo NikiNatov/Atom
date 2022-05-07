@@ -61,21 +61,21 @@ namespace Atom
             Vertex(-0.5f,  0.5f, 0.0f),
         };
 
-        VertexBufferDescription vbDesc;
-        vbDesc.VertexCount = _countof(vertices);
-        vbDesc.VertexStride = sizeof(Vertex);
+        BufferDescription vbDesc;
+        vbDesc.ElementCount = _countof(vertices);
+        vbDesc.ElementSize = sizeof(Vertex);
         vbDesc.Data = vertices;
 
         m_QuadVertexBuffer = CreateRef<VertexBuffer>(vbDesc, "QuadVertexBuffer");
 
         u32 indices[] = { 0, 1, 2, 2, 3, 0 };
 
-        IndexBufferDescription ibDesc;
-        ibDesc.IndexCount = _countof(indices);
-        ibDesc.Format = IndexBufferFormat::U32;
+        BufferDescription ibDesc;
+        ibDesc.ElementCount = _countof(indices);
+        ibDesc.ElementSize = sizeof(u32);
         ibDesc.Data = indices;
 
-        m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, "QuadIndexBuffer");
+        m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "QuadIndexBuffer");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
