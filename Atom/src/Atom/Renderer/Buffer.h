@@ -46,7 +46,7 @@ namespace Atom
         VertexBuffer(const BufferDescription& description, const char* debugName = "Unnamed Vertex Buffer");
         ~VertexBuffer();
 
-        inline const D3D12_VERTEX_BUFFER_VIEW& GetBufferView() const { return m_View; }
+        inline const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const { return m_View; }
     private:
         virtual void CreateViews() override;
     private:
@@ -66,7 +66,7 @@ namespace Atom
         ~IndexBuffer();
 
         IndexBufferFormat GetFormat() const;
-        inline const D3D12_INDEX_BUFFER_VIEW& GetBufferView() const { return m_View; }
+        inline const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return m_View; }
     private:
         virtual void CreateViews() override;
     private:

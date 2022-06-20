@@ -16,9 +16,4 @@
 #include <thread>
 
 #include "Atom/Core/Core.h"
-
-#if defined(ATOM_PLATFORM_WINDOWS)
-
-#include "Atom/Platform/Windows/AtomWin.h"
-
-#endif
+#include "Atom/Core/AtomWin.h"

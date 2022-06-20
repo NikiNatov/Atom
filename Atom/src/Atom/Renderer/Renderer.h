@@ -35,6 +35,5 @@ namespace Atom
         static u32 GetFramesInFlight();
     private:
         static RendererConfig ms_Config;
-        static Ref<Device>    ms_Device;
     };
 }

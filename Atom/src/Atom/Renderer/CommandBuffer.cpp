@@ -142,14 +142,14 @@ namespace Atom
     void CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
     {
         m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-        m_CommandList->IASetVertexBuffers(0, 1, &vertexBuffer->GetBufferView());
+        m_CommandList->IASetVertexBuffers(0, 1, &vertexBuffer->GetVertexBufferView());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
     {
         m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
-        m_CommandList->IASetIndexBuffer(&indexBuffer->GetBufferView());
+        m_CommandList->IASetIndexBuffer(&indexBuffer->GetIndexBufferView());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
