@@ -1,6 +1,8 @@
 #include "atompch.h"
 
 #include "Window.h"
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
 
 namespace Atom
 {
@@ -120,6 +122,9 @@ namespace Atom
 	LRESULT WINAPI Window::WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{
 		Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+		if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+			return true;
 
 		switch (Msg)
 		{

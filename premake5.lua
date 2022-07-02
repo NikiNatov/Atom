@@ -13,6 +13,9 @@ workspace "Atom"
 	IncludeDirs = {}
 	IncludeDirs["spd_log"] = "Atom/vendor/spdlog/include"
 	IncludeDirs["glm"] = "Atom/vendor/glm"
+	IncludeDirs["imgui"] = "Atom/vendor/imgui"
+
+	include "Atom/vendor/imgui"
 
 project "Atom"
 	location "Atom"
@@ -39,7 +42,8 @@ project "Atom"
 	{
 		"%{prj.name}/src",
 		"%{IncludeDirs.spd_log}",
-		"%{IncludeDirs.glm}"
+		"%{IncludeDirs.glm}",
+		"%{IncludeDirs.imgui}"
 	}
 
 	defines
@@ -49,6 +53,7 @@ project "Atom"
 
 	links
 	{
+		"ImGui"
 	}
 
 
@@ -84,7 +89,7 @@ project "Sandbox"
 		"Atom/src",
 		"Atom/vendor",
 		"%{IncludeDirs.spd_log}",
-		"%{IncludeDirs.glm}"
+		"%{IncludeDirs.glm}",
 	}
 
 	links

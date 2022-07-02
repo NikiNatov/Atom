@@ -29,6 +29,9 @@ namespace Atom
         m_Window = CreateScope<Window>(properties);
 
         Input::Initialize(m_Window->GetWindowHandle());
+
+        m_ImGuiLayer = new ImGuiLayer();
+        PushOverlay(m_ImGuiLayer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -46,7 +49,6 @@ namespace Atom
         while (m_Running)
         {
             Timestep ts = m_FrameTimer.GetElapsedTime();
-            //ATOM_ENGINE_INFO("{0} ms", ts.GetMilliseconds());
 
             m_FrameTimer.Reset();
 
@@ -57,6 +59,13 @@ namespace Atom
                 for (auto layer : m_LayerStack)
                     layer->OnUpdate(ts);
             }
+
+            m_ImGuiLayer->BeginFrame();
+
+            for (auto layer : m_LayerStack)
+                layer->OnImGuiRender();
+
+            m_ImGuiLayer->EndFrame();
 
             m_Window->SwapBuffers();
 

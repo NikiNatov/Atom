@@ -5,6 +5,8 @@
 #include "Timer.h"
 #include "Window.h"
 
+#include "Atom/ImGui/ImGuiLayer.h"
+
 namespace Atom
 {
     struct ApplicationSpecification
@@ -42,6 +44,7 @@ namespace Atom
         Timer                    m_FrameTimer;
         Scope<Window>            m_Window;
         LayerStack               m_LayerStack;
+        ImGuiLayer*              m_ImGuiLayer;
     private:
         static Application*      ms_Application;
     };

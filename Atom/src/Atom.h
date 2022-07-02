@@ -11,6 +11,9 @@
 #include "Atom/Core/Timer.h"
 #include "Atom/Core/Window.h"
 
+// ImGui
+#include "Atom/ImGui/ImGuiLayer.h"
+
 // Renderer
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/CommandQueue.h"
