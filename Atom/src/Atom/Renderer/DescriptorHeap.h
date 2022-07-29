@@ -18,8 +18,9 @@ namespace Atom
     {
     public:
         DescriptorHeap(DescriptorHeapType type, u32 capacity, bool shaderVisible, const char* debugName = "Unnamed Descriptor Heap");
-        ~DescriptorHeap();
+        virtual ~DescriptorHeap();
 
+        D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor, u32 offset);
         inline ComPtr<ID3D12DescriptorHeap> GetD3DHeap() const { return m_D3DHeap; }
         inline DescriptorHeapType GetType() const { return m_Type; }
         inline u32 GetSize() const { return m_Size; }

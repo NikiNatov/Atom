@@ -50,6 +50,15 @@ namespace Atom
     {
     }
 
+    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor, u32 offset)
+    {
+        ATOM_ENGINE_ASSERT(IsShaderVisible() && offset < m_Capacity);
+
+        auto d3d12Device = Device::Get().GetD3DDevice();
+        d3d12Device->CopyDescriptorsSimple(1, CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUStartHandle, offset, m_DescriptorSize), descriptor, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_GPUStartHandle, offset, m_DescriptorSize);
+    }
+
     // -----------------------------------------------------------------------------------------------------------------------------
     CPUDescriptorHeap::CPUDescriptorHeap(DescriptorHeapType type, u32 capacity, const char* debugName)
         : DescriptorHeap(type, capacity, false, debugName)
