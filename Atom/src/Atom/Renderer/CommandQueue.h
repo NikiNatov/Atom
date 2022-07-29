@@ -23,6 +23,7 @@ namespace Atom
 
         u64 Signal();
         void WaitForFenceValue(u64 value);
+        void WaitForQueue(const CommandQueue* queue);
         void Flush();
         u64 ExecuteCommandList(const CommandBuffer* commandBuffer);
         u64 ExecuteCommandLists(const Vector<const CommandBuffer*>& commandBuffers);

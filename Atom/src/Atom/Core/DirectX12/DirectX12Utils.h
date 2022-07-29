@@ -232,20 +232,4 @@ namespace Atom { namespace Utils {
         ATOM_ASSERT(false, "Unknown heap type!");
         return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    static D3D12_RESOURCE_STATES GetInitialStateFromBufferType(BufferType type)
-    {
-        switch (type)
-        {
-            case BufferType::VertexBuffer:
-            case BufferType::ConstantBuffer:
-                return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-            case BufferType::IndexBuffer:
-                return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-        }
-
-        ATOM_ENGINE_ASSERT(false, "Unsupported buffer type!");
-        return D3D12_RESOURCE_STATE_COMMON;
-    }
 }}

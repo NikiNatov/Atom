@@ -14,11 +14,12 @@ namespace Atom
     class VertexBuffer;
     class IndexBuffer;
     class ConstantBuffer;
+    enum class CommandQueueType;
 
     class CommandBuffer
     {
     public:
-        CommandBuffer(const char* debugName = "Unnamed Command Buffer");
+        CommandBuffer(CommandQueueType type, const char* debugName = "Unnamed Command Buffer");
         ~CommandBuffer();
 
         void Begin();

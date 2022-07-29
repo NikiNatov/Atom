@@ -70,7 +70,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ResourceStateTracker::CommitPendingBarriers()
     {
-        //std::lock_guard<std::mutex> lock(ms_GlobalMutex);
+        std::lock_guard<std::mutex> lock(ms_GlobalMutex);
 
         Vector<D3D12_RESOURCE_BARRIER> resolvedBarriers;
         resolvedBarriers.reserve(m_PendingBarriers.size());

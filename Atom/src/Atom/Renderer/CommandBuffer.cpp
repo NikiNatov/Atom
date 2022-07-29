@@ -4,6 +4,7 @@
 #include "Atom/Core/Application.h"
 
 #include "CommandBuffer.h"
+#include "CommandQueue.h"
 #include "Device.h"
 #include "Texture.h"
 #include "SwapChain.h"
@@ -17,7 +18,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    CommandBuffer::CommandBuffer(const char* debugName)
+    CommandBuffer::CommandBuffer(CommandQueueType type, const char* debugName)
         : m_ResourceStateTracker(*this)
     {
         auto d3dDevice = Device::Get().GetD3DDevice();
@@ -28,13 +29,13 @@ namespace Atom
         m_UploadBuffers.resize(framesInFlight);
         for (u32 i = 0; i < framesInFlight; i++)
         {
-            DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_Allocators[i])));
-            DXCall(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_PendingAllocators[i])));
+            DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_Allocators[i])));
+            DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_PendingAllocators[i])));
             m_UploadBuffers[i] = nullptr;
         }
 
-        DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
-        DXCall(d3dDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
+        DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
+        DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -142,6 +143,7 @@ namespace Atom
     void CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
     {
         m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        m_ResourceStateTracker.CommitBarriers();
         m_CommandList->IASetVertexBuffers(0, 1, &vertexBuffer->GetVertexBufferView());
     }
 
@@ -149,6 +151,7 @@ namespace Atom
     void CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
     {
         m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+        m_ResourceStateTracker.CommitBarriers();
         m_CommandList->IASetIndexBuffer(&indexBuffer->GetIndexBufferView());
     }
 
@@ -159,12 +162,13 @@ namespace Atom
 
         if (data)
         {
+            u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
             CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(buffer->GetSize());
 
-            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_UploadBuffers[Renderer::GetCurrentFrameIndex()])));
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_UploadBuffers[currentFrameIndex])));
 
 #if defined (ATOM_DEBUG)
-            DXCall(m_UploadBuffers[Renderer::GetCurrentFrameIndex()]->SetName(L"Upload Buffer"));
+            DXCall(m_UploadBuffers[currentFrameIndex]->SetName(L"Upload Buffer"));
 #endif
 
             D3D12_SUBRESOURCE_DATA subresourceData = {};
@@ -173,15 +177,16 @@ namespace Atom
             subresourceData.SlicePitch = subresourceData.RowPitch;
 
             m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), m_UploadBuffers[Renderer::GetCurrentFrameIndex()].Get(), 0, 0, 1, &subresourceData);
-            m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), Utils::GetInitialStateFromBufferType(buffer->GetType()));
             m_ResourceStateTracker.CommitBarriers();
+            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), m_UploadBuffers[currentFrameIndex].Get(), 0, 0, 1, &subresourceData);
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer)
     {
+        m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        m_ResourceStateTracker.CommitBarriers();
         m_CommandList->SetGraphicsRootConstantBufferView(slot, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
     }
 

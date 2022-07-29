@@ -70,6 +70,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandQueue::WaitForQueue(const CommandQueue* queue)
+    {
+        m_D3DCommandQueue->Wait(queue->m_D3DFence.Get(), queue->m_FenceValue);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     u64 CommandQueue::ExecuteCommandList(const CommandBuffer* commandBuffer)
     {
         return ExecuteCommandLists({ commandBuffer });

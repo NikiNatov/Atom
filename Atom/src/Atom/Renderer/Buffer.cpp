@@ -18,7 +18,7 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(GetSize());
-        D3D12_RESOURCE_STATES initialState = Utils::GetInitialStateFromBufferType(m_Type);
+        D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
 
         DXCall(d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&m_D3DResource)));
 
@@ -32,13 +32,13 @@ namespace Atom
         // If we supply any data, create an upload resource
         if (m_Description.Data)
         {
-            Ref<CommandBuffer> commandBuffer = CreateRef<CommandBuffer>("CopyCommandBuffer");
+            CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+            Ref<CommandBuffer> commandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
             commandBuffer->Begin();
             SetData(commandBuffer.get(), m_Description.Data, GetSize());
             commandBuffer->End();
 
-            u64 fenceValue = Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(commandBuffer.get());
-            Device::Get().GetCommandQueue(CommandQueueType::Graphics)->WaitForFenceValue(fenceValue);
+            copyQueue->ExecuteCommandList(commandBuffer.get());
         }
     }
 
