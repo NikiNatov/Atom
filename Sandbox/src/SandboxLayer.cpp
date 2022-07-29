@@ -27,7 +27,7 @@ namespace Atom
     void SandboxLayer::OnAttach()
     {
         // Create command buffers
-        m_CommandBuffer = CreateRef<CommandBuffer>();
+        m_CommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Graphics);
 
         // Create pipeline
         FramebufferDescription fbDesc;

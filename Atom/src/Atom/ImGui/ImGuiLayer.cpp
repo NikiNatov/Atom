@@ -26,7 +26,7 @@ namespace Atom
     void ImGuiLayer::OnAttach()
     {
         m_FontSrvHeap = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, 1, true, "ImGui Font SRV Heap");
-        m_CommandBuffer = CreateRef<CommandBuffer>("ImGui Command Buffer");
+        m_CommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Graphics, "ImGui Command Buffer");
 
         FramebufferDescription fbDesc;
         fbDesc.SwapChainFrameBuffer = true;
