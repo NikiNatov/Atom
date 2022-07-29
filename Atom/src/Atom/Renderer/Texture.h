@@ -3,6 +3,8 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 
+#include <glm/glm.hpp>
+
 namespace Atom
 {
     enum class TextureType
@@ -47,6 +49,21 @@ namespace Atom
 
     IMPL_ENUM_OPERATORS(TextureBindFlags);
 
+    struct DepthStencilValue
+    {
+        f32 DepthValue = 0.0f;
+        u8 StencilValue = 0xFF;
+    };
+
+    struct ClearValue
+    {
+        union
+        {
+            glm::vec4 Color;
+            DepthStencilValue DepthStencil;
+        };
+    };
+
     struct TextureDescription
     {
         TextureFormat Format = TextureFormat::RGBA8;
@@ -56,6 +73,7 @@ namespace Atom
         TextureBindFlags UsageFlags = TextureBindFlags::None;
         TextureFilter Filter = TextureFilter::Linear;
         TextureWrap Wrap = TextureWrap::Repeat;
+        ClearValue ClearValue = {};
     };
 
     class Texture
@@ -73,6 +91,7 @@ namespace Atom
         TextureBindFlags GetBindFlags() const;
         TextureFilter GetFilter() const;
         TextureWrap GetWrap() const;
+        const ClearValue& GetClearValue() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
     protected:
         virtual void CreateViews() = 0;

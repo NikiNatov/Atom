@@ -53,7 +53,23 @@ namespace Atom
         resourceDesc.Flags |= IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess) ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
         resourceDesc.Flags |= IsSet(m_Description.UsageFlags & TextureBindFlags::DepthStencil) ? D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL : D3D12_RESOURCE_FLAG_NONE;
 
-        DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_D3DResource)));
+        D3D12_CLEAR_VALUE clearValue = {};
+        if (IsSet(m_Description.UsageFlags & TextureBindFlags::DepthStencil))
+        {
+            clearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+            clearValue.DepthStencil.Depth = m_Description.ClearValue.DepthStencil.DepthValue;
+            clearValue.DepthStencil.Stencil = m_Description.ClearValue.DepthStencil.StencilValue;
+        }
+        else
+        {
+            clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            clearValue.Color[0] = m_Description.ClearValue.Color.r;
+            clearValue.Color[1] = m_Description.ClearValue.Color.g;
+            clearValue.Color[2] = m_Description.ClearValue.Color.b;
+            clearValue.Color[3] = m_Description.ClearValue.Color.a;
+        }
+
+        DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, &clearValue, IID_PPV_ARGS(&m_D3DResource)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -142,6 +158,12 @@ namespace Atom
     TextureWrap Texture::GetWrap() const
     {
         return m_Description.Wrap;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const ClearValue& Texture::GetClearValue() const
+    {
+        return m_Description.ClearValue;
     }
 
     // ------------------------------------------------- Texture2D -----------------------------------------------------------------
