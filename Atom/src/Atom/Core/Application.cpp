@@ -54,6 +54,8 @@ namespace Atom
 
             m_Window->ProcessEvents();
 
+            Renderer::BeginFrame();
+
             if (!m_Window->IsMinimized())
             {
                 for (auto layer : m_LayerStack)
@@ -66,6 +68,8 @@ namespace Atom
                 layer->OnImGuiRender();
 
             m_ImGuiLayer->EndFrame();
+
+            Renderer::EndFrame();
 
             m_Window->SwapBuffers();
 

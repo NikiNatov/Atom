@@ -21,11 +21,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginFrame(CommandBuffer* commandBuffer)
+    void Renderer::BeginFrame()
     {
         Device::Get().ProcessDeferredReleases(GetCurrentFrameIndex());
-
-        commandBuffer->Begin();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -52,10 +50,8 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndFrame(CommandBuffer* commandBuffer)
+    void Renderer::EndFrame()
     {
-        commandBuffer->End();
-        auto fence = Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

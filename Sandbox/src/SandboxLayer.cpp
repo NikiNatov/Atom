@@ -108,12 +108,14 @@ namespace Atom
         cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
 
         CommandBuffer* cmdBuffer = m_CommandBuffer.get();
-        Renderer::BeginFrame(cmdBuffer);
+        cmdBuffer->Begin();
         m_CameraCB->SetData(cmdBuffer, &cameraCB, sizeof(CameraCB));
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::EndFrame(cmdBuffer);
+        cmdBuffer->End();
+
+        Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(cmdBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
