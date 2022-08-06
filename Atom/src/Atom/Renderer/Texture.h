@@ -66,7 +66,8 @@ namespace Atom
             DepthStencilValue DepthStencil = {};
         };
 
-        ClearValue() = default;
+        ClearValue() 
+            : Color(0.0f, 0.0f, 0.0f, 1.0f), DepthStencil() {}
 
         ClearValue(f32 r, f32 g, f32 b, f32 a)
             : Color(r, g, b, a) {}
