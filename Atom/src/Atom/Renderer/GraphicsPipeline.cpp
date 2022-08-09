@@ -119,7 +119,7 @@ namespace Atom
         Device& device = Device::Get();
 
         m_D3DDescription.InputLayout = inputLayoutDesc;
-        m_D3DDescription.pRootSignature = shader->GetRootSignature().Get();
+        m_D3DDescription.pRootSignature = shader->GetResourceLayout().GetRootSignature().Get();
         m_D3DDescription.VS = CD3DX12_SHADER_BYTECODE(shader->GetVSData().Get());
         m_D3DDescription.PS = CD3DX12_SHADER_BYTECODE(shader->GetPSData().Get());
         m_D3DDescription.RasterizerState = rasterizerState;

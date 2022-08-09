@@ -232,4 +232,111 @@ namespace Atom { namespace Utils {
         ATOM_ASSERT(false, "Unknown heap type!");
         return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static ShaderDataType D3D12ShaderTypeToAtom(D3D12_SHADER_TYPE_DESC typeDesc)
+    {
+        switch (typeDesc.Type)
+        {
+            case D3D_SVT_BOOL: 
+            {
+                return ShaderDataType::Bool;
+            }
+            case D3D_SVT_INT: 
+            {
+                if (typeDesc.Columns == 1)
+                    return ShaderDataType::Int;
+                else if (typeDesc.Columns == 2)
+                    return ShaderDataType::Int2;
+                else if (typeDesc.Columns == 3)
+                    return ShaderDataType::Int3;
+                else if (typeDesc.Columns == 4)
+                    return ShaderDataType::Int4;
+
+                break;
+            }
+            case D3D_SVT_FLOAT:
+            {
+                if (typeDesc.Columns == 1)
+                    return ShaderDataType::Float;
+                else if (typeDesc.Columns == 2 && typeDesc.Rows == 2)
+                    return ShaderDataType::Mat2;
+                else if(typeDesc.Columns == 2)
+                    return ShaderDataType::Float2;
+                else if (typeDesc.Columns == 3 && typeDesc.Rows == 3)
+                    return ShaderDataType::Mat3;
+                else if (typeDesc.Columns == 3)
+                    return ShaderDataType::Float3;
+                else if (typeDesc.Columns == 4 && typeDesc.Rows == 4)
+                    return ShaderDataType::Mat4;
+                else if (typeDesc.Columns == 4)
+                    return ShaderDataType::Float4;
+
+                break;
+            }
+            case D3D_SVT_UINT:
+            {
+                if (typeDesc.Columns == 1)
+                    return ShaderDataType::Uint;
+                else if (typeDesc.Columns == 2)
+                    return ShaderDataType::Uint2;
+                else if (typeDesc.Columns == 3)
+                    return ShaderDataType::Uint3;
+                else if (typeDesc.Columns == 4)
+                    return ShaderDataType::Uint4;
+
+                break;
+            }
+        }
+
+        return ShaderDataType::None;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static ShaderResourceType D3D12ShaderResourceTypeToAtom(D3D12_SHADER_INPUT_BIND_DESC typeDesc)
+    {
+        switch (typeDesc.Type)
+        {
+            case D3D_SIT_CBUFFER: 
+            {
+                return ShaderResourceType::ConstantBuffer;
+            }
+            case D3D_SIT_TEXTURE:
+            {
+                if (typeDesc.Dimension == D3D_SRV_DIMENSION_TEXTURE2D)
+                    return ShaderResourceType::Texture2D;
+                else if (typeDesc.Dimension == D3D_SRV_DIMENSION_TEXTURE2DARRAY)
+                    return ShaderResourceType::Texture2DArray;
+                else if (typeDesc.Dimension == D3D_SRV_DIMENSION_TEXTURECUBE)
+                    return ShaderResourceType::TextureCube;
+
+                break;
+            }
+            case D3D_SIT_UAV_RWTYPED:
+            {
+                if (typeDesc.Dimension == D3D_SRV_DIMENSION_TEXTURE2D)
+                    return ShaderResourceType::RWTexture2D;
+                else if (typeDesc.Dimension == D3D_SRV_DIMENSION_TEXTURE2DARRAY)
+                    return ShaderResourceType::RWTexture2DArray;
+
+                break;
+            }
+            case D3D_SIT_SAMPLER:
+            {
+                return ShaderResourceType::Sampler;
+            }
+            case D3D_SIT_STRUCTURED:
+            {
+                return ShaderResourceType::StructuredBuffer;
+            }
+            case D3D_SIT_UAV_RWSTRUCTURED:
+            case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+            {
+                return ShaderResourceType::RWStructuredBuffer;
+            }
+        }
+
+        ATOM_ASSERT(false, "Unknown type!");
+        return ShaderResourceType::None;
+    }
 }}
