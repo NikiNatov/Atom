@@ -28,8 +28,8 @@ namespace Atom
         void SetGraphicsPipeline(const GraphicsPipeline* pipeline);
         void SetVertexBuffer(const VertexBuffer* vertexBuffer);
         void SetIndexBuffer(const IndexBuffer* indexBuffer);
-        void UploadBufferData(const void* data, u32 size, const Buffer* buffer);
         void SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer);
+        void UploadBufferData(const void* data, u32 size, const Buffer* buffer);
         void DrawIndexed(u32 indexCount);
         void End();
 

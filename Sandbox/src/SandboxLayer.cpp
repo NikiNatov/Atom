@@ -72,7 +72,7 @@ namespace Atom
         BufferDescription vbDesc;
         vbDesc.ElementCount = _countof(vertices);
         vbDesc.ElementSize = sizeof(Vertex);
-        vbDesc.Data = vertices;
+        vbDesc.IsDynamic = false;
 
         m_QuadVertexBuffer = CreateRef<VertexBuffer>(vbDesc, "QuadVertexBuffer");
 
@@ -81,14 +81,29 @@ namespace Atom
         BufferDescription ibDesc;
         ibDesc.ElementCount = _countof(indices);
         ibDesc.ElementSize = sizeof(u32);
-        ibDesc.Data = indices;
+        ibDesc.IsDynamic = false;
 
         m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "QuadIndexBuffer");
+
+        {
+            Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->UploadBufferData(vertices, _countof(vertices) * sizeof(Vertex), m_QuadVertexBuffer.get());
+            copyCommandBuffer->End();
+            Device::Get().GetCommandQueue(CommandQueueType::Copy)->ExecuteCommandList(copyCommandBuffer.get());
+        }
+        {
+            Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->UploadBufferData(indices, _countof(indices) * sizeof(u32), m_QuadIndexBuffer.get());
+            copyCommandBuffer->End();
+            Device::Get().GetCommandQueue(CommandQueueType::Copy)->ExecuteCommandList(copyCommandBuffer.get());
+        }
 
         BufferDescription cbDesc;
         cbDesc.ElementCount = 1;
         cbDesc.ElementSize = sizeof(CameraCB);
-        cbDesc.Data = nullptr;
+        cbDesc.IsDynamic = true;
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
     }
@@ -109,7 +124,11 @@ namespace Atom
 
         CommandBuffer* cmdBuffer = m_CommandBuffer.get();
         cmdBuffer->Begin();
-        m_CameraCB->SetData(cmdBuffer, &cameraCB, sizeof(CameraCB));
+
+        void* data = m_CameraCB->Map(0, 0);
+        memcpy(data, &cameraCB, sizeof(CameraCB));
+        m_CameraCB->Unmap();
+
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());

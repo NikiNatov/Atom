@@ -18,9 +18,10 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(GetSize());
-        D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
+        D3D12_RESOURCE_STATES initialState = m_Description.IsDynamic ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_COMMON;
 
-        DXCall(d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&m_D3DResource)));
+        auto heapProps = CD3DX12_HEAP_PROPERTIES(m_Description.IsDynamic ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT);
+        DXCall(d3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&m_D3DResource)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -28,18 +29,6 @@ namespace Atom
 #endif
 
         ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), initialState);
-
-        // If we supply any data, create an upload resource
-        if (m_Description.Data)
-        {
-            CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-            Ref<CommandBuffer> commandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
-            commandBuffer->Begin();
-            SetData(commandBuffer.get(), m_Description.Data, GetSize());
-            commandBuffer->End();
-
-            copyQueue->ExecuteCommandList(commandBuffer.get());
-        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -49,18 +38,27 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Buffer::SetData(CommandBuffer* commandBuffer, const void* data, u32 size)
-    {
-        if (data)
-        {
-            commandBuffer->UploadBufferData(data, size, this);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     BufferType Buffer::GetType() const
     {
         return m_Type;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void* Buffer::Map(u32 rangeBegin, u32 rangeEnd)
+    {
+        ATOM_ENGINE_ASSERT(m_Description.IsDynamic, "Buffer is not dynamic!");
+
+        m_MapRange = { rangeBegin, rangeEnd };
+        void* data = nullptr;
+        DXCall(m_D3DResource->Map(0, &m_MapRange, &data));
+        return data;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Buffer::Unmap()
+    {
+        m_D3DResource->Unmap(0, &m_MapRange);
+        m_MapRange = {};
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -79,6 +77,12 @@ namespace Atom
     u32 Buffer::GetSize() const
     {
         return m_Description.ElementSize * m_Description.ElementCount;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool Buffer::IsDynamic() const
+    {
+        return m_Description.IsDynamic;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

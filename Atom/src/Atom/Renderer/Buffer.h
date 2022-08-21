@@ -15,9 +15,9 @@ namespace Atom
 
     struct BufferDescription
     {
-        u32 ElementSize;
-        u32 ElementCount;
-        const void* Data;
+        u32 ElementSize = 0;
+        u32 ElementCount = 0;
+        bool IsDynamic = false;
     };
 
     class Buffer
@@ -26,11 +26,13 @@ namespace Atom
         Buffer(BufferType type, const BufferDescription& description, const char* debugName = "Unnamed Buffer");
         virtual ~Buffer();
 
-        void SetData(CommandBuffer* commandBuffer, const void* data, u32 size);
+        void* Map(u32 rangeBegin, u32 rangeEnd);
+        void Unmap();
         BufferType GetType() const;
         u32 GetElementSize() const;
         u32 GetElementCount() const;
         u32 GetSize() const;
+        bool IsDynamic() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
     protected:
         virtual void CreateViews() = 0;
@@ -38,6 +40,7 @@ namespace Atom
         BufferDescription      m_Description;
         BufferType             m_Type;
         ComPtr<ID3D12Resource> m_D3DResource;
+        D3D12_RANGE            m_MapRange;
     };
 
     class VertexBuffer : public Buffer

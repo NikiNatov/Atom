@@ -142,17 +142,28 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
     {
-        m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-        m_ResourceStateTracker.CommitBarriers();
+        if(!vertexBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
         m_CommandList->IASetVertexBuffers(0, 1, &vertexBuffer->GetVertexBufferView());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
     {
-        m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
-        m_ResourceStateTracker.CommitBarriers();
+        if (!indexBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+
         m_CommandList->IASetIndexBuffer(&indexBuffer->GetIndexBufferView());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer)
+    {
+        if (!constantBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+        m_CommandList->SetGraphicsRootConstantBufferView(slot, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -180,14 +191,6 @@ namespace Atom
             m_ResourceStateTracker.CommitBarriers();
             UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), m_UploadBuffers[currentFrameIndex].Get(), 0, 0, 1, &subresourceData);
         }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer)
-    {
-        m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-        m_ResourceStateTracker.CommitBarriers();
-        m_CommandList->SetGraphicsRootConstantBufferView(slot, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
