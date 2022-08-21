@@ -14,6 +14,7 @@ workspace "Atom"
 	IncludeDirs["spd_log"] = "Atom/vendor/spdlog/include"
 	IncludeDirs["glm"] = "Atom/vendor/glm"
 	IncludeDirs["imgui"] = "Atom/vendor/imgui"
+	IncludeDirs["PIX"] = "Atom/vendor/PIX/include"
 
 	include "Atom/vendor/imgui"
 
@@ -43,7 +44,8 @@ project "Atom"
 		"%{prj.name}/src",
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.glm}",
-		"%{IncludeDirs.imgui}"
+		"%{IncludeDirs.imgui}",
+		"%{IncludeDirs.PIX}",
 	}
 
 	defines
@@ -53,7 +55,8 @@ project "Atom"
 
 	links
 	{
-		"ImGui"
+		"ImGui",
+		"Atom/vendor/PIX/lib/WinPixEventRuntime.lib"
 	}
 
 
@@ -90,11 +93,17 @@ project "Sandbox"
 		"Atom/vendor",
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.glm}",
+		"%{IncludeDirs.PIX}",
 	}
 
 	links
 	{
 		"Atom"
+	}
+
+	postbuildcommands
+	{
+		"XCOPY ..\\Atom\\vendor\\PIX\\lib\\WinPixEventRuntime.dll \"%{cfg.targetdir}\"  /S /Y"
 	}
 
 	filter "configurations:Debug"

@@ -24,6 +24,7 @@ namespace Atom
     void Renderer::BeginFrame()
     {
         Device::Get().ProcessDeferredReleases(GetCurrentFrameIndex());
+        PIXBeginEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get(), 0, "Begin Frame");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -52,6 +53,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::EndFrame()
     {
+        PIXEndEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

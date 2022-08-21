@@ -7,6 +7,7 @@
 #include <wrl.h>
 #include "DXError/dxerr.h"
 #include "d3dx12.h"
+#include <pix3.h>
 
 #if defined(ATOM_DEBUG)
 #include <dxgidebug.h>
