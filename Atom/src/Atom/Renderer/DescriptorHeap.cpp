@@ -50,13 +50,24 @@ namespace Atom
     {
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor, u32 offset)
+    // -----------------------------------------------------------------------------------------------------------------------------
+    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptors(D3D12_CPU_DESCRIPTOR_HANDLE* descriptors, u32 descriptorCount)
     {
-        ATOM_ENGINE_ASSERT(IsShaderVisible() && offset < m_Capacity);
+        ATOM_ENGINE_ASSERT(IsShaderVisible() && m_Size + descriptorCount <= m_Capacity);
 
-        auto d3d12Device = Device::Get().GetD3DDevice();
-        d3d12Device->CopyDescriptorsSimple(1, CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUStartHandle, offset, m_DescriptorSize), descriptor, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
-        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_GPUStartHandle, offset, m_DescriptorSize);
+        CD3DX12_CPU_DESCRIPTOR_HANDLE destDescriptorCPUStart = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUStartHandle, m_Size, m_DescriptorSize);
+        CD3DX12_GPU_DESCRIPTOR_HANDLE destDescriptorGPUStart = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_GPUStartHandle, m_Size, m_DescriptorSize);
+
+        Device::Get().GetD3DDevice()->CopyDescriptorsSimple(descriptorCount, destDescriptorCPUStart, *descriptors, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
+        m_Size += descriptorCount;
+
+        return destDescriptorGPUStart;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor)
+    {
+        return CopyDescriptors(&descriptor, 1);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
