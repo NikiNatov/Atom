@@ -46,7 +46,7 @@ namespace Atom
         commandBuffer->SetVertexBuffer(vertexBuffer);
         commandBuffer->SetIndexBuffer(indexBuffer);
         // TODO: Find a better way of setting constant buffers
-        commandBuffer->SetConstantBuffer(0, constantBuffer);
+        commandBuffer->SetGraphicsConstantBuffer(0, constantBuffer);
         commandBuffer->DrawIndexed(indexBuffer->GetElementCount());
     }
 

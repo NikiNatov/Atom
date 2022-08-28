@@ -31,7 +31,6 @@ namespace Atom
         {
             DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_Allocators[i])));
             DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_PendingAllocators[i])));
-            m_UploadBuffers[i] = nullptr;
         }
 
         DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
@@ -58,6 +57,7 @@ namespace Atom
         DXCall(m_PendingAllocators[currentFrame]->Reset());
         DXCall(m_PendingCommandList->Reset(m_PendingAllocators[currentFrame].Get(), NULL));
 
+        m_UploadBuffers[currentFrame].clear();
         m_ResourceStateTracker.ClearStates();
         m_IsRecording = true;
     }
@@ -132,6 +132,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state)
+    {
+        m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state);
+        m_ResourceStateTracker.CommitBarriers();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsPipeline(const GraphicsPipeline* pipeline)
     {
         m_CommandList->SetGraphicsRootSignature(pipeline->GetD3DDescription().pRootSignature);
@@ -158,46 +165,106 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetConstantBuffer(u32 slot, const ConstantBuffer* constantBuffer)
+    void CommandBuffer::SetGraphicsConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer)
     {
         if (!constantBuffer->IsDynamic())
             m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-        m_CommandList->SetGraphicsRootConstantBufferView(slot, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
+        m_CommandList->SetGraphicsRootConstantBufferView(rootParamIndex, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadBufferData(const void* data, u32 size, const Buffer* buffer)
+    void CommandBuffer::SetGraphicsRootConstants(u32 rootParamIndex, const void* data, u32 numConstants)
+    {
+        m_CommandList->SetGraphicsRoot32BitConstants(rootParamIndex, numConstants, data, 0);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart)
+    {
+        m_CommandList->SetGraphicsRootDescriptorTable(rootParamIndex, tableStart);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetDescriptorHeaps(const DescriptorHeap* resourceHeap, const DescriptorHeap* samplerHeap)
+    {
+        Vector<ID3D12DescriptorHeap*> heaps;
+
+        if (resourceHeap)
+            heaps.push_back(resourceHeap->GetD3DHeap().Get());
+
+        if (samplerHeap)
+            heaps.push_back(samplerHeap->GetD3DHeap().Get());
+
+        if(heaps.size())
+            m_CommandList->SetDescriptorHeaps(heaps.size(), heaps.data());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::UploadBufferData(const void* data, const Buffer* buffer)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
         if (data)
         {
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(buffer->GetSize());
+            u32 bufferSize = GetRequiredIntermediateSize(buffer->GetD3DResource().Get(), 0, 1);
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 
-            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_UploadBuffers[currentFrameIndex])));
+            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
 
 #if defined (ATOM_DEBUG)
-            DXCall(m_UploadBuffers[currentFrameIndex]->SetName(L"Upload Buffer"));
+            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
 #endif
+            m_UploadBuffers[currentFrameIndex].push_back(uploadBuffer);
 
             D3D12_SUBRESOURCE_DATA subresourceData = {};
             subresourceData.pData = data;
-            subresourceData.RowPitch = size;
+            subresourceData.RowPitch = buffer->GetSize();
             subresourceData.SlicePitch = subresourceData.RowPitch;
 
             m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
             m_ResourceStateTracker.CommitBarriers();
-            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), m_UploadBuffers[currentFrameIndex].Get(), 0, 0, 1, &subresourceData);
+            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::DrawIndexed(u32 indexCount)
+    void CommandBuffer::UploadTextureData(const void* data, const Texture* texture)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (data)
+        {
+            u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+            u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), 0, 1);
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
+
+#if defined (ATOM_DEBUG)
+            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
+#endif
+            m_UploadBuffers[currentFrameIndex].push_back(uploadBuffer);
+
+            D3D12_SUBRESOURCE_DATA subresourceData = {};
+            subresourceData.pData = data;
+            subresourceData.RowPitch = texture->GetWidth() * Utils::GetTextureFormatSize(texture->GetFormat());
+            subresourceData.SlicePitch = texture->GetHeight() * subresourceData.RowPitch;
+
+            m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+            m_ResourceStateTracker.CommitBarriers();
+            UpdateSubresources<1>(m_CommandList.Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::DrawIndexed(u32 indexCount, u32 instanceCount, u32 startIndex, u32 startVertex, u32 startInstance)
     {
         m_ResourceStateTracker.CommitBarriers();
-        m_CommandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+        m_CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, startVertex, startInstance);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
