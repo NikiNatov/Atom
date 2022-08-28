@@ -105,12 +105,14 @@ namespace Atom
         TextureWrap GetWrap() const;
         const ClearValue& GetClearValue() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
+        inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
     protected:
-        virtual void CreateViews() = 0;
+        virtual void CreateViews();
     protected:
-        ComPtr<ID3D12Resource> m_D3DResource;
-        TextureType            m_Type;
-        TextureDescription     m_Description;
+        ComPtr<ID3D12Resource>      m_D3DResource;
+        D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor;
+        TextureType                 m_Type;
+        TextureDescription          m_Description;
     };
 
     class Texture2D : public Texture
@@ -120,12 +122,10 @@ namespace Atom
         Texture2D(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Texture2D");
         ~Texture2D();
 
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const;
         D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 mip = 0) const;
     protected:
         virtual void CreateViews() override;
     protected:
-        D3D12_CPU_DESCRIPTOR_HANDLE         m_SRVDescriptor;
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_UAVDescriptors;
     };
 
@@ -137,12 +137,10 @@ namespace Atom
         ~RenderTexture2D();
 
         inline bool IsSwapChainBuffer() const { return m_Type == TextureType::SwapChainBuffer; }
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const;
         D3D12_CPU_DESCRIPTOR_HANDLE GetRTV(u32 mip = 0) const;
     private:
         virtual void CreateViews() override;
     private:
-        D3D12_CPU_DESCRIPTOR_HANDLE         m_SRVDescriptor;
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_RTVDescriptors;
     };
 
@@ -153,12 +151,10 @@ namespace Atom
         DepthBuffer(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Depth Buffer");
         ~DepthBuffer();
 
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const;
         D3D12_CPU_DESCRIPTOR_HANDLE GetDSV(u32 mip = 0) const;
     private:
         virtual void CreateViews() override;
     private:
-        D3D12_CPU_DESCRIPTOR_HANDLE         m_SRVDescriptor;
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_DSVDescriptors;
     };
 }
