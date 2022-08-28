@@ -85,20 +85,14 @@ namespace Atom
 
         m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "QuadIndexBuffer");
 
-        {
-            Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
-            copyCommandBuffer->Begin();
-            copyCommandBuffer->UploadBufferData(vertices, _countof(vertices) * sizeof(Vertex), m_QuadVertexBuffer.get());
-            copyCommandBuffer->End();
-            Device::Get().GetCommandQueue(CommandQueueType::Copy)->ExecuteCommandList(copyCommandBuffer.get());
-        }
-        {
-            Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
-            copyCommandBuffer->Begin();
-            copyCommandBuffer->UploadBufferData(indices, _countof(indices) * sizeof(u32), m_QuadIndexBuffer.get());
-            copyCommandBuffer->End();
-            Device::Get().GetCommandQueue(CommandQueueType::Copy)->ExecuteCommandList(copyCommandBuffer.get());
-        }
+        // Upload data to the buffers
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
+        copyCommandBuffer->Begin();
+        copyCommandBuffer->UploadBufferData(vertices, m_QuadVertexBuffer.get());
+        copyCommandBuffer->UploadBufferData(indices, m_QuadIndexBuffer.get());
+        copyCommandBuffer->End();
+        copyQueue->ExecuteCommandList(copyCommandBuffer.get());
 
         BufferDescription cbDesc;
         cbDesc.ElementCount = 1;
@@ -106,6 +100,9 @@ namespace Atom
         cbDesc.IsDynamic = true;
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
+
+        // Wait until all copy operations are finished before rendering
+        copyQueue->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -339,4 +339,22 @@ namespace Atom { namespace Utils {
         ATOM_ASSERT(false, "Unknown type!");
         return ShaderResourceType::None;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static u32 GetTextureFormatSize(TextureFormat format)
+    {
+        switch (format)
+        {
+            case TextureFormat::Depth24Stencil8: return 4;
+            case TextureFormat::Depth32:         return 4;
+            case TextureFormat::RGBA8:           return 4;
+            case TextureFormat::RG16F:           return 4;
+            case TextureFormat::RG32F:           return 8;
+            case TextureFormat::RGBA16F:         return 8;
+            case TextureFormat::RGBA32F:         return 16;
+        }
+
+        ATOM_ASSERT(false, "Unknown format!");
+        return 0;
+    }
 }}

@@ -11,11 +11,11 @@
 
 #if defined(ATOM_DEBUG)
 #include <dxgidebug.h>
-#pragma comment(lib, "dxguid.lib")
 #endif
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
 
 template<typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
