@@ -34,6 +34,7 @@ namespace Atom
 
         inline Window& GetWindow() { return *m_Window; }
         inline const ApplicationSpecification& GetSpecification() { return m_Specification; }
+        inline ImGuiLayer& GetImGuiLayer() { return *m_ImGuiLayer; }
     private:
         bool OnWindowClosed(WindowClosedEvent& event);
     public:

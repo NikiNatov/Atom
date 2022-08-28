@@ -11,6 +11,7 @@ namespace Atom
     enum class ShaderDataType
     {
         None = 0,
+        Unorm4,
         Int, Int2, Int3, Int4,
         Uint, Uint2, Uint3, Uint4,
         Float, Float2, Float3, Float4,

@@ -25,6 +25,7 @@ namespace Atom
             {
                 switch (Type)
                 {
+                    case ShaderDataType::Unorm4: return 1 * 4;
                     case ShaderDataType::Int:    return 4;
                     case ShaderDataType::Int2:   return 4 * 2;
                     case ShaderDataType::Int3:   return 4 * 3;

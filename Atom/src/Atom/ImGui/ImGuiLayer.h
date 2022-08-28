@@ -1,32 +1,49 @@
 #pragma once
 
 #include "Atom/Core/Layer.h"
-#include "Atom/Renderer/DescriptorHeap.h"
-#include "Atom/Renderer/CommandBuffer.h"
-#include "Atom/Renderer/Framebuffer.h"
+#include "Atom/Core/DirectX12/DirectX12.h"
 
 namespace Atom
 {
+    class CommandBuffer;
+    class GraphicsPipeline;
+    class DescriptorHeap;
+    class Texture2D;
+    class Texture;
+    class VertexBuffer;
+    class IndexBuffer;
+
     class ImGuiLayer : public Layer
     {
+        using TextureRegistry = HashMap<const Texture*, D3D12_GPU_DESCRIPTOR_HANDLE>;
     public:
         ImGuiLayer();
         virtual ~ImGuiLayer();
 
         virtual void OnAttach() override;
         virtual void OnDetach() override;
-        virtual void OnImGuiRender() override;
-        virtual void OnUpdate(Timestep ts) override;
         virtual void OnEvent(Event& event) override;
 
         void BeginFrame();
         void EndFrame();
         void SetBlockEvents(bool block);
+        void SetClearRenderTarget(bool clear);
         void SetDarkTheme();
     private:
-        bool                m_BlockEvents = true;
-        Ref<DescriptorHeap> m_FontSrvHeap;
-        Ref<CommandBuffer>  m_CommandBuffer;
-        Ref<Framebuffer>    m_FrameBuffer;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetTextureHandle(const Texture* texture);
+        void SetRenderState();
+        void RenderDrawData();
+        void CreateGraphicsObjects();
+    private:
+        bool                      m_BlockEvents = true;
+        bool                      m_ClearRenderTarget = false;
+        Ref<CommandBuffer>        m_CommandBuffer;
+        Ref<GraphicsPipeline>     m_Pipeline;
+        Ref<DescriptorHeap>       m_GPUDescriptorHeap;
+        Ref<DescriptorHeap>       m_SamplerDescriptorHeap;
+        Ref<Texture2D>            m_FontTexture;
+        Vector<Ref<VertexBuffer>> m_VertexBuffers;
+        Vector<Ref<IndexBuffer>>  m_IndexBuffers;
+        TextureRegistry           m_TextureRegistry;
     };
 }
