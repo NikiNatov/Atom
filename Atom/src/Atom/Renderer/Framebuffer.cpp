@@ -139,7 +139,7 @@ namespace Atom
                 else
                 {
                     attachmentDesc.ClearValue.Color = m_Description.ClearColor;
-                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, fmt::format("ColorAttachment[{}]", i).c_str());
+                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, m_Description.SwapChainFrameBuffer, fmt::format("ColorAttachment[{}]", i).c_str());
                 }
             }
         }
