@@ -1,6 +1,6 @@
 workspace "Atom"
 	architecture "x64"
-	startproject "Sandbox"
+	startproject "AtomEditor"
 
 	configurations 
 	{
@@ -72,6 +72,52 @@ project "Atom"
 
 project "Sandbox"
 	location "Sandbox"
+	kind "ConsoleApp"
+	language "C++"
+	cppdialect "C++17"
+	staticruntime "on"
+	characterset("ASCII")
+
+	targetdir("bin/" .. outputdir .. "/%{prj.name}")
+	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
+
+	files
+	{
+		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/src/**.h"
+	}
+
+	includedirs
+	{
+		"Atom/src",
+		"Atom/vendor",
+		"%{IncludeDirs.spd_log}",
+		"%{IncludeDirs.glm}",
+		"%{IncludeDirs.PIX}",
+	}
+
+	links
+	{
+		"Atom"
+	}
+
+	postbuildcommands
+	{
+		"XCOPY ..\\Atom\\vendor\\PIX\\lib\\WinPixEventRuntime.dll \"%{cfg.targetdir}\"  /S /Y"
+	}
+
+	filter "configurations:Debug"
+		defines "ATOM_DEBUG"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		defines "ATOM_RELEASE"
+		runtime "Release"
+		optimize "on"
+
+project "AtomEditor"
+	location "AtomEditor"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"

@@ -65,6 +65,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void DescriptorHeap::Reset()
+    {
+        m_Size = 0;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor)
     {
         return CopyDescriptors(&descriptor, 1);

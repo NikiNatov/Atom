@@ -15,7 +15,7 @@ namespace Atom
 
     class ImGuiLayer : public Layer
     {
-        using TextureRegistry = HashMap<const Texture*, D3D12_GPU_DESCRIPTOR_HANDLE>;
+        using TextureCache = HashMap<const Texture*, D3D12_GPU_DESCRIPTOR_HANDLE>;
     public:
         ImGuiLayer();
         virtual ~ImGuiLayer();
@@ -35,15 +35,15 @@ namespace Atom
         void RenderDrawData();
         void CreateGraphicsObjects();
     private:
-        bool                      m_BlockEvents = true;
-        bool                      m_ClearRenderTarget = false;
-        Ref<CommandBuffer>        m_CommandBuffer;
-        Ref<GraphicsPipeline>     m_Pipeline;
-        Ref<DescriptorHeap>       m_GPUDescriptorHeap;
-        Ref<DescriptorHeap>       m_SamplerDescriptorHeap;
-        Ref<Texture2D>            m_FontTexture;
-        Vector<Ref<VertexBuffer>> m_VertexBuffers;
-        Vector<Ref<IndexBuffer>>  m_IndexBuffers;
-        TextureRegistry           m_TextureRegistry;
+        bool                        m_BlockEvents = true;
+        bool                        m_ClearRenderTarget = false;
+        Ref<CommandBuffer>          m_CommandBuffer;
+        Ref<GraphicsPipeline>       m_Pipeline;
+        Vector<Ref<DescriptorHeap>> m_GPUDescriptorHeaps;
+        Ref<DescriptorHeap>         m_SamplerDescriptorHeap;
+        Ref<Texture2D>              m_FontTexture;
+        Vector<Ref<VertexBuffer>>   m_VertexBuffers;
+        Vector<Ref<IndexBuffer>>    m_IndexBuffers;
+        Vector<TextureCache>        m_TextureCache;
     };
 }

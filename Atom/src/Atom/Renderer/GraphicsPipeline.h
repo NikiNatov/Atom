@@ -103,7 +103,7 @@ namespace Atom
 
         const PipelineLayout& GetLayout() const;
         const Shader* GetShader() const;
-        const Framebuffer* GetFramebuffer() const;
+        Framebuffer* GetFramebuffer() const;
         Topology GetTopology() const;
         bool IsDepthTestingEnabled() const;
         bool IsBlendingEnabled() const;

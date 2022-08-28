@@ -173,7 +173,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Framebuffer* GraphicsPipeline::GetFramebuffer() const
+    Framebuffer* GraphicsPipeline::GetFramebuffer() const
     {
         return m_Description.Framebuffer.get();
     }

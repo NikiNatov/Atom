@@ -123,14 +123,16 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     D3D12_GPU_DESCRIPTOR_HANDLE ImGuiLayer::GetTextureHandle(const Texture* texture)
     {
-        if (m_TextureRegistry.find(texture) == m_TextureRegistry.end())
+        u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+
+        if (m_TextureCache[currentFrameIndex].find(texture) == m_TextureCache[currentFrameIndex].end())
         {
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptor = m_GPUDescriptorHeap->CopyDescriptor(texture->GetSRV());
-            m_TextureRegistry.emplace(texture, gpuDescriptor);
+            D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptor = m_GPUDescriptorHeaps[currentFrameIndex]->CopyDescriptor(texture->GetSRV());
+            m_TextureCache[currentFrameIndex].emplace(texture, gpuDescriptor);
             return gpuDescriptor;
         }
 
-        return m_TextureRegistry[texture];
+        return m_TextureCache[currentFrameIndex][texture];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -161,7 +163,7 @@ namespace Atom
         m_CommandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
         m_CommandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
         m_CommandBuffer->SetGraphicsPipeline(m_Pipeline.get());
-        m_CommandBuffer->SetDescriptorHeaps(m_GPUDescriptorHeap.get(), m_SamplerDescriptorHeap.get());
+        m_CommandBuffer->SetDescriptorHeaps(m_GPUDescriptorHeaps[currentFrameIndex].get(), m_SamplerDescriptorHeap.get());
         m_CommandBuffer->SetGraphicsRootConstants(0, &transformCB, 16);
     }
 
@@ -176,6 +178,10 @@ namespace Atom
             m_CommandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer(), m_ClearRenderTarget);
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+
+            // Reset descriptor heap and texture cache for current frame
+            m_GPUDescriptorHeaps[currentFrameIndex]->Reset();
+            m_TextureCache[currentFrameIndex].clear();
 
             // Create and grow vertex/index buffers if needed
             if (m_VertexBuffers[currentFrameIndex] == nullptr || m_VertexBuffers[currentFrameIndex]->GetElementCount() < drawData->TotalVtxCount)
@@ -279,7 +285,15 @@ namespace Atom
         m_CommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Graphics, "ImGuiCommandBuffer");
 
         // Create descriptor heaps
-        m_GPUDescriptorHeap = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, true, "ImGuiResourceDescriptorHeap");
+        u32 numFramesInFlight = Renderer::GetFramesInFlight();
+        m_GPUDescriptorHeaps.resize(numFramesInFlight);
+
+        for (u32 i = 0; i < numFramesInFlight; i++)
+        {
+            m_GPUDescriptorHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, true, 
+                                                                    fmt::format("ImGuiResourceDescriptorHeap[{}]", i).c_str());
+        }
+
         m_SamplerDescriptorHeap = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, 1, true, "ImGuiSamplerDescriptorHeap");
 
         D3D12_SAMPLER_DESC defaultSamplerDesc = {};
@@ -296,8 +310,8 @@ namespace Atom
         Device::Get().GetD3DDevice()->CreateSampler(&defaultSamplerDesc, m_SamplerDescriptorHeap->GetCPUStartHandle());
 
         // Create vertex and index buffers;
-        m_VertexBuffers.resize(Renderer::GetFramesInFlight(), nullptr);
-        m_IndexBuffers.resize(Renderer::GetFramesInFlight(), nullptr);
+        m_VertexBuffers.resize(numFramesInFlight, nullptr);
+        m_IndexBuffers.resize(numFramesInFlight, nullptr);
 
         // Create pipeline
         FramebufferDescription fbDesc;
@@ -343,6 +357,9 @@ namespace Atom
         copyQueue->ExecuteCommandList(copyCommandBuffer.get());
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
+
+        // Create texture caches
+        m_TextureCache.resize(numFramesInFlight);
 
         // Wait until all copy operations are finished before rendering
         copyQueue->Flush();
