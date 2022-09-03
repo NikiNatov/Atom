@@ -35,6 +35,9 @@ namespace Atom
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+        io.Fonts->AddFontFromFileTTF("../Atom/assets/fonts/opensans/OpenSans-Bold.ttf", 18);
+        io.FontDefault = io.Fonts->AddFontFromFileTTF("../Atom/assets/fonts/opensans/OpenSans-Regular.ttf", 18);
+
         SetDarkTheme();
 
         ImGui_ImplWin32_Init(Application::Get().GetWindow().GetWindowHandle());
@@ -93,9 +96,10 @@ namespace Atom
     {
         auto& colors = ImGui::GetStyle().Colors;
 
-        colors[ImGuiCol_Header] = ImVec4{ 0.2f, 0.205f, 0.21f, 1.0f };
+        colors[ImGuiCol_Header] = ImVec4{ 0.2f, 0.2f, 0.2f, 1.0f };
         colors[ImGuiCol_HeaderHovered] = ImVec4{ 0.3f, 0.305f, 0.31f, 1.0f };
         colors[ImGuiCol_HeaderActive] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
+        colors[ImGuiCol_WindowBg] = ImVec4{ 0.14f, 0.14f, 0.14f, 1.0f };
 
         // Buttons
         colors[ImGuiCol_Button] = ImVec4{ 0.2f, 0.205f, 0.21f, 1.0f };
@@ -118,6 +122,9 @@ namespace Atom
         colors[ImGuiCol_TitleBg] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
         colors[ImGuiCol_TitleBgActive] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
         colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
+
+        // Tables
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4{ 0.2f, 0.2f, 0.2f, 1.0f };
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

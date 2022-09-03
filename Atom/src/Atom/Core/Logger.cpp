@@ -1,6 +1,8 @@
 #include "atompch.h"
 #include "Logger.h"
 
+#include "Atom/Tools/ConsoleSink.h"
+
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace Atom
@@ -10,12 +12,24 @@ namespace Atom
 
     void Logger::Initialize()
     {
-        spdlog::set_pattern("%^[%T] %n: %v%$");
+        Vector<spdlog::sink_ptr> engineSinks = {
+            std::make_shared<spdlog::sinks::stdout_color_sink_mt>()
+        };
 
-        ms_EngineLogger = spdlog::stdout_color_mt("ATOM");
-        ms_ClientLogger = spdlog::stdout_color_mt("CLIENT");
+        Vector<spdlog::sink_ptr> clientSinks = {
+            std::make_shared<spdlog::sinks::stdout_color_sink_mt>(),
+            std::make_shared<ConsoleSink>()
+        };
 
+        engineSinks[0]->set_pattern("%^[%T] %n: %v%$");
+
+        clientSinks[0]->set_pattern("%^[%T] %n: %v%$");
+        clientSinks[1]->set_pattern("%^[%T] [%l]: %v%$");
+
+        ms_EngineLogger = std::make_shared<spdlog::logger>("ATOM", engineSinks.begin(), engineSinks.end());
         ms_EngineLogger->set_level(spdlog::level::trace);
+
+        ms_ClientLogger = std::make_shared<spdlog::logger>("CLIENT", clientSinks.begin(), clientSinks.end());
         ms_ClientLogger->set_level(spdlog::level::trace);
     }
 }

@@ -45,7 +45,7 @@ namespace Atom
             {
                 case ShaderResourceType::ConstantBuffer:
                 {
-                    ATOM_INFO("\tConstantBuffer \"{0}\" (b{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
+                    ATOM_ENGINE_INFO("\tConstantBuffer \"{0}\" (b{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
 
                     ID3D12ShaderReflectionConstantBuffer* constantBuffer = reflection->GetConstantBufferByName(resourceDesc.Name);
                     D3D12_SHADER_BUFFER_DESC cbDesc = {};
@@ -92,7 +92,7 @@ namespace Atom
                 case ShaderResourceType::Texture2DArray:
                 case ShaderResourceType::TextureCube:
                 {
-                    ATOM_INFO("\ShaderResourceRO \"{0}\" (t{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
+                    ATOM_ENGINE_INFO("\ShaderResourceRO \"{0}\" (t{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
                     m_Resources.emplace_back(resourceDesc.Name, type, resourceDesc.BindPoint, resourceDesc.Space);
                     break;
                 }
@@ -100,13 +100,13 @@ namespace Atom
                 case ShaderResourceType::RWTexture2D:
                 case ShaderResourceType::RWTexture2DArray:
                 {
-                    ATOM_INFO("\ShaderResourceRW \"{0}\" (u{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
+                    ATOM_ENGINE_INFO("\ShaderResourceRW \"{0}\" (u{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
                     m_Resources.emplace_back(resourceDesc.Name, type, resourceDesc.BindPoint, resourceDesc.Space);
                     break;
                 }
                 case ShaderResourceType::Sampler:
                 {
-                    ATOM_INFO("\tSampler \"{0}\" (s{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
+                    ATOM_ENGINE_INFO("\tSampler \"{0}\" (s{1}, space({2}))", resourceDesc.Name, resourceDesc.BindPoint, resourceDesc.Space);
                     m_Resources.emplace_back(resourceDesc.Name, type, resourceDesc.BindPoint, resourceDesc.Space);
                     break;
                 }
@@ -267,7 +267,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Reflect on the shader data and build resource set
-        ATOM_INFO("Shader \"{0}\" Resources:", m_Name);
+        ATOM_ENGINE_INFO("Shader \"{0}\" Resources:", m_Name);
         m_ResourceLayout = ShaderResourceLayout(m_VSData, m_PSData);
     }
 

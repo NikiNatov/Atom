@@ -103,6 +103,11 @@ namespace Atom
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
+        ATOM_INFO("Test Info");
+        ATOM_WARNING("Test Warning");
+        ATOM_ERROR("Test Error");
+        ATOM_CRITICAL("Test Critical");
+
         // Wait until all copy operations are finished before rendering
         copyQueue->Flush();
     }
@@ -193,9 +198,11 @@ namespace Atom
             ImGui::EndMenuBar();
         }
 
+        ConsolePanel::OnImGuiRender();
+        ImGui::ShowDemoWindow(false);
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
-
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
 
         if (m_ViewportSize.x != panelSize.x || m_ViewportSize.y != panelSize.y)
