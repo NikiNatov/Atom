@@ -7,8 +7,48 @@
 #include "Device.h"
 #include "ResourceStateTracker.h"
 
+#include "stb_image.h"
+#include <glm/glm.hpp>
+
 namespace Atom
 {
+    namespace Utils
+    {
+        u32 GetMaxMipCount(u32 width, u32 height)
+        {
+            return (u32)glm::log2((f32)glm::max(width, height)) + 1;
+        }
+    }
+
+    // ------------------------------------------------------ Image2D --------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Image2D::Image2D(u32 width, u32 height, u32 bytesPerPixel, u32 maxMipCount, bool isHDR, const byte* pixelData)
+        : m_Width(width), m_Height(height), m_BytesPerPixel(bytesPerPixel), m_MaxMipCount(maxMipCount), m_IsHDR(isHDR)
+    {
+        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
+        memcpy(m_PixelData.data(), pixelData, m_Width * m_Height * m_BytesPerPixel);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Image2D::Image2D(const String& filepath, u32 desiredChannels)
+    {
+        m_IsHDR = stbi_is_hdr(filepath.c_str());
+
+        s32 width, height;
+        byte* data = m_IsHDR ? (byte*)stbi_loadf(filepath.c_str(), &width, &height, nullptr, desiredChannels) : stbi_load(filepath.c_str(), &width, &height, nullptr, desiredChannels);
+        ATOM_ENGINE_ASSERT(data, fmt::format("Failed to load texture file \"{}\"", filepath));
+
+        m_Width = (u32)width;
+        m_Height = (u32)height;
+        m_BytesPerPixel = m_IsHDR ? desiredChannels * 4 : desiredChannels * 1;
+        m_MaxMipCount = Utils::GetMaxMipCount(m_Width, m_Height);
+
+        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
+        memcpy(m_PixelData.data(), data, m_Width * m_Height * m_BytesPerPixel);
+
+        stbi_image_free(data);
+    }
+
     // ------------------------------------------------------ Texture --------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(TextureType type, const TextureDescription& description, const char* debugName)

@@ -15,6 +15,7 @@ workspace "Atom"
 	IncludeDirs["glm"] = "Atom/vendor/glm"
 	IncludeDirs["imgui"] = "Atom/vendor/imgui"
 	IncludeDirs["PIX"] = "Atom/vendor/PIX/include"
+	IncludeDirs["stb_image"] = "Atom/vendor/stb_image"
 
 	include "Atom/vendor/imgui"
 
@@ -36,7 +37,9 @@ project "Atom"
 	files
 	{
 		"%{prj.name}/src/**.cpp",
-		"%{prj.name}/src/**.h"
+		"%{prj.name}/src/**.h",
+		"%{prj.name}/vendor/stb_image/**.h",
+		"%{prj.name}/vendor/stb_image/**.cpp",
 	}
 
 	includedirs
@@ -46,6 +49,7 @@ project "Atom"
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.imgui}",
 		"%{IncludeDirs.PIX}",
+		"%{IncludeDirs.stb_image}",
 	}
 
 	defines

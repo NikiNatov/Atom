@@ -76,6 +76,27 @@ namespace Atom
             : DepthStencil(depthValue, stencilValue) {}
     };
 
+    class Image2D
+    {
+    public:
+        Image2D(u32 width, u32 height, u32 bytesPerPixel, u32 maxMipCount, bool isHDR, const byte* pixelData);
+        Image2D(const String& filepath, u32 desiredChannels = 4);
+
+        inline u32 GetWidth() const { return m_Width; }
+        inline u32 GetHeight() const { return m_Height; }
+        inline u32 GetBytesPerPixel() const { return m_BytesPerPixel; }
+        inline u32 GetMaxMipCount() const { return m_MaxMipCount; }
+        inline bool IsHDR() const { return m_IsHDR; }
+        inline const Vector<byte>& GetPixelData() const { return m_PixelData; }
+    private:
+        u32          m_Width;
+        u32          m_Height;
+        u32          m_BytesPerPixel;
+        u32          m_MaxMipCount;
+        bool         m_IsHDR;
+        Vector<byte> m_PixelData;
+    };
+
     struct TextureDescription
     {
         TextureFormat Format = TextureFormat::RGBA8;
@@ -106,6 +127,7 @@ namespace Atom
         const ClearValue& GetClearValue() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
+
     protected:
         virtual void CreateViews();
     protected:
