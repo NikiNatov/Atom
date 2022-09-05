@@ -42,7 +42,7 @@ namespace Atom
 
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Topology = Topology::Triangles;
-        pipelineDesc.Shader = CreateRef<Shader>("../Atom/assets/shaders/Shader.hlsl");
+        pipelineDesc.Shader = CreateRef<Shader>("../Atom/shaders/Shader.hlsl");
         pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
         pipelineDesc.Layout = {
             { "POSITION", ShaderDataType::Float3 },

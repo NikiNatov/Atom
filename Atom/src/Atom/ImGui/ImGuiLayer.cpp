@@ -35,8 +35,8 @@ namespace Atom
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-        io.Fonts->AddFontFromFileTTF("../Atom/assets/fonts/opensans/OpenSans-Bold.ttf", 18);
-        io.FontDefault = io.Fonts->AddFontFromFileTTF("../Atom/assets/fonts/opensans/OpenSans-Regular.ttf", 18);
+        io.Fonts->AddFontFromFileTTF("resources/fonts/opensans/OpenSans-Bold.ttf", 18);
+        io.FontDefault = io.Fonts->AddFontFromFileTTF("resources/fonts/opensans/OpenSans-Regular.ttf", 18);
 
         SetDarkTheme();
 
@@ -102,7 +102,7 @@ namespace Atom
         colors[ImGuiCol_WindowBg] = ImVec4{ 0.14f, 0.14f, 0.14f, 1.0f };
 
         // Buttons
-        colors[ImGuiCol_Button] = ImVec4{ 0.2f, 0.205f, 0.21f, 1.0f };
+        colors[ImGuiCol_Button] = ImVec4{ 0.14f, 0.14f, 0.14f, 1.0f };
         colors[ImGuiCol_ButtonHovered] = ImVec4{ 0.3f, 0.305f, 0.31f, 1.0f };
         colors[ImGuiCol_ButtonActive] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
 
@@ -326,7 +326,7 @@ namespace Atom
 
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
-        pipelineDesc.Shader = CreateRef<Shader>("../Atom/assets/shaders/ImGuiShader.hlsl");
+        pipelineDesc.Shader = CreateRef<Shader>("../Atom/shaders/ImGuiShader.hlsl");
         pipelineDesc.EnableBlend = true;
         pipelineDesc.EnableDepthTest = false;
         pipelineDesc.BackfaceCulling = false;

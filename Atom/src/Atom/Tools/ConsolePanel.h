@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Renderer/Texture.h"
 
 namespace Atom
 {
@@ -33,9 +34,14 @@ namespace Atom
     class ConsolePanel
     {
     public:
+        static void Initialize();
+        static void Shutdown();
         static void AddMessage(const ConsoleMessage& message);
         static void OnImGuiRender();
     private:
         static Vector<ConsoleMessage> ms_Messages;
+        inline static Ref<Texture2D> ms_InfoIcon = nullptr;
+        inline static Ref<Texture2D> ms_WarningIcon = nullptr;
+        inline static Ref<Texture2D> ms_ErrorIcon = nullptr;
     };
 }
