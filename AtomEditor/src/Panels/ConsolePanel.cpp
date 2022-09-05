@@ -4,7 +4,7 @@
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Device.h"
-#include <imgui.h>
+#include <imgui/imgui.h>
 
 namespace Atom
 {

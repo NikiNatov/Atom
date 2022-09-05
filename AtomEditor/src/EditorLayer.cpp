@@ -1,4 +1,6 @@
 #include "EditorLayer.h"
+#include "Panels/ConsolePanel.h"
+
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
 

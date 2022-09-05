@@ -18,6 +18,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(ms_Application == nullptr, "Application already exists!");
         ms_Application = this;
 
+        Logger::Initialize(spec.AppLoggerSinks);
         Renderer::Initialize();
 
         WindowProperties properties;

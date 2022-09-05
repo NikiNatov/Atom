@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Application.h"
-#include "Logger.h"
-
 #include "AtomWin.h"
 
 #if 0
@@ -12,7 +10,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-    Atom::Logger::Initialize();
     Atom::Application* app = Atom::CreateApplication();
     ATOM_ENGINE_INFO("Application created!");
 
@@ -30,7 +27,6 @@ int main(int argc, char** argv)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-    Atom::Logger::Initialize();
     Atom::Application* app = Atom::CreateApplication();
     ATOM_ENGINE_INFO("Application created!");
 

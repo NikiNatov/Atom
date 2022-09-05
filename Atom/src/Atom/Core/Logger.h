@@ -1,18 +1,34 @@
 #pragma once
 
-#include <memory>
+#include "Atom/Core/Core.h"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace Atom
 {
+    class SinkWrapper
+    {
+    public:
+        SinkWrapper(const spdlog::sink_ptr& sink, const std::string& pattern)
+            : m_Sink(sink)
+        {
+            m_Sink->set_pattern(pattern.c_str());
+        }
+
+        spdlog::sink_ptr GetSink() const { return m_Sink; }
+    private:
+        spdlog::sink_ptr m_Sink;
+    };
+
     class Logger
     {
     public:
         Logger(const Logger&) = delete;
         Logger& operator=(const Logger&) = delete;
 
-        static void Initialize();
+        static void Initialize(const std::vector<SinkWrapper>& clientSinks);
 
         static const std::shared_ptr<spdlog::logger>& GetEngineLogger() { return ms_EngineLogger; }
         static const std::shared_ptr<spdlog::logger>& GetClientLogger() { return ms_ClientLogger; }

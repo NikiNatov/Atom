@@ -11,10 +11,11 @@ namespace Atom
 {
     struct ApplicationSpecification
     {
-        String    Name = "Atom Application";
-        u32       WindowWidth = 1280;
-        u32       WindowHeight = 720;
-        bool      VSync = true;
+        String              Name = "Atom Application";
+        u32                 WindowWidth = 1280;
+        u32                 WindowHeight = 720;
+        bool                VSync = true;
+        Vector<SinkWrapper> AppLoggerSinks;
     };
 
     class Application
