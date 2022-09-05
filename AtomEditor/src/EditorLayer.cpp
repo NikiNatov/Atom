@@ -1,4 +1,5 @@
 #include "EditorLayer.h"
+#include "EditorResources.h"
 #include "Panels/ConsolePanel.h"
 
 #include <glm/glm.hpp>
@@ -110,13 +111,13 @@ namespace Atom
         ATOM_ERROR("Test Error");
         ATOM_CRITICAL("Test Critical");
 
-        // Wait until all copy operations are finished before rendering
-        copyQueue->Flush();
+        EditorResources::Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnDetach()
     {
+        EditorResources::Shutdown();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

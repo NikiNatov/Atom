@@ -1,9 +1,7 @@
 #include "atompch.h"
 #include "ConsolePanel.h"
+#include "../EditorResources.h"
 
-#include "Atom/Renderer/CommandBuffer.h"
-#include "Atom/Renderer/CommandQueue.h"
-#include "Atom/Renderer/Device.h"
 #include <imgui/imgui.h>
 
 namespace Atom
@@ -27,47 +25,6 @@ namespace Atom
     }
 
     Vector<ConsoleMessage> ConsolePanel::ms_Messages;
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void ConsolePanel::Initialize()
-    {
-        Image2D infoImage("resources/icons/info_icon.png");
-        Image2D warningImage("resources/icons/warning_icon.png");
-        Image2D errorImage("resources/icons/error_icon.png");
-
-        TextureDescription desc;
-        desc.Format = TextureFormat::RGBA8;
-
-        desc.Width = infoImage.GetWidth();
-        desc.Height = infoImage.GetHeight();
-        ms_InfoIcon = CreateRef<Texture2D>(desc, "InfoIcon");
-
-        desc.Width = warningImage.GetWidth();
-        desc.Height = warningImage.GetHeight();
-        ms_WarningIcon = CreateRef<Texture2D>(desc, "WarningIcon");
-
-        desc.Width = errorImage.GetWidth();
-        desc.Height = errorImage.GetHeight();
-        ms_ErrorIcon = CreateRef<Texture2D>(desc, "ErrorIcon");
-
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "IconsCopyCmdBuffer");
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadTextureData(infoImage.GetPixelData().data(), ms_InfoIcon.get());
-        copyCommandBuffer->UploadTextureData(warningImage.GetPixelData().data(), ms_WarningIcon.get());
-        copyCommandBuffer->UploadTextureData(errorImage.GetPixelData().data(), ms_ErrorIcon.get());
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer.get());
-        copyQueue->Flush();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void ConsolePanel::Shutdown()
-    {
-        ms_InfoIcon = nullptr;
-        ms_WarningIcon = nullptr;
-        ms_ErrorIcon = nullptr;
-    }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void ConsolePanel::AddMessage(const ConsoleMessage& message)
@@ -96,11 +53,11 @@ namespace Atom
         f32 rowPadding = 8.0f;
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - toggleButtonSize * 3 - ImGui::GetStyle().ItemSpacing.x * 3);
-        Utils::ImageToggleButton("Infos", (ImTextureID)ms_InfoIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayInfo);
+        Utils::ImageToggleButton("Infos", (ImTextureID)EditorResources::InfoIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayInfo);
         ImGui::SameLine();
-        Utils::ImageToggleButton("Warnings", (ImTextureID)ms_WarningIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayWarnings);
+        Utils::ImageToggleButton("Warnings", (ImTextureID)EditorResources::WarningIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayWarnings);
         ImGui::SameLine();
-        Utils::ImageToggleButton("Errors", (ImTextureID)ms_ErrorIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayErrors);
+        Utils::ImageToggleButton("Errors", (ImTextureID)EditorResources::ErrorIcon.get(), ImVec2{ toggleButtonSize, toggleButtonSize }, displayErrors);
 
         ImGui::Separator();
 
@@ -131,19 +88,19 @@ namespace Atom
                         case ConsoleMessage::Severity::Info:
                         {
                             color = ImColor(70, 170, 255);
-                            currentIcon = ms_InfoIcon.get();
+                            currentIcon = EditorResources::InfoIcon.get();
                             break;
                         }
                         case ConsoleMessage::Severity::Warning:
                         {
                             color = ImColor(255, 200, 0);
-                            currentIcon = ms_WarningIcon.get();
+                            currentIcon = EditorResources::WarningIcon.get();
                             break;
                         }
                         case ConsoleMessage::Severity::Error:
                         {
                             color = ImColor(255, 100, 100);
-                            currentIcon = ms_ErrorIcon.get();
+                            currentIcon = EditorResources::ErrorIcon.get();
                             break;
                         }
                     }

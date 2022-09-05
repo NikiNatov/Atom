@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Texture.h"
 
 #include <spdlog/sinks/base_sink.h>
 #include <mutex>
@@ -37,15 +36,10 @@ namespace Atom
     class ConsolePanel
     {
     public:
-        static void Initialize();
-        static void Shutdown();
         static void AddMessage(const ConsoleMessage& message);
         static void OnImGuiRender();
     private:
         static Vector<ConsoleMessage> ms_Messages;
-        inline static Ref<Texture2D>  ms_InfoIcon = nullptr;
-        inline static Ref<Texture2D>  ms_WarningIcon = nullptr;
-        inline static Ref<Texture2D>  ms_ErrorIcon = nullptr;
     };
 
     class ConsoleSink : public spdlog::sinks::base_sink<std::mutex>
@@ -75,15 +69,15 @@ namespace Atom
         {
             switch (level)
             {
-            case spdlog::level::trace:
-            case spdlog::level::debug:
-            case spdlog::level::info:
-                return ConsoleMessage::Severity::Info;
-            case spdlog::level::warn:
-                return ConsoleMessage::Severity::Warning;
-            case spdlog::level::err:
-            case spdlog::level::critical:
-                return ConsoleMessage::Severity::Error;
+                case spdlog::level::trace:
+                case spdlog::level::debug:
+                case spdlog::level::info:
+                    return ConsoleMessage::Severity::Info;
+                case spdlog::level::warn:
+                    return ConsoleMessage::Severity::Warning;
+                case spdlog::level::err:
+                case spdlog::level::critical:
+                    return ConsoleMessage::Severity::Error;
             }
 
             ATOM_ENGINE_ASSERT(false, "Unknown severity level");

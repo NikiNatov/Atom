@@ -10,13 +10,11 @@ public:
     EditorApplication(const Atom::ApplicationSpecification& spec)
         : Application(spec)
     {
-        Atom::ConsolePanel::Initialize();
         PushLayer(new Atom::EditorLayer());
     }
 
     ~EditorApplication()
     {
-        Atom::ConsolePanel::Shutdown();
     }
 
 };
