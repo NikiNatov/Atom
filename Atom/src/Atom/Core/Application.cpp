@@ -19,7 +19,6 @@ namespace Atom
         ms_Application = this;
 
         Logger::Initialize(spec.AppLoggerSinks);
-        Renderer::Initialize();
 
         WindowProperties properties;
         properties.Title = m_Specification.Name;
@@ -28,6 +27,8 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = CreateScope<Window>(properties);
+
+        Renderer::Initialize();
 
         Input::Initialize(m_Window->GetWindowHandle());
 

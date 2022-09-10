@@ -153,6 +153,7 @@ namespace Atom
     Texture::~Texture()
     {
         Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, m_Type != TextureType::SwapChainBuffer);
+        Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, m_Type != TextureType::SwapChainBuffer);
         Device::Get().ReleaseResource(m_D3DResource.Detach(), m_Type != TextureType::SwapChainBuffer);
     }
 
@@ -226,6 +227,20 @@ namespace Atom
 
         m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
         dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+
+        // Create Sampler
+        D3D12_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.AddressU = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
+        samplerDesc.AddressV = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
+        samplerDesc.AddressW = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
+        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+        samplerDesc.Filter = Utils::AtomTextureFilterToD3D12(m_Description.Filter);
+        samplerDesc.MinLOD = 0.0f;
+        samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+        samplerDesc.MaxAnisotropy = m_Description.Filter == TextureFilter::Anisotropic ? D3D12_REQ_MAXANISOTROPY : 1;
+
+        m_SamplerDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateSampler(&samplerDesc, m_SamplerDescriptor);
     }
 
     // ------------------------------------------------- Texture2D -----------------------------------------------------------------

@@ -43,6 +43,7 @@ namespace Atom
             ShaderDataType Type;
             u32 Offset;
             u32 Size;
+            u32 BufferRegister;
         };
 
         struct ConstantBuffer

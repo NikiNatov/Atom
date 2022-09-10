@@ -49,6 +49,7 @@ namespace Atom
         pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
         pipelineDesc.Layout = {
             { "POSITION", ShaderDataType::Float3 },
+            { "TEX_COORD", ShaderDataType::Float2 },
         };
         pipelineDesc.EnableDepthTest = false;
         pipelineDesc.EnableBlend = true;
@@ -60,18 +61,19 @@ namespace Atom
         struct Vertex
         {
             glm::vec3 Position;
+            glm::vec2 UV;
 
-            Vertex(f32 x, f32 y, f32 z)
-                : Position(x, y, z)
+            Vertex(f32 x, f32 y, f32 z, f32 u, f32 v)
+                : Position(x, y, z), UV(u, v)
             {}
         };
 
         // Create buffers
         Vertex vertices[] = {
-            Vertex(-0.5f, -0.5f, 0.0f),
-            Vertex(0.5f, -0.5f, 0.0f),
-            Vertex(0.5f,  0.5f, 0.0f),
-            Vertex(-0.5f,  0.5f, 0.0f),
+            Vertex(-0.5f, -0.5f, 0.0f, 0.0f, 1.0f),
+            Vertex(0.5f, -0.5f, 0.0f, 1.0f, 1.0f),
+            Vertex(0.5f,  0.5f, 0.0f, 1.0f, 0.0f),
+            Vertex(-0.5f,  0.5f, 0.0f, 0.0f, 0.0f),
         };
 
         BufferDescription vbDesc;
@@ -106,12 +108,18 @@ namespace Atom
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
+        EditorResources::Initialize();
+
+        // Create material
+        m_Material = CreateRef<Material>(m_DefaultPipeline->GetShader(), MaterialFlags::None, "Material");
+        m_Material->SetTexture("Texture1", EditorResources::ErrorIcon);
+        m_Material->SetTexture("Texture2", EditorResources::WarningIcon);
+        m_Material->SetTexture("Texture3", EditorResources::InfoIcon);
+
         ATOM_INFO("Test Info");
         ATOM_WARNING("Test Warning");
         ATOM_ERROR("Test Error");
         ATOM_CRITICAL("Test Critical");
-
-        EditorResources::Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -123,6 +131,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnUpdate(Timestep ts)
     {
+        static f32 elapsedTime = 0.0f;
+        elapsedTime += ts;
+
         m_Camera.OnUpdate(ts);
 
         CameraCB cameraCB;
@@ -136,8 +147,12 @@ namespace Atom
         memcpy(data, &cameraCB, sizeof(CameraCB));
         m_CameraCB->Unmap();
 
+        //m_Material->SetUniform("Red", sin(elapsedTime) * 0.5f + 0.5f);
+        //m_Material->SetUniform("Green", cos(elapsedTime) * 0.5f + 0.5f);
+        //m_Material->SetUniform("Blue", sin(elapsedTime) * 0.5f + 0.5f);
+
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get());
+        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get(), m_Material.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         cmdBuffer->End();
 

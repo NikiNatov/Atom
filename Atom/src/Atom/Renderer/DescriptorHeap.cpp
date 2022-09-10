@@ -58,7 +58,7 @@ namespace Atom
         CD3DX12_CPU_DESCRIPTOR_HANDLE destDescriptorCPUStart = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUStartHandle, m_Size, m_DescriptorSize);
         CD3DX12_GPU_DESCRIPTOR_HANDLE destDescriptorGPUStart = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_GPUStartHandle, m_Size, m_DescriptorSize);
 
-        Device::Get().GetD3DDevice()->CopyDescriptorsSimple(descriptorCount, destDescriptorCPUStart, *descriptors, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
+        Device::Get().GetD3DDevice()->CopyDescriptors(1, &destDescriptorCPUStart, &descriptorCount, descriptorCount, descriptors, nullptr, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
         m_Size += descriptorCount;
 
         return destDescriptorGPUStart;

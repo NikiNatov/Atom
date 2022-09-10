@@ -21,6 +21,7 @@ namespace Atom
         Ref<VertexBuffer>     m_QuadVertexBuffer = nullptr;
         Ref<IndexBuffer>      m_QuadIndexBuffer = nullptr;
         Ref<ConstantBuffer>   m_CameraCB = nullptr;
+        Ref<Material>         m_Material = nullptr;
         EditorCamera          m_Camera;
         glm::vec2             m_ViewportSize = { 0.0f, 0.0f };
     };

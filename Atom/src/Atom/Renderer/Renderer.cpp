@@ -9,22 +9,44 @@
 #include "Atom/Renderer/GraphicsPipeline.h"
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Renderer/Material.h"
 
 namespace Atom
 {
     RendererConfig Renderer::ms_Config;
+    Vector<Ref<DescriptorHeap>> Renderer::ms_ResourceHeaps;
+    Vector<Ref<DescriptorHeap>> Renderer::ms_SamplerHeaps;
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize(const RendererConfig& config)
     {
         ms_Config = config;
+        ms_ResourceHeaps.resize(ms_Config.FramesInFlight);
+        ms_SamplerHeaps.resize(ms_Config.FramesInFlight);
+
+        for (u32 i = 0; i < ms_Config.FramesInFlight; i++)
+        {
+            ms_ResourceHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, ms_Config.MaxDescriptorsPerHeap, true,
+                fmt::format("ResourceDescriptorHeap[{}]", i).c_str());
+        }
+
+        for (u32 i = 0; i < ms_Config.FramesInFlight; i++)
+        {
+            ms_SamplerHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, ms_Config.MaxDescriptorsPerHeap, true,
+                fmt::format("SamplerDescriptorHeap[{}]", i).c_str());
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::BeginFrame()
     {
-        Device::Get().ProcessDeferredReleases(GetCurrentFrameIndex());
+        u32 currentFrameIndex = GetCurrentFrameIndex();
+
+        Device::Get().ProcessDeferredReleases(currentFrameIndex);
         PIXBeginEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get(), 0, "Begin Frame");
+
+        ms_ResourceHeaps[currentFrameIndex]->Reset();
+        ms_SamplerHeaps[currentFrameIndex]->Reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -40,13 +62,40 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer, const ConstantBuffer* constantBuffer)
+    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer, const ConstantBuffer* constantBuffer, const Material* material)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
         commandBuffer->SetVertexBuffer(vertexBuffer);
         commandBuffer->SetIndexBuffer(indexBuffer);
+
+        u32 currentFrameIndex = GetCurrentFrameIndex();
+        commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
+
+        u32 currentRootParameter = 0;
+        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
+        {
+            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
+        }
+
         // TODO: Find a better way of setting constant buffers
-        commandBuffer->SetGraphicsConstantBuffer(0, constantBuffer);
+        commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
+        textureSRVs.reserve(material->GetTextures().size());
+        samplers.reserve(material->GetTextures().size());
+
+        for (const auto& texture : material->GetTextures())
+        {
+            textureSRVs.push_back(texture->GetSRV());
+            samplers.push_back(texture->GetSampler());
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+
         commandBuffer->DrawIndexed(indexBuffer->GetElementCount());
     }
 

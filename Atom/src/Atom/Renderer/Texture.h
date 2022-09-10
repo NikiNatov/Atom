@@ -127,12 +127,14 @@ namespace Atom
         const ClearValue& GetClearValue() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
+        inline D3D12_CPU_DESCRIPTOR_HANDLE GetSampler() const { return m_SamplerDescriptor; }
 
     protected:
         virtual void CreateViews();
     protected:
         ComPtr<ID3D12Resource>      m_D3DResource;
         D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor;
+        D3D12_CPU_DESCRIPTOR_HANDLE m_SamplerDescriptor;
         TextureType                 m_Type;
         TextureDescription          m_Description;
     };

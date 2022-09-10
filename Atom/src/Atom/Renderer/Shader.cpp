@@ -74,7 +74,7 @@ namespace Atom
 
                             ShaderDataType uniformType = Utils::D3D12ShaderTypeToAtom(shaderUniformTypeDesc);
                             ATOM_ENGINE_ASSERT(uniformType != ShaderDataType::None, fmt::format("Shader uniforms with type \"{0}\" are not supported!", shaderUniformTypeDesc.Name));
-                            buffer.Uniforms.push_back({ shaderUniformDesc.Name, uniformType, shaderUniformDesc.StartOffset, shaderUniformDesc.Size });
+                            buffer.Uniforms.push_back({ shaderUniformDesc.Name, uniformType, shaderUniformDesc.StartOffset, shaderUniformDesc.Size, buffer.Register });
                         }
 
                         m_RootConstants.push_back(buffer);
