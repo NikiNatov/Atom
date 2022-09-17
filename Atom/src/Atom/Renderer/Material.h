@@ -9,10 +9,10 @@ namespace Atom
     enum class MaterialFlags
     {
         None = 0,
-        DepthTested,
-        Wireframe,
-        TwoSided,
-        Transparent
+        DepthTested = BIT(0),
+        Wireframe = BIT(1),
+        TwoSided = BIT(2),
+        Transparent = BIT(3)
     };
 
     IMPL_ENUM_OPERATORS(MaterialFlags)
