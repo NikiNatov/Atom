@@ -101,7 +101,8 @@ namespace Atom
                     clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
                 }
 
-                m_CommandList->ClearDepthStencilView(depthBuffer->GetDSV(), clearFlags, 0.0f, 0xff, 0, nullptr);
+                const DepthStencilValue& clearValue = depthBuffer->GetClearValue().DepthStencil;
+                m_CommandList->ClearDepthStencilView(depthBuffer->GetDSV(), clearFlags, clearValue.DepthValue, clearValue.StencilValue, 0, nullptr);
             }
 
             dsvHandle = &depthBuffer->GetDSV();
