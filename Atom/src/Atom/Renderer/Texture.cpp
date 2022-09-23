@@ -49,6 +49,26 @@ namespace Atom
         stbi_image_free(data);
     }
 
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Image2D::Image2D(const byte* compressedData, u32 dataSize, u32 desiredChannels)
+    {
+        m_IsHDR = stbi_is_hdr_from_memory(compressedData, dataSize);
+
+        s32 width, height;
+        byte* decompressedData = m_IsHDR ? (byte*)stbi_loadf_from_memory(compressedData, dataSize, &width, &height, nullptr, desiredChannels) : stbi_load_from_memory(compressedData, dataSize, &width, &height, nullptr, desiredChannels);
+        ATOM_ENGINE_ASSERT(decompressedData, "Failed to decompress texture!");
+
+        m_Width = (u32)width;
+        m_Height = (u32)height;
+        m_BytesPerPixel = m_IsHDR ? desiredChannels * 4 : desiredChannels * 1;
+        m_MaxMipCount = Utils::GetMaxMipCount(m_Width, m_Height);
+
+        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
+        memcpy(m_PixelData.data(), decompressedData, m_Width * m_Height * m_BytesPerPixel);
+
+        stbi_image_free(decompressedData);
+    }
+
     // ------------------------------------------------------ Texture --------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(TextureType type, const TextureDescription& description, const char* debugName)

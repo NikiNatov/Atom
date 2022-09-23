@@ -54,7 +54,7 @@ namespace Atom
         f32 DepthValue;
         u8 StencilValue;
 
-        DepthStencilValue(f32 depth = 0.0f, u8 stencil = 0xFF)
+        DepthStencilValue(f32 depth = 1.0f, u8 stencil = 0)
             : DepthValue(depth), StencilValue(stencil) {}
     };
 
@@ -81,6 +81,7 @@ namespace Atom
     public:
         Image2D(u32 width, u32 height, u32 bytesPerPixel, u32 maxMipCount, bool isHDR, const byte* pixelData);
         Image2D(const String& filepath, u32 desiredChannels = 4);
+        Image2D(const byte* compressedData, u32 dataSize, u32 desiredChannels = 4);
 
         inline u32 GetWidth() const { return m_Width; }
         inline u32 GetHeight() const { return m_Height; }
