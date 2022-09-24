@@ -113,6 +113,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SandboxLayer::OnUpdate(Timestep ts)
     {
+#if 0
         m_Camera.OnUpdate(ts);
 
         CameraCB cameraCB;
@@ -132,6 +133,7 @@ namespace Atom
         cmdBuffer->End();
 
         Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(cmdBuffer);
+#endif
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

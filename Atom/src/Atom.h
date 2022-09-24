@@ -30,3 +30,4 @@
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/EditorCamera.h"
 #include "Atom/Renderer/Material.h"
+#include "Atom/Renderer/Mesh.h"

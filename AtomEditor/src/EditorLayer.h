@@ -18,10 +18,8 @@ namespace Atom
     private:
         Ref<CommandBuffer>    m_CommandBuffer = nullptr;
         Ref<GraphicsPipeline> m_DefaultPipeline = nullptr;
-        Ref<VertexBuffer>     m_QuadVertexBuffer = nullptr;
-        Ref<IndexBuffer>      m_QuadIndexBuffer = nullptr;
         Ref<ConstantBuffer>   m_CameraCB = nullptr;
-        Ref<Material>         m_Material = nullptr;
+        Ref<Mesh>             m_TestMesh = nullptr;
         EditorCamera          m_Camera;
         glm::vec2             m_ViewportSize = { 0.0f, 0.0f };
     };

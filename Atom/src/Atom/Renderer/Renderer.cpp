@@ -2,21 +2,14 @@
 #include "Renderer.h"
 
 #include "Atom/Core/Application.h"
-#include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Texture.h"
-#include "Atom/Renderer/GraphicsPipeline.h"
-#include "Atom/Renderer/Framebuffer.h"
-#include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Material.h"
+#include "Atom/Renderer/Mesh.h"
 
 namespace Atom
 {
-    RendererConfig Renderer::ms_Config;
-    Vector<Ref<DescriptorHeap>> Renderer::ms_ResourceHeaps;
-    Vector<Ref<DescriptorHeap>> Renderer::ms_SamplerHeaps;
-
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Initialize(const RendererConfig& config)
     {
@@ -35,6 +28,13 @@ namespace Atom
             ms_SamplerHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, ms_Config.MaxDescriptorsPerHeap, true,
                 fmt::format("SamplerDescriptorHeap[{}]", i).c_str());
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::Shutdown()
+    {
+        ms_ResourceHeaps.clear();
+        ms_SamplerHeaps.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -62,41 +62,52 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const VertexBuffer* vertexBuffer, const IndexBuffer* indexBuffer, const ConstantBuffer* constantBuffer, const Material* material)
+    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
-        commandBuffer->SetVertexBuffer(vertexBuffer);
-        commandBuffer->SetIndexBuffer(indexBuffer);
+        commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
+        commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
 
         u32 currentFrameIndex = GetCurrentFrameIndex();
         commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
-        u32 currentRootParameter = 0;
-        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
+        for (auto& submesh : mesh->GetSubmeshes())
         {
-            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
+            Ref<Material> material = mesh->GetMaterials()[submesh.MaterialIndex];
+
+            u32 currentRootParameter = 0;
+
+            // Set root constants
+            for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
+            {
+                commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
+            }
+
+            // Set constant buffers and structured buffers
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+
+            // Set textures and samplers
+            Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
+            textureSRVs.reserve(material->GetTextures().size());
+
+            Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
+            samplers.reserve(material->GetTextures().size());
+
+            for (const auto& texture : material->GetTextures())
+            {
+                textureSRVs.push_back(texture->GetSRV());
+                samplers.push_back(texture->GetSampler());
+            }
+
+            D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
+            commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+
+            D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
+            commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+
+            // Draw
+            commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
         }
-
-        // TODO: Find a better way of setting constant buffers
-        commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
-
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
-        textureSRVs.reserve(material->GetTextures().size());
-        samplers.reserve(material->GetTextures().size());
-
-        for (const auto& texture : material->GetTextures())
-        {
-            textureSRVs.push_back(texture->GetSRV());
-            samplers.push_back(texture->GetSampler());
-        }
-
-        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
-
-        commandBuffer->DrawIndexed(indexBuffer->GetElementCount());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -16,6 +16,7 @@ workspace "Atom"
 	IncludeDirs["imgui"] = "Atom/vendor/imgui"
 	IncludeDirs["PIX"] = "Atom/vendor/PIX/include"
 	IncludeDirs["stb_image"] = "Atom/vendor/stb_image"
+	IncludeDirs["assimp"] = "Atom/vendor/assimp/include"
 
 	include "Atom/vendor/imgui"
 
@@ -50,6 +51,7 @@ project "Atom"
 		"%{IncludeDirs.imgui}",
 		"%{IncludeDirs.PIX}",
 		"%{IncludeDirs.stb_image}",
+		"%{IncludeDirs.assimp}",
 	}
 
 	defines
@@ -69,10 +71,20 @@ project "Atom"
 		runtime "Debug"
 		symbols "on"
 
+		links
+		{
+			"Atom/vendor/assimp/lib/Debug/assimp-vc143-mtd.lib" 
+		}
+
 	filter "configurations:Release"
 		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		links
+		{
+			"Atom/vendor/assimp/lib/Release/assimp-vc143-mt.lib" 
+		}
 
 project "Sandbox"
 	location "Sandbox"
@@ -115,10 +127,20 @@ project "Sandbox"
 		runtime "Debug"
 		symbols "on"
 
+		postbuildcommands
+		{
+			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Debug\\assimp-vc143-mtd.dll \"%{cfg.targetdir}\"  /S /Y"
+		}
+
 	filter "configurations:Release"
 		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		postbuildcommands
+		{
+			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Release\\assimp-vc143-mt.dll \"%{cfg.targetdir}\"  /S /Y"
+		}
 
 project "AtomEditor"
 	location "AtomEditor"
@@ -161,7 +183,17 @@ project "AtomEditor"
 		runtime "Debug"
 		symbols "on"
 
+		postbuildcommands
+		{
+			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Debug\\assimp-vc143-mtd.dll \"%{cfg.targetdir}\"  /S /Y"
+		}
+
 	filter "configurations:Release"
 		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		postbuildcommands
+		{
+			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Release\\assimp-vc143-mt.dll \"%{cfg.targetdir}\"  /S /Y"
+		}

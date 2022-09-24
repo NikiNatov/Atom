@@ -3,6 +3,7 @@
 #include "Panels/ConsolePanel.h"
 
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 #include <imgui/imgui.h>
 
 namespace Atom
@@ -50,57 +51,21 @@ namespace Atom
         pipelineDesc.Layout = {
             { "POSITION", ShaderDataType::Float3 },
             { "TEX_COORD", ShaderDataType::Float2 },
+            { "NORMAL", ShaderDataType::Float3 },
+            { "TANGENT", ShaderDataType::Float3 },
+            { "BITANGENT", ShaderDataType::Float3 },
         };
-        pipelineDesc.EnableDepthTest = false;
+
         pipelineDesc.EnableBlend = true;
+        pipelineDesc.EnableDepthTest = true;
         pipelineDesc.Wireframe = false;
-        pipelineDesc.BackfaceCulling = false;
+        pipelineDesc.BackfaceCulling = true;
+        m_DefaultPipeline = CreateRef<GraphicsPipeline>(pipelineDesc, "DefaultPipeline");
 
-        m_DefaultPipeline = CreateRef<GraphicsPipeline>(pipelineDesc);
+        // Load the test mesh
+        m_TestMesh = CreateRef<Mesh>("assets/meshes/x-wing/x-wing.gltf");
 
-        struct Vertex
-        {
-            glm::vec3 Position;
-            glm::vec2 UV;
-
-            Vertex(f32 x, f32 y, f32 z, f32 u, f32 v)
-                : Position(x, y, z), UV(u, v)
-            {}
-        };
-
-        // Create buffers
-        Vertex vertices[] = {
-            Vertex(-0.5f, -0.5f, 0.0f, 0.0f, 1.0f),
-            Vertex(0.5f, -0.5f, 0.0f, 1.0f, 1.0f),
-            Vertex(0.5f,  0.5f, 0.0f, 1.0f, 0.0f),
-            Vertex(-0.5f,  0.5f, 0.0f, 0.0f, 0.0f),
-        };
-
-        BufferDescription vbDesc;
-        vbDesc.ElementCount = _countof(vertices);
-        vbDesc.ElementSize = sizeof(Vertex);
-        vbDesc.IsDynamic = false;
-
-        m_QuadVertexBuffer = CreateRef<VertexBuffer>(vbDesc, "QuadVertexBuffer");
-
-        u32 indices[] = { 0, 1, 2, 2, 3, 0 };
-
-        BufferDescription ibDesc;
-        ibDesc.ElementCount = _countof(indices);
-        ibDesc.ElementSize = sizeof(u32);
-        ibDesc.IsDynamic = false;
-
-        m_QuadIndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "QuadIndexBuffer");
-
-        // Upload data to the buffers
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadBufferData(vertices, m_QuadVertexBuffer.get());
-        copyCommandBuffer->UploadBufferData(indices, m_QuadIndexBuffer.get());
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer.get());
-
+        // Create camera constant buffer
         BufferDescription cbDesc;
         cbDesc.ElementCount = 1;
         cbDesc.ElementSize = sizeof(CameraCB);
@@ -109,17 +74,6 @@ namespace Atom
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
         EditorResources::Initialize();
-
-        // Create material
-        m_Material = CreateRef<Material>(m_DefaultPipeline->GetShader(), MaterialFlags::None, "Material");
-        m_Material->SetTexture("Texture1", EditorResources::ErrorIcon);
-        m_Material->SetTexture("Texture2", EditorResources::WarningIcon);
-        m_Material->SetTexture("Texture3", EditorResources::InfoIcon);
-
-        ATOM_INFO("Test Info");
-        ATOM_WARNING("Test Warning");
-        ATOM_ERROR("Test Error");
-        ATOM_CRITICAL("Test Critical");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -140,19 +94,14 @@ namespace Atom
         cameraCB.ProjMatrix = m_Camera.GetProjectionMatrix();
         cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
 
-        CommandBuffer* cmdBuffer = m_CommandBuffer.get();
-        cmdBuffer->Begin();
-
         void* data = m_CameraCB->Map(0, 0);
         memcpy(data, &cameraCB, sizeof(CameraCB));
         m_CameraCB->Unmap();
 
-        //m_Material->SetUniform("Red", sin(elapsedTime) * 0.5f + 0.5f);
-        //m_Material->SetUniform("Green", cos(elapsedTime) * 0.5f + 0.5f);
-        //m_Material->SetUniform("Blue", sin(elapsedTime) * 0.5f + 0.5f);
-
+        CommandBuffer* cmdBuffer = m_CommandBuffer.get();
+        cmdBuffer->Begin();
         Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_QuadVertexBuffer.get(), m_QuadIndexBuffer.get(), m_CameraCB.get(), m_Material.get());
+        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
         Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
         cmdBuffer->End();
 

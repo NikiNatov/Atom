@@ -22,7 +22,7 @@ namespace Atom
         using Uniform = ShaderResourceLayout::ShaderUniform;
         using Resource = ShaderResourceLayout::ShaderResource;
     public:
-        Material(const Shader* shader, MaterialFlags flags, const char* name);
+        Material(const Ref<Shader>& shader, MaterialFlags flags, const char* name);
         ~Material() = default;
 
         template<typename T>
@@ -48,13 +48,14 @@ namespace Atom
         }
         
         void SetTexture(const char* uniformName, const Ref<Texture>& texture);
+        inline void SetName(const String& name) { m_Name = name; }
         inline void SetFlags(MaterialFlags flags) { m_Flags = flags; }
         inline bool IsDepthTested() const { return (m_Flags & MaterialFlags::DepthTested) != MaterialFlags::None; }
         inline bool IsWireframe() const { return (m_Flags & MaterialFlags::Wireframe) != MaterialFlags::None; }
         inline bool IsTwoSided() const { return (m_Flags & MaterialFlags::TwoSided) != MaterialFlags::None; }
         inline bool IsTransparent() const { return (m_Flags & MaterialFlags::Transparent) != MaterialFlags::None; }
         inline const String& GetName() const { return m_Name; }
-        inline const Shader* GetShader() const { return m_Shader; }
+        inline const Ref<Shader>& GetShader() const { return m_Shader; }
         inline MaterialFlags GetFlags() const { return m_Flags; }
         inline const HashMap<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
         inline const Vector<Ref<Texture>>& GetTextures() const { return m_Textures; }
@@ -63,7 +64,7 @@ namespace Atom
         const Resource* FindResourceDeclaration(const char* name);
     private:
         String                     m_Name;
-        const Shader*              m_Shader;
+        Ref<Shader>                m_Shader;
         MaterialFlags              m_Flags;
         HashMap<u32, Vector<byte>> m_UniformBuffersData;
         Vector<Ref<Texture>>       m_Textures;
