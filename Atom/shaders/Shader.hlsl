@@ -19,8 +19,8 @@ struct PSInput
 
 struct Camera
 {
-    row_major matrix ViewMatrix;
-    row_major matrix ProjectionMatrix;
+    matrix ViewMatrix;
+    matrix ProjectionMatrix;
 };
 
 ConstantBuffer<Camera> CameraCB : register(b0);

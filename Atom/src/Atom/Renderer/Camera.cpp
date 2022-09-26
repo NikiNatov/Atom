@@ -42,6 +42,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void PerspectiveCamera::RecalculateProjection()
     {
-        m_ProjectionMatrix = glm::perspective(glm::radians(m_Fov), m_AspectRatio, m_Near, m_Far);
+        m_ProjectionMatrix = glm::transpose(glm::perspective(glm::radians(m_Fov), m_AspectRatio, m_Near, m_Far));
     }
 }
