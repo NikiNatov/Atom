@@ -143,7 +143,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void ImGuiLayer::SetRenderState()
+    void ImGuiLayer::SetRenderState(Ref<CommandBuffer> commandBuffer)
     {
         struct TransformCB
         {
@@ -167,11 +167,11 @@ namespace Atom
         memcpy(&transformCB.MVPMatrix, mvp, sizeof(mvp));
 
         u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-        m_CommandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
-        m_CommandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
-        m_CommandBuffer->SetGraphicsPipeline(m_Pipeline.get());
-        m_CommandBuffer->SetDescriptorHeaps(m_GPUDescriptorHeaps[currentFrameIndex].get(), m_SamplerDescriptorHeap.get());
-        m_CommandBuffer->SetGraphicsRootConstants(0, &transformCB, 16);
+        commandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
+        commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
+        commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
+        commandBuffer->SetDescriptorHeaps(m_GPUDescriptorHeaps[currentFrameIndex].get(), m_SamplerDescriptorHeap.get());
+        commandBuffer->SetGraphicsRootConstants(0, &transformCB, 16);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -181,8 +181,10 @@ namespace Atom
 
         if (drawData->DisplaySize.x > 0.0f && drawData->DisplaySize.y > 0.0f)
         {
-            m_CommandBuffer->Begin();
-            m_CommandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer(), m_ClearRenderTarget);
+            CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+            Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
+            commandBuffer->Begin();
+            commandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer(), m_ClearRenderTarget);
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
 
@@ -231,7 +233,7 @@ namespace Atom
             m_IndexBuffers[currentFrameIndex]->Unmap();
 
             // Setup the rendering pipeline
-            SetRenderState();
+            SetRenderState(commandBuffer);
 
             // Render command lists
             u32 globalVtxOffset = 0;
@@ -250,7 +252,7 @@ namespace Atom
                         // User callback, registered via ImDrawList::AddCallback()
                         // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                         if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                            SetRenderState();
+                            SetRenderState(commandBuffer);
                         else
                             pcmd->UserCallback(cmdList, pcmd);
                     }
@@ -266,11 +268,11 @@ namespace Atom
                         // Apply Scissor/clipping rectangle, Bind texture, Draw
                         const D3D12_RECT r = { (LONG)clipMin.x, (LONG)clipMin.y, (LONG)clipMax.x, (LONG)clipMax.y };
                         Texture* texture = (Texture*)pcmd->GetTexID();
-                        m_CommandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
-                        m_CommandBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ);
-                        m_CommandBuffer->SetGraphicsDescriptorTable(1, GetTextureHandle(texture));
-                        m_CommandBuffer->SetGraphicsDescriptorTable(2, m_SamplerDescriptorHeap->GetGPUStartHandle());
-                        m_CommandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
+                        commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
+                        commandBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ);
+                        commandBuffer->SetGraphicsDescriptorTable(1, GetTextureHandle(texture));
+                        commandBuffer->SetGraphicsDescriptorTable(2, m_SamplerDescriptorHeap->GetGPUStartHandle());
+                        commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
 
@@ -278,19 +280,16 @@ namespace Atom
                 globalVtxOffset += cmdList->VtxBuffer.Size;
             }
 
-            m_CommandBuffer->EndRenderPass(m_Pipeline->GetFramebuffer());
-            m_CommandBuffer->End();
+            commandBuffer->EndRenderPass(m_Pipeline->GetFramebuffer());
+            commandBuffer->End();
 
-            Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(m_CommandBuffer.get());
+            gfxQueue->ExecuteCommandList(commandBuffer);
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void ImGuiLayer::CreateGraphicsObjects()
     {
-        // Create command buffer
-        m_CommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Graphics, "ImGuiCommandBuffer");
-
         // Create descriptor heaps
         u32 numFramesInFlight = Renderer::GetFramesInFlight();
         m_GPUDescriptorHeaps.resize(numFramesInFlight);
@@ -357,11 +356,11 @@ namespace Atom
         m_FontTexture = CreateRef<Texture2D>(fontTextureDesc, "ImGuiFontTexture");
 
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "ImGuiCopyCommandBuffer");
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
         copyCommandBuffer->UploadTextureData(pixels, m_FontTexture.get());
         copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer.get());
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
 

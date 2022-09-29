@@ -35,6 +35,8 @@ namespace Atom
         String name = debugName;
         DXCall(m_D3DCommandQueue->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
+
+        m_CmdBufferProcessingThread = std::thread(&CommandQueue::ProcessInFlightCommandBuffers, this);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -42,6 +44,9 @@ namespace Atom
     {
         if (m_FenceEvent)
             CloseHandle(m_FenceEvent);
+
+        m_ProcessInFlightCmdBuffers = false;
+        m_CmdBufferProcessingThread.join();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -65,6 +70,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandQueue::Flush()
     {
+        std::unique_lock<std::mutex> lock(m_CmdBufferProcessingMutex);
+        m_CmdBufferProcessingCV.wait(lock, [this] { return m_InFlightCmdBuffers.Empty(); });
+
         u64 fenceValueToWait = Signal();
         WaitForFenceValue(fenceValueToWait);
     }
@@ -76,13 +84,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 CommandQueue::ExecuteCommandList(const CommandBuffer* commandBuffer)
+    u64 CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
     {
         return ExecuteCommandLists({ commandBuffer });
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 CommandQueue::ExecuteCommandLists(const Vector<const CommandBuffer*>& commandBuffers)
+    u64 CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
     {
         Vector<ID3D12CommandList*> commandListArray;
 
@@ -93,6 +101,55 @@ namespace Atom
         }
 
         m_D3DCommandQueue->ExecuteCommandLists(commandListArray.size(), commandListArray.data());
-        return Signal();
+        u64 fenceValue = Signal();
+
+        for (auto& buffer : commandBuffers)
+        {
+            m_InFlightCmdBuffers.Emplace(buffer, fenceValue);
+        }
+
+        return fenceValue;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<CommandBuffer> CommandQueue::GetCommandBuffer()
+    {
+        if (!m_AvailableCmdBuffers.Empty())
+        {
+            return m_AvailableCmdBuffers.Pop();
+        }
+
+        String cmdBufferName;
+
+        switch (m_Type)
+        {
+            case CommandQueueType::Graphics: cmdBufferName = "CmdBuffer(Graphics)"; break;
+            case CommandQueueType::Compute:  cmdBufferName = "CmdBuffer(Compute)"; break;
+            case CommandQueueType::Copy:     cmdBufferName = "CmdBuffer(Copy)"; break;
+        }
+
+        return CreateRef<CommandBuffer>(m_Type, cmdBufferName.c_str());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandQueue::ProcessInFlightCommandBuffers()
+    {
+        std::unique_lock<std::mutex> lock(m_CmdBufferProcessingMutex, std::defer_lock);
+
+        while (m_ProcessInFlightCmdBuffers)
+        {
+            lock.lock();
+
+            while (!m_InFlightCmdBuffers.Empty())
+            {
+                CommandBufferEntry entry = m_InFlightCmdBuffers.Pop();
+
+                WaitForFenceValue(entry.FenceValue);
+                m_AvailableCmdBuffers.Push(entry.CmdBuffer);
+            }
+
+            lock.unlock();
+            std::this_thread::yield();
+        }
     }
 }

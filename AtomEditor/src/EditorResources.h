@@ -15,7 +15,7 @@ namespace Atom
         static void Initialize()
         {
             CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-            Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "EditorResourcesCopyCmdBuffer");
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
             copyCommandBuffer->Begin();
 
             InfoIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/info_icon.png", "InfoIcon");
@@ -23,8 +23,7 @@ namespace Atom
             ErrorIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/error_icon.png", "ErrorIcon");
 
             copyCommandBuffer->End();
-            copyQueue->ExecuteCommandList(copyCommandBuffer.get());
-            copyQueue->Flush();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
         }
 
         static void Shutdown()

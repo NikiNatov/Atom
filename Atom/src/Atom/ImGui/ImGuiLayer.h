@@ -31,13 +31,12 @@ namespace Atom
         void SetDarkTheme();
     private:
         D3D12_GPU_DESCRIPTOR_HANDLE GetTextureHandle(const Texture* texture);
-        void SetRenderState();
+        void SetRenderState(Ref<CommandBuffer> commandBuffer);
         void RenderDrawData();
         void CreateGraphicsObjects();
     private:
         bool                        m_BlockEvents = true;
         bool                        m_ClearRenderTarget = false;
-        Ref<CommandBuffer>          m_CommandBuffer;
         Ref<GraphicsPipeline>       m_Pipeline;
         Vector<Ref<DescriptorHeap>> m_GPUDescriptorHeaps;
         Ref<DescriptorHeap>         m_SamplerDescriptorHeap;

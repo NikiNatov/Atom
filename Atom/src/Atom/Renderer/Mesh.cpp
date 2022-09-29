@@ -92,7 +92,8 @@ namespace Atom
             m_Submeshes.push_back(sm);
         }
 
-        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
 
         // Parse all materials
@@ -186,7 +187,7 @@ namespace Atom
         }
 
         copyCommandBuffer->End();
-        Device::Get().GetCommandQueue(CommandQueueType::Copy)->ExecuteCommandList(copyCommandBuffer.get());
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
 
         CreateBuffers(vertices, indices);
     }
@@ -210,12 +211,11 @@ namespace Atom
 
         // Upload the data to the GPU
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Copy, "CopyCommandBuffer");
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
         copyCommandBuffer->UploadBufferData(vertices.data(), m_VertexBuffer.get());
         copyCommandBuffer->UploadBufferData(indices.data(), m_IndexBuffer.get());
         copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer.get());
-        copyQueue->Flush();
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
     }
 }

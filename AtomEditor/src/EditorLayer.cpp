@@ -32,9 +32,6 @@ namespace Atom
     {
         Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
 
-        // Create command buffers
-        m_CommandBuffer = CreateRef<CommandBuffer>(CommandQueueType::Graphics);
-
         // Create pipeline
         FramebufferDescription fbDesc;
         fbDesc.SwapChainFrameBuffer = false;
@@ -98,14 +95,15 @@ namespace Atom
         memcpy(data, &cameraCB, sizeof(CameraCB));
         m_CameraCB->Unmap();
 
-        CommandBuffer* cmdBuffer = m_CommandBuffer.get();
-        cmdBuffer->Begin();
-        Renderer::BeginRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        Renderer::RenderGeometry(cmdBuffer, m_DefaultPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
-        Renderer::EndRenderPass(cmdBuffer, m_DefaultPipeline->GetFramebuffer());
-        cmdBuffer->End();
+        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+        Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
+        commandBuffer->Begin();
+        Renderer::BeginRenderPass(commandBuffer.get(), m_DefaultPipeline->GetFramebuffer());
+        Renderer::RenderGeometry(commandBuffer.get(), m_DefaultPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
+        Renderer::EndRenderPass(commandBuffer.get(), m_DefaultPipeline->GetFramebuffer());
+        commandBuffer->End();
 
-        Device::Get().GetCommandQueue(CommandQueueType::Graphics)->ExecuteCommandList(cmdBuffer);
+        gfxQueue->ExecuteCommandList(commandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -23,15 +23,8 @@ namespace Atom
     {
         auto d3dDevice = Device::Get().GetD3DDevice();
 
-        u32 framesInFlight = Renderer::GetFramesInFlight();
-        m_Allocators.resize(framesInFlight);
-        m_PendingAllocators.resize(framesInFlight);
-        m_UploadBuffers.resize(framesInFlight);
-        for (u32 i = 0; i < framesInFlight; i++)
-        {
-            DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_Allocators[i])));
-            DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_PendingAllocators[i])));
-        }
+        DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_Allocator)));
+        DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_PendingAllocator)));
 
         DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
         DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
@@ -50,14 +43,13 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::Begin()
     {
-        u32 currentFrame = Renderer::GetCurrentFrameIndex();
-        DXCall(m_Allocators[currentFrame]->Reset());
-        DXCall(m_CommandList->Reset(m_Allocators[currentFrame].Get(), NULL));
+        DXCall(m_Allocator->Reset());
+        DXCall(m_CommandList->Reset(m_Allocator.Get(), NULL));
 
-        DXCall(m_PendingAllocators[currentFrame]->Reset());
-        DXCall(m_PendingCommandList->Reset(m_PendingAllocators[currentFrame].Get(), NULL));
+        DXCall(m_PendingAllocator->Reset());
+        DXCall(m_PendingCommandList->Reset(m_PendingAllocator.Get(), NULL));
 
-        m_UploadBuffers[currentFrame].clear();
+        m_UploadBuffers.clear();
         m_ResourceStateTracker.ClearStates();
         m_IsRecording = true;
     }
@@ -65,6 +57,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::BeginRenderPass(const Framebuffer* framebuffer, bool clear)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         // Set color attachments
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
         rtvHandles.reserve(AttachmentPoint::NumColorAttachments);
@@ -116,6 +110,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::EndRenderPass(const Framebuffer* framebuffer)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
         {
             auto colorAttachment = framebuffer->GetColorAttachment((AttachmentPoint)i);
@@ -135,6 +131,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state);
         m_ResourceStateTracker.CommitBarriers();
     }
@@ -142,6 +140,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsPipeline(const GraphicsPipeline* pipeline)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         m_CommandList->SetGraphicsRootSignature(pipeline->GetD3DDescription().pRootSignature);
         m_CommandList->IASetPrimitiveTopology(Utils::D3D12TopologyTypeToD3D12Topology(pipeline->GetD3DDescription().PrimitiveTopologyType));
         m_CommandList->SetPipelineState(pipeline->GetD3DPipeline().Get());
@@ -150,6 +150,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         if(!vertexBuffer->IsDynamic())
             m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
@@ -159,6 +161,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         if (!indexBuffer->IsDynamic())
             m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
@@ -168,6 +172,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         if (!constantBuffer->IsDynamic())
             m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
@@ -177,18 +183,22 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsRootConstants(u32 rootParamIndex, const void* data, u32 numConstants)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
         m_CommandList->SetGraphicsRoot32BitConstants(rootParamIndex, numConstants, data, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
         m_CommandList->SetGraphicsRootDescriptorTable(rootParamIndex, tableStart);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetDescriptorHeaps(const DescriptorHeap* resourceHeap, const DescriptorHeap* samplerHeap)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         Vector<ID3D12DescriptorHeap*> heaps;
 
         if (resourceHeap)
@@ -218,7 +228,7 @@ namespace Atom
 #if defined (ATOM_DEBUG)
             DXCall(uploadBuffer->SetName(L"Upload Buffer"));
 #endif
-            m_UploadBuffers[currentFrameIndex].push_back(uploadBuffer);
+            m_UploadBuffers.push_back(uploadBuffer);
 
             D3D12_SUBRESOURCE_DATA subresourceData = {};
             subresourceData.pData = data;
@@ -248,7 +258,7 @@ namespace Atom
 #if defined (ATOM_DEBUG)
             DXCall(uploadBuffer->SetName(L"Upload Buffer"));
 #endif
-            m_UploadBuffers[currentFrameIndex].push_back(uploadBuffer);
+            m_UploadBuffers.push_back(uploadBuffer);
 
             D3D12_SUBRESOURCE_DATA subresourceData = {};
             subresourceData.pData = data;
@@ -264,6 +274,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::DrawIndexed(u32 indexCount, u32 instanceCount, u32 startIndex, u32 startVertex, u32 startInstance)
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         m_ResourceStateTracker.CommitBarriers();
         m_CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, startVertex, startInstance);
     }
@@ -271,6 +283,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::End()
     {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
         m_ResourceStateTracker.CommitBarriers();
         DXCall(m_CommandList->Close());
 

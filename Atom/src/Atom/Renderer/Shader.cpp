@@ -195,11 +195,11 @@ namespace Atom
 
         if (!readOnlyResources.empty())
         {
-            ranges.emplace_back(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, readOnlyResources.size(), readOnlyResources[0]->Register, 0);
+            ranges.emplace_back(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, readOnlyResources.size(), readOnlyResources[0]->Register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
         }
         if (!readWriteResources.empty())
         {
-            ranges.emplace_back(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, readWriteResources.size(), readWriteResources[0]->Register, 0);
+            ranges.emplace_back(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, readWriteResources.size(), readWriteResources[0]->Register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
         }
         if (ranges.size() > 0)
         {
@@ -212,7 +212,7 @@ namespace Atom
         // Create sampler descriptor table
         if (!samplers.empty())
         {
-            CD3DX12_DESCRIPTOR_RANGE1 range(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, samplers.size(), samplers[0]->Register, 0);
+            CD3DX12_DESCRIPTOR_RANGE1 range(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, samplers.size(), samplers[0]->Register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
             CD3DX12_ROOT_PARAMETER1 param;
             param.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
             m_DescriptorTables.emplace_back(rootParameters.size(), DescriptorHeapType::Sampler, samplers.size());

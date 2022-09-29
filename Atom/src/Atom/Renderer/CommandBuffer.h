@@ -42,12 +42,12 @@ namespace Atom
         inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
         inline ComPtr<ID3D12GraphicsCommandList6> GetPendingCommandList() const { return m_PendingCommandList; }
     private:
-        Vector<ComPtr<ID3D12CommandAllocator>> m_Allocators;
-        ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
-        Vector<ComPtr<ID3D12CommandAllocator>> m_PendingAllocators;
-        ComPtr<ID3D12GraphicsCommandList6>     m_PendingCommandList;
-        ResourceStateTracker                   m_ResourceStateTracker;
-        Vector<Vector<ComPtr<ID3D12Resource>>> m_UploadBuffers;
-        bool                                   m_IsRecording = false;
+        ComPtr<ID3D12CommandAllocator>     m_Allocator;
+        ComPtr<ID3D12GraphicsCommandList6> m_CommandList;
+        ComPtr<ID3D12CommandAllocator>     m_PendingAllocator;
+        ComPtr<ID3D12GraphicsCommandList6> m_PendingCommandList;
+        ResourceStateTracker               m_ResourceStateTracker;
+        Vector<ComPtr<ID3D12Resource>>     m_UploadBuffers;
+        bool                               m_IsRecording = false;
     };
 }
