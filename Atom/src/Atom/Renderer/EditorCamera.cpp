@@ -112,9 +112,6 @@ namespace Atom
         m_Distance -= zoomDelta * m_ZoomSpeed * ts;
 
         if (m_Distance < 1.0f)
-        {
-            m_FocalPoint += GetCameraFront();
             m_Distance = 1.0f;
-        }
     }
 }
