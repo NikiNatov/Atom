@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 
 namespace Atom
 {
@@ -35,9 +36,11 @@ namespace Atom
         static const RendererConfig& GetConfig();
         static u32 GetCurrentFrameIndex();
         static u32 GetFramesInFlight();
+        static const ShaderLibrary& GetShaderLibrary();
     private:
         inline static RendererConfig              ms_Config;
         inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;
         inline static Vector<Ref<DescriptorHeap>> ms_SamplerHeaps;
+        inline static ShaderLibrary               ms_ShaderLibrary;
     };
 }

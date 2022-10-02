@@ -17,6 +17,7 @@ namespace Atom
         ms_ResourceHeaps.resize(ms_Config.FramesInFlight);
         ms_SamplerHeaps.resize(ms_Config.FramesInFlight);
 
+        // Create descriptor heaps
         for (u32 i = 0; i < ms_Config.FramesInFlight; i++)
         {
             ms_ResourceHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, ms_Config.MaxDescriptorsPerHeap, true,
@@ -28,6 +29,10 @@ namespace Atom
             ms_SamplerHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, ms_Config.MaxDescriptorsPerHeap, true,
                 fmt::format("SamplerDescriptorHeap[{}]", i).c_str());
         }
+
+        // Load shaders
+        ms_ShaderLibrary.Load("../Atom/shaders/ImGuiShader.hlsl");
+        ms_ShaderLibrary.Load("../Atom/shaders/Shader.hlsl");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -132,5 +137,11 @@ namespace Atom
     u32 Renderer::GetFramesInFlight()
     {
         return ms_Config.FramesInFlight;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const ShaderLibrary& Renderer::GetShaderLibrary()
+    {
+        return ms_ShaderLibrary;
     }
 }

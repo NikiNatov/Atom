@@ -6,6 +6,7 @@
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Material.h"
+#include "Atom/Renderer/Renderer.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -101,7 +102,7 @@ namespace Atom
         {
             const aiMaterial* assimpMat = scene->mMaterials[materialIdx];
             
-            Ref<Shader> shader = CreateRef<Shader>("../Atom/shaders/Shader.hlsl");
+            Ref<Shader> shader = Renderer::GetShaderLibrary().Get("Shader");
 
             MaterialFlags materialFlags = MaterialFlags::DepthTested;
             Ref<Material> material = CreateRef<Material>(shader, materialFlags, "UnnamedMaterial");

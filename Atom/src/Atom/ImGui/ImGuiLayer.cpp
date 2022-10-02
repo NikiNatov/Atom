@@ -325,7 +325,7 @@ namespace Atom
 
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
-        pipelineDesc.Shader = CreateRef<Shader>("../Atom/shaders/ImGuiShader.hlsl");
+        pipelineDesc.Shader = Renderer::GetShaderLibrary().Get("ImGuiShader");
         pipelineDesc.EnableBlend = true;
         pipelineDesc.EnableDepthTest = false;
         pipelineDesc.BackfaceCulling = false;
