@@ -31,8 +31,8 @@ namespace Atom
         }
 
         // Load shaders
-        ms_ShaderLibrary.Load("../Atom/shaders/ImGuiShader.hlsl");
-        ms_ShaderLibrary.Load("../Atom/shaders/Shader.hlsl");
+        ms_ShaderLibrary.Load("resources/shaders/ImGuiShader.hlsl");
+        ms_ShaderLibrary.Load("resources/shaders/Shader.hlsl");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
