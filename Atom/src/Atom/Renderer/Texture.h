@@ -80,7 +80,7 @@ namespace Atom
     {
     public:
         Image2D(u32 width, u32 height, u32 bytesPerPixel, u32 maxMipCount, bool isHDR, const byte* pixelData);
-        Image2D(const String& filepath, u32 desiredChannels = 4);
+        Image2D(const std::filesystem::path& filepath, u32 desiredChannels = 4);
         Image2D(const byte* compressedData, u32 dataSize, u32 desiredChannels = 4);
 
         inline u32 GetWidth() const { return m_Width; }

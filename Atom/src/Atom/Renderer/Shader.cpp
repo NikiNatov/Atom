@@ -21,6 +21,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    ShaderResourceLayout::ShaderResourceLayout(const ComPtr<ID3DBlob>& csDataBlob)
+    {
+        Reflect(csDataBlob);
+        CreateRootSignature();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     ShaderResourceLayout::~ShaderResourceLayout()
     {
     }
@@ -243,8 +250,14 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Shader::Shader(const String& filepath)
-        : m_Name(std::filesystem::path(filepath).stem().string()), m_Filepath(filepath)
+    Shader::Shader(const std::filesystem::path& filepath)
+        : m_Name(filepath.stem().string()), m_Filepath(filepath)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    GraphicsShader::GraphicsShader(const std::filesystem::path& filepath)
+        : Shader(filepath)
     {
         auto d3dDevice = Device::Get().GetD3DDevice();
 
@@ -253,17 +266,15 @@ namespace Atom
 #else
         UINT compileFlags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
-
-        // Read the file
-        String source = ReadFile(filepath);
         ComPtr<ID3DBlob> errorBlob = nullptr;
+        WString filepathStr = filepath.wstring();
 
         // Compile vertex shader
-        D3DCompile(source.data(), source.size(), nullptr, nullptr, nullptr, "VSMain", "vs_5_1", compileFlags, 0, &m_VSData, &errorBlob);
+        D3DCompileFromFile(filepathStr.c_str(), nullptr, nullptr, "VSMain", "vs_5_1", compileFlags, 0, &m_VSData, &errorBlob);
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Compile pixel shader
-        D3DCompile(source.data(), source.size(), nullptr, nullptr, nullptr, "PSMain", "ps_5_1", compileFlags, 0, &m_PSData, &errorBlob);
+        D3DCompileFromFile(filepathStr.c_str(), nullptr, nullptr, "PSMain", "ps_5_1", compileFlags, 0, &m_PSData, &errorBlob);
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Reflect on the shader data and build resource set
@@ -272,27 +283,34 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Shader::~Shader()
+    GraphicsShader::~GraphicsShader()
     {
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    String Shader::ReadFile(const String& filepath)
+    ComputeShader::ComputeShader(const std::filesystem::path& filepath)
+        : Shader(filepath)
     {
-        std::ifstream fileStream(filepath, std::ios::binary | std::ios::in);
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
-        fileStream.seekg(0, fileStream.end);
-        u32 size = fileStream.tellg();
-        fileStream.seekg(0, fileStream.beg);
+#if defined(ATOM_DEBUG)
+        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+        UINT compileFlags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
+        ComPtr<ID3DBlob> errorBlob = nullptr;
 
-        String buffer(size, '\0');
+        // Compile compute shader
+        D3DCompileFromFile(filepath.wstring().c_str(), nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &m_CSData, &errorBlob);
+        ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
-        if (size > 0)
-        {
-            fileStream.read(buffer.data(), size);
-        }
+        // Reflect on the shader data and build resource set
+        ATOM_ENGINE_INFO("Compute Shader \"{0}\" Resources:", m_Name);
+        m_ResourceLayout = ShaderResourceLayout(m_CSData);
+    }
 
-        return buffer;
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ComputeShader::~ComputeShader()
+    {
     }
 }

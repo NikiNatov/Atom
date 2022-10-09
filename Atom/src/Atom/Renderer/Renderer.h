@@ -2,6 +2,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Renderer/ShaderLibrary.h"
+#include "Atom/Renderer/PipelineLibrary.h"
 
 namespace Atom
 {
@@ -37,10 +38,12 @@ namespace Atom
         static u32 GetCurrentFrameIndex();
         static u32 GetFramesInFlight();
         static const ShaderLibrary& GetShaderLibrary();
+        static const PipelineLibrary& GetPipelineLibrary();
     private:
         inline static RendererConfig              ms_Config;
         inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;
         inline static Vector<Ref<DescriptorHeap>> ms_SamplerHeaps;
         inline static ShaderLibrary               ms_ShaderLibrary;
+        inline static PipelineLibrary             ms_PipelineLibrary;
     };
 }

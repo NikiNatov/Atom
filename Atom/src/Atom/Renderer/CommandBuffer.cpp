@@ -8,7 +8,7 @@
 #include "Device.h"
 #include "Texture.h"
 #include "SwapChain.h"
-#include "GraphicsPipeline.h"
+#include "Pipeline.h"
 #include "Framebuffer.h"
 #include "Buffer.h"
 #include "Renderer.h"
@@ -134,17 +134,6 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
         m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state);
-        m_ResourceStateTracker.CommitBarriers();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetGraphicsPipeline(const GraphicsPipeline* pipeline)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        m_CommandList->SetGraphicsRootSignature(pipeline->GetD3DDescription().pRootSignature);
-        m_CommandList->IASetPrimitiveTopology(Utils::D3D12TopologyTypeToD3D12Topology(pipeline->GetD3DDescription().PrimitiveTopologyType));
-        m_CommandList->SetPipelineState(pipeline->GetD3DPipeline().Get());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -170,6 +159,25 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetGraphicsPipeline(const GraphicsPipeline* pipeline)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_CommandList->SetGraphicsRootSignature(pipeline->GetD3DDescription().pRootSignature);
+        m_CommandList->IASetPrimitiveTopology(Utils::D3D12TopologyTypeToD3D12Topology(pipeline->GetD3DDescription().PrimitiveTopologyType));
+        m_CommandList->SetPipelineState(pipeline->GetD3DPipeline().Get());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetComputePipeline(const ComputePipeline* pipeline)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_CommandList->SetComputeRootSignature(pipeline->GetD3DDescription().pRootSignature);
+        m_CommandList->SetPipelineState(pipeline->GetD3DPipeline().Get());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
@@ -181,6 +189,17 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetComputeConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (!constantBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+        m_CommandList->SetComputeRootConstantBufferView(rootParamIndex, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsRootConstants(u32 rootParamIndex, const void* data, u32 numConstants)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
@@ -188,10 +207,24 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetComputeRootConstants(u32 rootParamIndex, const void* data, u32 numConstants)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+        m_CommandList->SetComputeRoot32BitConstants(rootParamIndex, numConstants, data, 0);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
         m_CommandList->SetGraphicsRootDescriptorTable(rootParamIndex, tableStart);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetComputeDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+        m_CommandList->SetComputeRootDescriptorTable(rootParamIndex, tableStart);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -278,6 +311,15 @@ namespace Atom
 
         m_ResourceStateTracker.CommitBarriers();
         m_CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, startVertex, startInstance);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::Dispatch(u32 threadCountX, u32 threadCountY, u32 threadCountZ)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_ResourceStateTracker.CommitBarriers();
+        m_CommandList->Dispatch(threadCountX, threadCountY, threadCountZ);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

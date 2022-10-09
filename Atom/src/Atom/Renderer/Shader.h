@@ -89,6 +89,7 @@ namespace Atom
     public:
         ShaderResourceLayout() = default;
         ShaderResourceLayout(const ComPtr<ID3DBlob>& vsDataBlob, const ComPtr<ID3DBlob>& psDataBlob);
+        ShaderResourceLayout(const ComPtr<ID3DBlob>& csDataBlob);
         ~ShaderResourceLayout();
 
         inline const Vector<ConstantBuffer>& GetRootConstants() const { return m_RootConstants; }
@@ -110,22 +111,41 @@ namespace Atom
     class Shader
     {
     public:
-        Shader(const String& filepath);
-        ~Shader();
+        virtual ~Shader() = default;
 
         inline const String& GetName() const { return m_Name; }
-        inline const String& GetFilepath() const { return m_Filepath; }
-        inline u64 GetHash() const { return std::hash<String>{}(m_Filepath); }
+        inline const std::filesystem::path& GetFilepath() const { return m_Filepath; }
+        inline u64 GetHash() const { return std::hash<String>{}(m_Filepath.string()); }
+        inline const ShaderResourceLayout& GetResourceLayout() const { return m_ResourceLayout; }
+    protected:
+        Shader(const std::filesystem::path& filepath);
+    protected:
+        String                m_Name;
+        std::filesystem::path m_Filepath;
+        ShaderResourceLayout  m_ResourceLayout;
+    };
+
+    class GraphicsShader : public Shader
+    {
+    public:
+        GraphicsShader(const std::filesystem::path& filepath);
+        ~GraphicsShader();
+
         inline ComPtr<ID3DBlob> GetVSData() const { return m_VSData; }
         inline ComPtr<ID3DBlob> GetPSData() const { return m_PSData; }
-        inline const ShaderResourceLayout& GetResourceLayout() const { return m_ResourceLayout; }
     private:
-        String ReadFile(const String& filepath);
+        ComPtr<ID3DBlob> m_VSData;
+        ComPtr<ID3DBlob> m_PSData;
+    };
+
+    class ComputeShader : public Shader
+    {
+    public:
+        ComputeShader(const std::filesystem::path& filepath);
+        ~ComputeShader();
+
+        inline ComPtr<ID3DBlob> GetCSData() const { return m_CSData; }
     private:
-        String               m_Name;
-        String               m_Filepath;
-        ComPtr<ID3DBlob>     m_VSData;
-        ComPtr<ID3DBlob>     m_PSData;
-        ShaderResourceLayout m_ResourceLayout;
+        ComPtr<ID3DBlob> m_CSData;
     };
 }

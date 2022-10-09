@@ -22,7 +22,7 @@
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Shader.h"
-#include "Atom/Renderer/GraphicsPipeline.h"
+#include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/DescriptorHeap.h"
@@ -33,3 +33,4 @@
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/ShaderLibrary.h"
+#include "Atom/Renderer/PipelineLibrary.h"

@@ -24,12 +24,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Mesh::Mesh(const String& filepath)
+    Mesh::Mesh(const std::filesystem::path& filepath)
     {
         u32 processingFlags = aiProcess_ConvertToLeftHanded | aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_PreTransformVertices;
 
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(filepath, processingFlags);
+        const aiScene* scene = importer.ReadFile(filepath.string().c_str(), processingFlags);
 
         m_Name = scene->mName.C_Str();
         m_Materials.reserve(scene->mNumMaterials);
@@ -102,7 +102,7 @@ namespace Atom
         {
             const aiMaterial* assimpMat = scene->mMaterials[materialIdx];
             
-            Ref<Shader> shader = Renderer::GetShaderLibrary().Get("Shader");
+            Ref<GraphicsShader> shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("Shader");
 
             MaterialFlags materialFlags = MaterialFlags::DepthTested;
             Ref<Material> material = CreateRef<Material>(shader, materialFlags, "UnnamedMaterial");
@@ -162,7 +162,7 @@ namespace Atom
                     else
                     {
                         // Load the texture from filepath
-                        std::filesystem::path textureFilepath = std::filesystem::path(filepath).parent_path() / "textures" / aiPath.C_Str();
+                        std::filesystem::path textureFilepath = filepath.parent_path() / "textures" / aiPath.C_Str();
                         image = std::make_unique<Image2D>(textureFilepath.string());
                         name = textureFilepath.filename().string();
                     }

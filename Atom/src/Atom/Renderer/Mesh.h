@@ -32,7 +32,7 @@ namespace Atom
     {
     public:
         Mesh(const String& name, const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const Vector<Ref<Material>>& materials);
-        Mesh(const String& filepath);
+        Mesh(const std::filesystem::path& filepath);
 
         inline const String& GetName() const { return m_Name; }
         inline const Ref<VertexBuffer>& GetVertexBuffer() const { return m_VertexBuffer; }

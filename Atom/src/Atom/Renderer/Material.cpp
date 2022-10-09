@@ -4,7 +4,7 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Material::Material(const Ref<Shader>& shader, MaterialFlags flags, const char* name)
+    Material::Material(const Ref<GraphicsShader>& shader, MaterialFlags flags, const char* name)
         : m_Name(name), m_Shader(shader), m_Flags(flags)
     {
         const auto& resourceLayout = m_Shader->GetResourceLayout();

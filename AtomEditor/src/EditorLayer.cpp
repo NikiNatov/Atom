@@ -32,32 +32,8 @@ namespace Atom
     {
         Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
 
-        // Create pipeline
-        FramebufferDescription fbDesc;
-        fbDesc.SwapChainFrameBuffer = false;
-        fbDesc.Width = 1980;
-        fbDesc.Height = 1080;
-        fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
-        fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
-        fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
-
-        GraphicsPipelineDescription pipelineDesc;
-        pipelineDesc.Topology = Topology::Triangles;
-        pipelineDesc.Shader = Renderer::GetShaderLibrary().Get("Shader");
-        pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
-        pipelineDesc.Layout = {
-            { "POSITION", ShaderDataType::Float3 },
-            { "TEX_COORD", ShaderDataType::Float2 },
-            { "NORMAL", ShaderDataType::Float3 },
-            { "TANGENT", ShaderDataType::Float3 },
-            { "BITANGENT", ShaderDataType::Float3 },
-        };
-
-        pipelineDesc.EnableBlend = true;
-        pipelineDesc.EnableDepthTest = true;
-        pipelineDesc.Wireframe = false;
-        pipelineDesc.BackfaceCulling = true;
-        m_DefaultPipeline = CreateRef<GraphicsPipeline>(pipelineDesc, "DefaultPipeline");
+        // Set the pipeline
+        m_GeometryPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("GeometryPipeline");
 
         // Load the test mesh
         m_TestMesh = CreateRef<Mesh>("assets/meshes/x-wing/x-wing.gltf");
@@ -69,6 +45,14 @@ namespace Atom
         cbDesc.IsDynamic = true;
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
+
+        // Create compute shader test output texture
+        TextureDescription textureDesc;
+        textureDesc.Width = 512;
+        textureDesc.Height = 512;
+        textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+
+        m_ComputeShaderTestTexture = CreateRef<Texture2D>(textureDesc, "ComputeShaderTestOutput");
 
         EditorResources::Initialize();
     }
@@ -98,9 +82,11 @@ namespace Atom
         CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
         Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
         commandBuffer->Begin();
-        Renderer::BeginRenderPass(commandBuffer.get(), m_DefaultPipeline->GetFramebuffer());
-        Renderer::RenderGeometry(commandBuffer.get(), m_DefaultPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
-        Renderer::EndRenderPass(commandBuffer.get(), m_DefaultPipeline->GetFramebuffer());
+
+        Renderer::BeginRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+        Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
+        Renderer::EndRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+
         commandBuffer->End();
 
         gfxQueue->ExecuteCommandList(commandBuffer);
@@ -166,6 +152,14 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         ImGui::ShowDemoWindow(false);
 
+        ImGui::Begin("ComputeShaderTestOutput");
+        if (ImGui::Button("Run Compute Test"))
+        {
+            RunComputeShaderTest();
+        }
+        ImGui::Image((ImTextureID)m_ComputeShaderTestTexture.get(), {(f32)m_ComputeShaderTestTexture->GetWidth(), (f32)m_ComputeShaderTestTexture->GetHeight()});
+        ImGui::End();
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
@@ -173,11 +167,11 @@ namespace Atom
         if (m_ViewportSize.x != panelSize.x || m_ViewportSize.y != panelSize.y)
         {
             m_ViewportSize = { panelSize.x, panelSize.y };
-            m_DefaultPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
+            m_GeometryPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
             m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
         }
 
-        const RenderTexture2D* sceneTexture = m_DefaultPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        const RenderTexture2D* sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
         ImGui::Image((ImTextureID)sceneTexture, { (f32)sceneTexture->GetWidth(), (f32)sceneTexture->GetHeight() });
 
         ImGui::End();
@@ -190,5 +184,47 @@ namespace Atom
     void EditorLayer::OnEvent(Event& event)
     {
         m_Camera.OnEvent(event);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::RunComputeShaderTest()
+    {
+        struct TextureDimensionsCB
+        {
+            u32 Width;
+            u32 Height;
+        };
+
+        TextureDimensionsCB Constants;
+        Constants.Width = m_ComputeShaderTestTexture->GetWidth();
+        Constants.Height = m_ComputeShaderTestTexture->GetHeight();
+
+        Ref<DescriptorHeap> heap = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, 1, true, "ComputeShaderTestHeap");
+        D3D12_GPU_DESCRIPTOR_HANDLE outputTextureHandle = heap->CopyDescriptor(m_ComputeShaderTestTexture->GetUAV());
+
+        // Transition the texture
+        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+        Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
+        gfxCmdBuffer->Begin();
+        gfxCmdBuffer->TransitionResource(m_ComputeShaderTestTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        gfxCmdBuffer->End();
+        gfxQueue->ExecuteCommandList(gfxCmdBuffer);
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+        computeCmdBuffer->Begin();
+
+        computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("TestComputePipeline").get());
+        computeCmdBuffer->SetDescriptorHeaps(heap.get(), nullptr);
+        computeCmdBuffer->SetComputeRootConstants(0, &Constants, 2);
+        computeCmdBuffer->SetComputeDescriptorTable(1, outputTextureHandle);
+        computeCmdBuffer->Dispatch(Constants.Width / 32, Constants.Height / 32, 1);
+
+        computeCmdBuffer->End();
+
+        // Wait for the gfx queue to execute the transitions cmd list
+        computeQueue->WaitForQueue(gfxQueue);
+        computeQueue->ExecuteCommandList(computeCmdBuffer);
+        computeQueue->Flush();
     }
 }

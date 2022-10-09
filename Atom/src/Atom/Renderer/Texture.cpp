@@ -30,12 +30,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Image2D::Image2D(const String& filepath, u32 desiredChannels)
+    Image2D::Image2D(const std::filesystem::path& filepath, u32 desiredChannels)
     {
-        m_IsHDR = stbi_is_hdr(filepath.c_str());
+        String pathStr = filepath.string();
+        m_IsHDR = stbi_is_hdr(pathStr.c_str());
 
         s32 width, height;
-        byte* data = m_IsHDR ? (byte*)stbi_loadf(filepath.c_str(), &width, &height, nullptr, desiredChannels) : stbi_load(filepath.c_str(), &width, &height, nullptr, desiredChannels);
+        byte* data = m_IsHDR ? (byte*)stbi_loadf(pathStr.c_str(), &width, &height, nullptr, desiredChannels) : stbi_load(pathStr.c_str(), &width, &height, nullptr, desiredChannels);
         ATOM_ENGINE_ASSERT(data, fmt::format("Failed to load texture file \"{}\"", filepath));
 
         m_Width = (u32)width;

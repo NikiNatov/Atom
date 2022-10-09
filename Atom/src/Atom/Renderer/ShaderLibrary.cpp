@@ -6,43 +6,9 @@
 namespace Atom
 {
 	// -----------------------------------------------------------------------------------------------------------------------------
-	void ShaderLibrary::Add(const String& name, const Ref<Shader>& shader)
+	void ShaderLibrary::Clear()
 	{
-		bool exists = Exists(name);
-		ATOM_ENGINE_ASSERT(!exists, "Shader with that name already exists!");
-
-		if (!exists)
-			m_ShaderMap[name] = shader;
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------------------
-	void ShaderLibrary::Add(const Ref<Shader>& shader)
-	{
-		auto& name = shader->GetName();
-		Add(name, shader);
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------------------
-	Ref<Shader> ShaderLibrary::Load(const String& name, const String& filepath)
-	{
-		Ref<Shader> shader = CreateRef<Shader>(filepath);
-		Add(name, shader);
-		return shader;
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------------------
-	Ref<Shader> ShaderLibrary::Load(const String& filepath)
-	{
-		Ref<Shader> shader = CreateRef<Shader>(filepath);
-		Add(shader);
-		return shader;
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------------------
-	Ref<Shader> ShaderLibrary::Get(const String& name) const
-	{
-		ATOM_ENGINE_ASSERT(Exists(name), "Shader does not exist!");
-		return m_ShaderMap.at(name);
+		m_ShaderMap.clear();
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------------------

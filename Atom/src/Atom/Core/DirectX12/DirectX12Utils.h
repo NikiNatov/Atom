@@ -8,7 +8,7 @@
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/CommandBuffer.h"
-#include "Atom/Renderer/GraphicsPipeline.h"
+#include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/DescriptorHeap.h"
 

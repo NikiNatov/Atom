@@ -34,7 +34,7 @@ namespace Atom
         }
 
     private:
-        static Ref<Texture2D> LoadResourceTexture(Ref<CommandBuffer> copyCommandBuffer, const String& filepath, const char* name)
+        static Ref<Texture2D> LoadResourceTexture(Ref<CommandBuffer> copyCommandBuffer, const std::filesystem::path& filepath, const char* name)
         {
             Image2D image(filepath);
 

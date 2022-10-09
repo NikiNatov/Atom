@@ -7,6 +7,7 @@
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
+#include "Atom/Renderer/Framebuffer.h"
 
 namespace Atom
 {
@@ -31,13 +32,74 @@ namespace Atom
         }
 
         // Load shaders
-        ms_ShaderLibrary.Load("resources/shaders/ImGuiShader.hlsl");
-        ms_ShaderLibrary.Load("resources/shaders/Shader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/Shader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/ComputeShaderTest.hlsl");
+
+        // Load pipelines
+        {
+            FramebufferDescription fbDesc;
+            fbDesc.SwapChainFrameBuffer = false;
+            fbDesc.Width = 1980;
+            fbDesc.Height = 1080;
+            fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
+            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
+            fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
+
+            GraphicsPipelineDescription pipelineDesc;
+            pipelineDesc.Topology = Topology::Triangles;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("Shader");
+            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
+            pipelineDesc.Layout = {
+                { "POSITION", ShaderDataType::Float3 },
+                { "TEX_COORD", ShaderDataType::Float2 },
+                { "NORMAL", ShaderDataType::Float3 },
+                { "TANGENT", ShaderDataType::Float3 },
+                { "BITANGENT", ShaderDataType::Float3 },
+            };
+
+            pipelineDesc.EnableBlend = true;
+            pipelineDesc.EnableDepthTest = true;
+            pipelineDesc.Wireframe = false;
+            pipelineDesc.BackfaceCulling = true;
+
+            ms_PipelineLibrary.Load<GraphicsPipeline>("GeometryPipeline", pipelineDesc);
+        }
+
+        {
+            FramebufferDescription fbDesc;
+            fbDesc.SwapChainFrameBuffer = true;
+
+            GraphicsPipelineDescription pipelineDesc;
+            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("ImGuiShader");
+            pipelineDesc.EnableBlend = true;
+            pipelineDesc.EnableDepthTest = false;
+            pipelineDesc.BackfaceCulling = false;
+            pipelineDesc.Wireframe = false;
+            pipelineDesc.Topology = Topology::Triangles;
+            pipelineDesc.Layout = {
+                { "POSITION", ShaderDataType::Float2 },
+                { "TEX_COORD", ShaderDataType::Float2 },
+                { "COLOR", ShaderDataType::Unorm4 },
+            };
+
+            ms_PipelineLibrary.Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
+        }
+
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("ComputeShaderTest");
+
+            ms_PipelineLibrary.Load<ComputePipeline>("TestComputePipeline", pipelineDesc);
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Shutdown()
     {
+        ms_PipelineLibrary.Clear();
+        ms_ShaderLibrary.Clear();
         ms_ResourceHeaps.clear();
         ms_SamplerHeaps.clear();
     }
@@ -143,5 +205,11 @@ namespace Atom
     const ShaderLibrary& Renderer::GetShaderLibrary()
     {
         return ms_ShaderLibrary;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const PipelineLibrary& Renderer::GetPipelineLibrary()
+    {
+        return ms_PipelineLibrary;
     }
 }

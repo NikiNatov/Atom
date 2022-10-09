@@ -2,7 +2,7 @@
 
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
 
-#include "GraphicsPipeline.h"
+#include "Pipeline.h"
 #include "Device.h"
 #include "Framebuffer.h"
 
@@ -32,7 +32,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     GraphicsPipeline::GraphicsPipeline(const GraphicsPipelineDescription& description, const char* debugName)
-        : m_Description(description)
+        : Pipeline(), m_Description(description)
     {
         //////////////////////////////////////////////////////////////////////
         ///                            Input layout                         //
@@ -116,8 +116,8 @@ namespace Atom
         //////////////////////////////////////////////////////////////////////
         ///                            Create PSO                           //
         //////////////////////////////////////////////////////////////////////
-        Shader* shader = m_Description.Shader.get();
-        Device& device = Device::Get();
+        GraphicsShader* shader = m_Description.Shader.get();
+        auto d3dDevice = Device::Get().GetD3DDevice();
 
         m_D3DDescription.InputLayout = inputLayoutDesc;
         m_D3DDescription.pRootSignature = shader->GetResourceLayout().GetRootSignature().Get();
@@ -147,7 +147,7 @@ namespace Atom
 
         m_D3DDescription.SampleDesc.Count = 1;
 
-        DXCall(device.GetD3DDevice()->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
+        DXCall(d3dDevice->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -161,13 +161,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const PipelineLayout& GraphicsPipeline::GetLayout() const
+    const GraphicsPipelineLayout& GraphicsPipeline::GetLayout() const
     {
         return m_Description.Layout;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Shader* GraphicsPipeline::GetShader() const
+    const GraphicsShader* GraphicsPipeline::GetShader() const
     {
         return m_Description.Shader.get();
     }
@@ -206,5 +206,33 @@ namespace Atom
     bool GraphicsPipeline::IsBackfaceCullingEnabled() const
     {
         return m_Description.BackfaceCulling;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ComputePipeline::ComputePipeline(const ComputePipelineDescription& description, const char* debugName)
+        : Pipeline(), m_Description(description)
+    {
+        auto d3dDevice = Device::Get().GetD3DDevice();
+
+        m_D3DDescription.CS = CD3DX12_SHADER_BYTECODE(m_Description.Shader->GetCSData().Get());
+        m_D3DDescription.pRootSignature = m_Description.Shader->GetResourceLayout().GetRootSignature().Get();
+
+        DXCall(d3dDevice->CreateComputePipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
+
+#if defined (ATOM_DEBUG)
+        String name = debugName;
+        DXCall(m_D3DPipeline->SetName(STRING_TO_WSTRING(name).c_str()));
+#endif
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ComputePipeline::~ComputePipeline()
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const ComputeShader* ComputePipeline::GetComputeShader() const
+    {
+        return m_Description.Shader.get();
     }
 }

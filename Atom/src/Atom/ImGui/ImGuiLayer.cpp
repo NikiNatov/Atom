@@ -9,7 +9,7 @@
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/DescriptorHeap.h"
 #include "Atom/Renderer/CommandBuffer.h"
-#include "Atom/Renderer/GraphicsPipeline.h"
+#include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Framebuffer.h"
 
@@ -319,25 +319,8 @@ namespace Atom
         m_VertexBuffers.resize(numFramesInFlight, nullptr);
         m_IndexBuffers.resize(numFramesInFlight, nullptr);
 
-        // Create pipeline
-        FramebufferDescription fbDesc;
-        fbDesc.SwapChainFrameBuffer = true;
-
-        GraphicsPipelineDescription pipelineDesc;
-        pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
-        pipelineDesc.Shader = Renderer::GetShaderLibrary().Get("ImGuiShader");
-        pipelineDesc.EnableBlend = true;
-        pipelineDesc.EnableDepthTest = false;
-        pipelineDesc.BackfaceCulling = false;
-        pipelineDesc.Wireframe = false;
-        pipelineDesc.Topology = Topology::Triangles;
-        pipelineDesc.Layout = {
-            { "POSITION", ShaderDataType::Float2 },
-            { "TEX_COORD", ShaderDataType::Float2 },
-            { "COLOR", ShaderDataType::Unorm4 },
-        };
-
-        m_Pipeline = CreateRef<GraphicsPipeline>(pipelineDesc, "ImGuiPipeline");
+        // Get the pipeline
+        m_Pipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("ImGuiPipeline");
 
         // Create font texture
         ImGuiIO& io = ImGui::GetIO();
