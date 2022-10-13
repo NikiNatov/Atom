@@ -28,7 +28,7 @@ namespace Atom
     enum class TextureFilter
     {
         None = 0,
-        Linear, 
+        Linear,
         Nearest,
         Anisotropic
     };
@@ -66,7 +66,7 @@ namespace Atom
             DepthStencilValue DepthStencil = {};
         };
 
-        ClearValue() 
+        ClearValue()
             : Color(0.0f, 0.0f, 0.0f, 1.0f), DepthStencil() {}
 
         ClearValue(f32 r, f32 g, f32 b, f32 a)
@@ -148,9 +148,9 @@ namespace Atom
         ~Texture2D();
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 mip = 0) const;
-    protected:
+    private:
         virtual void CreateViews() override;
-    protected:
+    private:
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_UAVDescriptors;
     };
 
@@ -181,5 +181,21 @@ namespace Atom
         virtual void CreateViews() override;
     private:
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_DSVDescriptors;
+    };
+
+    class TextureCube : public Texture
+    {
+    public:
+        TextureCube(const TextureDescription& description, const char* debugName = "Unnamed TextureCube");
+        TextureCube(ID3D12Resource* textureHandle, const char* debugName = "Unnamed TextureCube");
+        ~TextureCube();
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 slice = 0, u32 mip = 0) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetArrayUAV(u32 mip = 0) const;
+    private:
+        virtual void CreateViews() override;
+    private:
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_UAVDescriptors;
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_ArrayUAVDescriptors;
     };
 }

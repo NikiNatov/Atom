@@ -93,10 +93,6 @@ namespace Atom
             m_Submeshes.push_back(sm);
         }
 
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-        copyCommandBuffer->Begin();
-
         // Parse all materials
         for (u32 materialIdx = 0; materialIdx < scene->mNumMaterials; materialIdx++)
         {
@@ -164,7 +160,7 @@ namespace Atom
                         // Load the texture from filepath
                         std::filesystem::path textureFilepath = filepath.parent_path() / "textures" / aiPath.C_Str();
                         image = std::make_unique<Image2D>(textureFilepath.string());
-                        name = textureFilepath.filename().string();
+                        name = textureFilepath.stem().string();
                     }
 
                     TextureDescription textureDesc;
@@ -172,9 +168,21 @@ namespace Atom
                     textureDesc.Height = image->GetHeight();
                     textureDesc.Format = TextureFormat::RGBA8;
                     textureDesc.MipLevels = image->GetMaxMipCount();
+                    textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
 
                     Ref<Texture2D> texture = CreateRef<Texture2D>(textureDesc, name.c_str());
+
+                    // Upload data
+                    CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+                    Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+                    copyCommandBuffer->Begin();
                     copyCommandBuffer->UploadTextureData(image->GetPixelData().data(), texture.get());
+                    copyCommandBuffer->End();
+                    copyQueue->ExecuteCommandList(copyCommandBuffer);
+
+                    // Make sure all the data is finished uploading before generating mip levels
+                    Device::Get().GetCommandQueue(CommandQueueType::Compute)->WaitForQueue(copyQueue);
+                    Renderer::GenerateMips(texture.get());
 
                     material->SetTexture(uniformName, texture);
                     material->SetUniform(fmt::format("Use{}", uniformName).c_str(), 1);
@@ -186,9 +194,6 @@ namespace Atom
             
             m_Materials.push_back(material);
         }
-
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer);
 
         CreateBuffers(vertices, indices);
     }
@@ -208,7 +213,7 @@ namespace Atom
         ibDesc.ElementSize = sizeof(u32);
         ibDesc.IsDynamic = false;
 
-        m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc,IndexBufferFormat::U32, "IB");
+        m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
 
         // Upload the data to the GPU
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);

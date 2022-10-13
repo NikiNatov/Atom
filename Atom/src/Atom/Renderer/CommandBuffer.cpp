@@ -129,11 +129,27 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state)
+    void CommandBuffer::TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state, u32 subresource)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state);
+        m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state, subresource);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::AddUAVBarrier(const Texture* texture)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_ResourceStateTracker.AddUAVBarrier(texture->GetD3DResource().Get());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::CommitBarriers()
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_ResourceStateTracker.CommitBarriers();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -275,14 +291,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadTextureData(const void* data, const Texture* texture)
+    void CommandBuffer::UploadTextureData(const void* data, const Texture* texture, u32 mip, u32 arraySlice)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
         if (data)
         {
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-            u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), 0, 1);
+            u32 subresourceIdx = D3D12CalcSubresource(mip, arraySlice, 0, texture->GetMipLevels(), texture->GetType() == TextureType::TextureCube ? 6 : 1);
+            u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
             CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 
             ComPtr<ID3D12Resource> uploadBuffer = nullptr;
@@ -300,8 +317,23 @@ namespace Atom
 
             m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
             m_ResourceStateTracker.CommitBarriers();
-            UpdateSubresources<1>(m_CommandList.Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
+            UpdateSubresources<1>(m_CommandList.Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, subresourceIdx, 1, &subresourceData);
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        m_ResourceStateTracker.AddTransition(srcTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, subresource);
+        m_ResourceStateTracker.AddTransition(dstTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST, subresource);
+
+        CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstTexture->GetD3DResource().Get(), subresource);
+        CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);
+
+        m_ResourceStateTracker.CommitBarriers();
+        m_CommandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, nullptr);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

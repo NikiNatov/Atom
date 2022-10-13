@@ -8,6 +8,7 @@
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Framebuffer.h"
+#include "Atom/Renderer/Buffer.h"
 
 namespace Atom
 {
@@ -33,8 +34,12 @@ namespace Atom
 
         // Load shaders
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/Shader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/SkyBoxShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/ComputeShaderTest.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/GenerateMips.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/EquirectToCubeMap.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapPrefilter.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapIrradiance.hlsl");
 
         // Load pipelines
         {
@@ -46,24 +51,46 @@ namespace Atom
             fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
             fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
 
-            GraphicsPipelineDescription pipelineDesc;
-            pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("Shader");
-            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
-            pipelineDesc.Layout = {
-                { "POSITION", ShaderDataType::Float3 },
-                { "TEX_COORD", ShaderDataType::Float2 },
-                { "NORMAL", ShaderDataType::Float3 },
-                { "TANGENT", ShaderDataType::Float3 },
-                { "BITANGENT", ShaderDataType::Float3 },
-            };
+            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc);
 
-            pipelineDesc.EnableBlend = true;
-            pipelineDesc.EnableDepthTest = true;
-            pipelineDesc.Wireframe = false;
-            pipelineDesc.BackfaceCulling = true;
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("Shader");
+                pipelineDesc.Framebuffer = frameBuffer;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                    { "NORMAL", ShaderDataType::Float3 },
+                    { "TANGENT", ShaderDataType::Float3 },
+                    { "BITANGENT", ShaderDataType::Float3 },
+                };
 
-            ms_PipelineLibrary.Load<GraphicsPipeline>("GeometryPipeline", pipelineDesc);
+                pipelineDesc.EnableBlend = true;
+                pipelineDesc.EnableDepthTest = true;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.BackfaceCulling = true;
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("GeometryPipeline", pipelineDesc);
+            }
+
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("SkyBoxShader");
+                pipelineDesc.Framebuffer = frameBuffer;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                };
+
+                pipelineDesc.EnableBlend = false;
+                pipelineDesc.EnableDepthTest = false;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.BackfaceCulling = true;
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("SkyBoxPipeline", pipelineDesc);
+            }
         }
 
         {
@@ -89,10 +116,74 @@ namespace Atom
 
         {
             ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("ComputeShaderTest");
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("GenerateMips");
 
-            ms_PipelineLibrary.Load<ComputePipeline>("TestComputePipeline", pipelineDesc);
+            ms_PipelineLibrary.Load<ComputePipeline>("GenerateMipsPipeline", pipelineDesc);
         }
+
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("EquirectToCubeMap");
+
+            ms_PipelineLibrary.Load<ComputePipeline>("EquirectToCubeMapPipeline", pipelineDesc);
+        }
+
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("CubeMapPrefilter");
+
+            ms_PipelineLibrary.Load<ComputePipeline>("CubeMapPrefilterPipeline", pipelineDesc);
+        }
+
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("CubeMapIrradiance");
+
+            ms_PipelineLibrary.Load<ComputePipeline>("CubeMapIrradiancePipeline", pipelineDesc);
+        }
+
+        // Create fullscreen quad buffers
+        struct QuadVertex
+        {
+            glm::vec3 Position;
+            glm::vec2 TexCoord;
+
+            QuadVertex(f32 x, f32 y, f32 z, f32 u, f32 v)
+                : Position(x, y, z), TexCoord(u, v)
+            {}
+        };
+
+        QuadVertex quadVertices[] = {
+            QuadVertex(-1.0, -1.0, 0.0, 0.0, 1.0),
+            QuadVertex( 1.0, -1.0, 0.0, 1.0, 1.0),
+            QuadVertex( 1.0,  1.0, 0.0, 1.0, 0.0),
+            QuadVertex(-1.0,  1.0, 0.0, 0.0, 0.0)
+        };
+
+        BufferDescription vbDesc;
+        vbDesc.ElementCount = _countof(quadVertices);
+        vbDesc.ElementSize = sizeof(QuadVertex);
+        vbDesc.IsDynamic = false;
+
+        ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB");
+
+        u16 quadIndices[] = { 0, 1, 2, 2, 3, 0 };
+
+        BufferDescription ibDesc;
+        ibDesc.ElementCount = _countof(quadIndices);
+        ibDesc.ElementSize = sizeof(u16);
+        ibDesc.IsDynamic = false;
+
+        ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB");
+
+        // Upload the data to the GPU
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+        copyCommandBuffer->Begin();
+        copyCommandBuffer->UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
+        copyCommandBuffer->UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
+        copyCommandBuffer->End();
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -102,6 +193,8 @@ namespace Atom
         ms_ShaderLibrary.Clear();
         ms_ResourceHeaps.clear();
         ms_SamplerHeaps.clear();
+        ms_FullscreenQuadVB.reset();
+        ms_FullscreenQuadIB.reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -151,7 +244,10 @@ namespace Atom
             }
 
             // Set constant buffers and structured buffers
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+            if (constantBuffer)
+            {
+                commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+            }
 
             // Set textures and samplers
             Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
@@ -175,6 +271,282 @@ namespace Atom
             // Draw
             commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::RenderFullscreenQuad(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const ConstantBuffer* constantBuffer, const Material* material)
+    {
+        commandBuffer->SetGraphicsPipeline(pipeline);
+        commandBuffer->SetVertexBuffer(ms_FullscreenQuadVB.get());
+        commandBuffer->SetIndexBuffer(ms_FullscreenQuadIB.get());
+
+        u32 currentFrameIndex = GetCurrentFrameIndex();
+        commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
+
+        u32 currentRootParameter = 0;
+
+        // Set root constants
+        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
+        {
+            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
+        }
+
+        // Set constant buffers and structured buffers
+        if(constantBuffer)
+        {
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+        }
+
+        // Set textures and samplers
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
+        textureSRVs.reserve(material->GetTextures().size());
+
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
+        samplers.reserve(material->GetTextures().size());
+
+        for (const auto& texture : material->GetTextures())
+        {
+            textureSRVs.push_back(texture->GetSRV());
+            samplers.push_back(texture->GetSampler());
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+
+        // Draw
+        commandBuffer->DrawIndexed(ms_FullscreenQuadIB->GetElementCount(), 1, 0, 0, 0);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    std::pair<Ref<TextureCube>, Ref<TextureCube>> Renderer::CreateEnvironmentMap(const std::filesystem::path& filepath)
+    {
+        u32 currentFrameIdx = GetCurrentFrameIndex();
+        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
+        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //                               Phase 0: Load the hdr texture                                 //
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        Image2D hdrImage(filepath);
+
+        TextureDescription textureDesc;
+        textureDesc.Width = hdrImage.GetWidth();
+        textureDesc.Height = hdrImage.GetHeight();
+        textureDesc.Format = TextureFormat::RGBA32F;
+        textureDesc.MipLevels = hdrImage.GetMaxMipCount();
+        textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+
+        String name = filepath.stem().string();
+        Ref<Texture2D> hdrMap = CreateRef<Texture2D>(textureDesc, name.c_str());
+
+        {
+            Ref<CommandBuffer> copyCmdBuffer = copyQueue->GetCommandBuffer();
+            copyCmdBuffer->Begin();
+            copyCmdBuffer->UploadTextureData(hdrImage.GetPixelData().data(), hdrMap.get());
+            copyCmdBuffer->End();
+            copyQueue->ExecuteCommandList(copyCmdBuffer);
+        }
+
+        Renderer::GenerateMips(hdrMap.get());
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //                        Phase 1: Equirectangular map to cubemap                              //
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        TextureDescription envMapDesc;
+        envMapDesc.Width = 1024;
+        envMapDesc.Height = 1024;
+        envMapDesc.Format = TextureFormat::RGBA16F;
+        envMapDesc.MipLevels = 11;
+        envMapDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+
+        Ref<TextureCube> envMapUnfiltered = CreateRef<TextureCube>(envMapDesc, fmt::format("{}(EnvironmentMapUnfiltered)", name).c_str());
+
+        {
+            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(hdrMap->GetSampler());
+
+            Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+            computeCmdBuffer->Begin();
+            computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
+            computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
+            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+
+            for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
+            {
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { hdrMap->GetSRV(), envMapUnfiltered->GetArrayUAV(mip) };
+                D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+                computeCmdBuffer->SetComputeRootConstants(0, &mip, 1);
+                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+                computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
+            }
+            
+            computeCmdBuffer->End();
+            computeQueue->WaitForQueue(copyQueue);
+            computeQueue->ExecuteCommandList(computeCmdBuffer);
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //                                    Phase 2: Pre-filtering                                   //
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        Ref<TextureCube> envMap = CreateRef<TextureCube>(envMapDesc, fmt::format("{}(EnvironmentMap)", name).c_str());
+
+        // Copy the first mip of every face from the unfiltered map
+        {
+            Ref<CommandBuffer> copyCmdBuffer = copyQueue->GetCommandBuffer();
+            copyCmdBuffer->Begin();
+
+            for (u32 arraySlice = 0; arraySlice < 6; arraySlice++)
+            {
+                u32 subresourceIdx = D3D12CalcSubresource(0, arraySlice, 0, envMapDesc.MipLevels, 6);
+                copyCmdBuffer->CopyTexture(envMapUnfiltered.get(), envMap.get(), subresourceIdx);
+            }
+
+            copyCmdBuffer->End();
+            copyQueue->WaitForQueue(computeQueue);
+            copyQueue->ExecuteCommandList(copyCmdBuffer);
+        }
+
+        {
+            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMapUnfiltered->GetSampler());
+
+            Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+            computeCmdBuffer->Begin();
+            computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapPrefilterPipeline").get());
+            computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
+            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+
+            u32 width = glm::max(envMapDesc.Width / 2, 1u);
+            u32 height = glm::max(envMapDesc.Height / 2, 1u);
+
+            for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
+            {
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV(), envMap->GetArrayUAV(mip) };
+                D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+                f32 roughness = mip / glm::max(envMapDesc.MipLevels - 1.0f, 1.0f);
+                computeCmdBuffer->SetComputeRootConstants(0, &roughness, 1);
+                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+                computeCmdBuffer->Dispatch(glm::max(width / 32, 1u), glm::max(height / 32, 1u), 6);
+
+                width = glm::max(width / 2, 1u);
+                height = glm::max(height / 2, 1u);
+            }
+
+            computeCmdBuffer->End();
+            computeQueue->WaitForQueue(copyQueue);
+            computeQueue->ExecuteCommandList(computeCmdBuffer);
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //                                    Phase 3: Irradiance map                                  //
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+
+        TextureDescription irradianceMapDesc;
+        irradianceMapDesc.Width = 32;
+        irradianceMapDesc.Height = 32;
+        irradianceMapDesc.Format = TextureFormat::RGBA16F;
+        irradianceMapDesc.MipLevels = 1;
+        irradianceMapDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+
+        Ref<TextureCube> irradianceMap = CreateRef<TextureCube>(irradianceMapDesc, fmt::format("{}(IrradianceMap)", name).c_str());
+
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMap->GetSRV(), irradianceMap->GetArrayUAV() };
+        D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMap->GetSampler());
+
+        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+        computeCmdBuffer->Begin();
+        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
+        computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
+        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
+        computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable);
+        computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
+        computeCmdBuffer->End();
+        computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+        // Wait for all compute operations to complete
+        computeQueue->Flush();
+
+        return std::pair<Ref<TextureCube>, Ref<TextureCube>>(envMap, irradianceMap);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::GenerateMips(const Texture2D* texture)
+    {
+        u32 currentFrameIdx = GetCurrentFrameIndex();
+        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
+        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+
+        // Create bilinear clamp sampler to use for mip generation
+        D3D12_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+        samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        samplerDesc.MipLODBias = 0.0f;
+        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+        samplerDesc.MinLOD = 0.0f;
+        samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+        samplerDesc.MaxAnisotropy = 0;
+
+        auto& dx12Device = Device::Get();
+        D3D12_CPU_DESCRIPTOR_HANDLE sampler = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateSampler(&samplerDesc, sampler);
+
+        // Copy the sampler CPU descriptor into the GPU visible heap
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(sampler);
+
+        // Run compute shader for each mip
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+        computeCmdBuffer->Begin();
+        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("GenerateMipsPipeline").get());
+        computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
+        computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+
+        u32 width = glm::max(texture->GetWidth() / 2, 1u);
+        u32 height = glm::max(texture->GetHeight() / 2, 1u);
+
+        struct GenerateMipCB
+        {
+            glm::vec2 TexelSize;
+            u32 TopMipLevel;
+        };
+
+        for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
+        {
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV(), texture->GetUAV(mip) };
+            D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+            GenerateMipCB constants;
+            constants.TexelSize = { 1.0f / width, 1.0f / height };
+            constants.TopMipLevel = mip - 1;
+
+            computeCmdBuffer->SetComputeRootConstants(0, &constants, 3);
+            computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+            computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
+
+            computeCmdBuffer->AddUAVBarrier(texture);
+            computeCmdBuffer->CommitBarriers();
+
+            width = glm::max(width / 2, 1u);
+            height = glm::max(height / 2, 1u);
+        }
+
+        computeCmdBuffer->End();
+        computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+        // Wait for the compute operations to finish before continuing
+        computeQueue->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

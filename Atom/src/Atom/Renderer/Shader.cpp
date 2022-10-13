@@ -270,11 +270,11 @@ namespace Atom
         WString filepathStr = filepath.wstring();
 
         // Compile vertex shader
-        D3DCompileFromFile(filepathStr.c_str(), nullptr, nullptr, "VSMain", "vs_5_1", compileFlags, 0, &m_VSData, &errorBlob);
+        D3DCompileFromFile(filepathStr.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &m_VSData, &errorBlob);
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Compile pixel shader
-        D3DCompileFromFile(filepathStr.c_str(), nullptr, nullptr, "PSMain", "ps_5_1", compileFlags, 0, &m_PSData, &errorBlob);
+        D3DCompileFromFile(filepathStr.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &m_PSData, &errorBlob);
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Reflect on the shader data and build resource set
@@ -301,7 +301,7 @@ namespace Atom
         ComPtr<ID3DBlob> errorBlob = nullptr;
 
         // Compile compute shader
-        D3DCompileFromFile(filepath.wstring().c_str(), nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &m_CSData, &errorBlob);
+        D3DCompileFromFile(filepath.wstring().c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CSMain", "cs_5_1", compileFlags, 0, &m_CSData, &errorBlob);
         ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
 
         // Reflect on the shader data and build resource set

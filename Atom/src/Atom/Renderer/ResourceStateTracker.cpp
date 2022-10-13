@@ -68,6 +68,16 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void ResourceStateTracker::AddUAVBarrier(ID3D12Resource* resource)
+    {
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = resource;
+
+        m_ResourceBarriers.push_back(barrier);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void ResourceStateTracker::CommitPendingBarriers()
     {
         std::lock_guard<std::mutex> lock(ms_GlobalMutex);

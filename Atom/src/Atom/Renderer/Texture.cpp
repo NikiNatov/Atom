@@ -242,9 +242,19 @@ namespace Atom
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format = Utils::AtomTextureFormatToSRVFormat(m_Description.Format);
         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
+
+        if (m_Type == TextureType::TextureCube)
+        {
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+            srvDesc.TextureCube.MostDetailedMip = 0;
+            srvDesc.TextureCube.MipLevels = m_Description.MipLevels;
+        }
+        else
+        {
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MostDetailedMip = 0;
+            srvDesc.Texture2D.MipLevels = m_Description.MipLevels;
+        }
 
         m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
         dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
@@ -295,6 +305,7 @@ namespace Atom
     D3D12_CPU_DESCRIPTOR_HANDLE Texture2D::GetUAV(u32 mip) const
     {
         ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels); 
+        ATOM_ENGINE_ASSERT(IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess));
         return m_UAVDescriptors[mip];
     }
 
@@ -431,6 +442,104 @@ namespace Atom
 
             m_DSVDescriptors[mip] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->AllocateDescriptor();
             dx12Device.GetD3DDevice()->CreateDepthStencilView(m_D3DResource.Get(), &dsvDesc, m_DSVDescriptors[mip]);
+        }
+    }
+
+    // --------------------------------------------------- TextureCube -------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube::TextureCube(const TextureDescription& description, const char* debugName)
+        : Texture(TextureType::TextureCube, description, debugName)
+    {
+        CreateViews();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube::TextureCube(ID3D12Resource* textureHandle, const char* debugName)
+        : Texture(TextureType::TextureCube, textureHandle, debugName)
+    {
+        CreateViews();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube::~TextureCube()
+    {
+        if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
+        {
+            for (u32 i = 0; i < m_Description.MipLevels * 6; i++)
+            {
+                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[i], true);
+            }
+
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_ArrayUAVDescriptors[i], true);
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    D3D12_CPU_DESCRIPTOR_HANDLE TextureCube::GetUAV(u32 slice, u32 mip) const
+    {
+        ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels && slice < 6);
+        ATOM_ENGINE_ASSERT(IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess));
+        u32 subresourceIdx = D3D12CalcSubresource(mip, slice, 0, m_Description.MipLevels, 6);
+        return m_UAVDescriptors[subresourceIdx];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    D3D12_CPU_DESCRIPTOR_HANDLE TextureCube::GetArrayUAV(u32 mip) const
+    {
+        ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels);
+        ATOM_ENGINE_ASSERT(IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess));
+        return m_ArrayUAVDescriptors[mip];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void TextureCube::CreateViews()
+    {
+        auto& dx12Device = Device::Get();
+
+        Texture::CreateViews();
+
+        // Create UAVs
+        if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
+        {
+            // Create descriptors for each individual subresource
+            m_UAVDescriptors.resize(m_Description.MipLevels * 6);
+
+            for (u32 slice = 0; slice < 6; slice++)
+            {
+                for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+                {
+                    u32 subresourceIdx = D3D12CalcSubresource(mip, slice, 0, m_Description.MipLevels, 6);
+
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+                    uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+                    uavDesc.Texture2DArray.ArraySize = 1;
+                    uavDesc.Texture2DArray.FirstArraySlice = slice;
+                    uavDesc.Texture2DArray.MipSlice = mip;
+
+                    m_UAVDescriptors[subresourceIdx] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+                    dx12Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_UAVDescriptors[subresourceIdx]);
+                }
+            }
+
+            // Create descriptors of the whole texture array for each mip level
+            m_ArrayUAVDescriptors.resize(m_Description.MipLevels);
+
+            for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+            {
+                D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+                uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
+                uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+                uavDesc.Texture2DArray.ArraySize = 6;
+                uavDesc.Texture2DArray.FirstArraySlice = 0;
+                uavDesc.Texture2DArray.MipSlice = mip;
+
+                m_ArrayUAVDescriptors[mip] = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+                dx12Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_ArrayUAVDescriptors[mip]);
+            }
         }
     }
 }

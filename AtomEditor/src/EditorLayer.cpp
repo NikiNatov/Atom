@@ -12,7 +12,8 @@ namespace Atom
     {
         glm::mat4 ViewMatrix = glm::mat4(1.0f);
         glm::mat4 ProjMatrix = glm::mat4(1.0f);
-        f32 p[32]{ 0 };
+        glm::vec3 CameraPosition = glm::vec3(0.0f);
+        f32 p[29]{ 0 };
     };
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -32,8 +33,9 @@ namespace Atom
     {
         Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
 
-        // Set the pipeline
+        // Set the pipelines
         m_GeometryPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("GeometryPipeline");
+        m_SkyBoxPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("SkyBoxPipeline");
 
         // Load the test mesh
         m_TestMesh = CreateRef<Mesh>("assets/meshes/x-wing/x-wing.gltf");
@@ -46,13 +48,10 @@ namespace Atom
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
-        // Create compute shader test output texture
-        TextureDescription textureDesc;
-        textureDesc.Width = 512;
-        textureDesc.Height = 512;
-        textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
-
-        m_ComputeShaderTestTexture = CreateRef<Texture2D>(textureDesc, "ComputeShaderTestOutput");
+        // Create environment map
+        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/the_sky_is_on_fire_4k.hdr");
+        m_SkyBoxMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None, "SkyBoxMaterial");
+        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
 
         EditorResources::Initialize();
     }
@@ -66,14 +65,12 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnUpdate(Timestep ts)
     {
-        static f32 elapsedTime = 0.0f;
-        elapsedTime += ts;
-
         m_Camera.OnUpdate(ts);
 
         CameraCB cameraCB;
         cameraCB.ProjMatrix = m_Camera.GetProjectionMatrix();
         cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
+        cameraCB.CameraPosition = m_Camera.GetPosition();
 
         void* data = m_CameraCB->Map(0, 0);
         memcpy(data, &cameraCB, sizeof(CameraCB));
@@ -84,6 +81,12 @@ namespace Atom
         commandBuffer->Begin();
 
         Renderer::BeginRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+
+        // Render skybox
+        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(cameraCB.ViewMatrix * cameraCB.ProjMatrix));
+        Renderer::RenderFullscreenQuad(commandBuffer.get(), m_SkyBoxPipeline.get(), nullptr, m_SkyBoxMaterial.get());
+
+        // Render mesh
         Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
         Renderer::EndRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
 
@@ -152,14 +155,6 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         ImGui::ShowDemoWindow(false);
 
-        ImGui::Begin("ComputeShaderTestOutput");
-        if (ImGui::Button("Run Compute Test"))
-        {
-            RunComputeShaderTest();
-        }
-        ImGui::Image((ImTextureID)m_ComputeShaderTestTexture.get(), {(f32)m_ComputeShaderTestTexture->GetWidth(), (f32)m_ComputeShaderTestTexture->GetHeight()});
-        ImGui::End();
-
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
@@ -184,47 +179,5 @@ namespace Atom
     void EditorLayer::OnEvent(Event& event)
     {
         m_Camera.OnEvent(event);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void EditorLayer::RunComputeShaderTest()
-    {
-        struct TextureDimensionsCB
-        {
-            u32 Width;
-            u32 Height;
-        };
-
-        TextureDimensionsCB Constants;
-        Constants.Width = m_ComputeShaderTestTexture->GetWidth();
-        Constants.Height = m_ComputeShaderTestTexture->GetHeight();
-
-        Ref<DescriptorHeap> heap = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, 1, true, "ComputeShaderTestHeap");
-        D3D12_GPU_DESCRIPTOR_HANDLE outputTextureHandle = heap->CopyDescriptor(m_ComputeShaderTestTexture->GetUAV());
-
-        // Transition the texture
-        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
-        Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
-        gfxCmdBuffer->Begin();
-        gfxCmdBuffer->TransitionResource(m_ComputeShaderTestTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        gfxCmdBuffer->End();
-        gfxQueue->ExecuteCommandList(gfxCmdBuffer);
-
-        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
-        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
-        computeCmdBuffer->Begin();
-
-        computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("TestComputePipeline").get());
-        computeCmdBuffer->SetDescriptorHeaps(heap.get(), nullptr);
-        computeCmdBuffer->SetComputeRootConstants(0, &Constants, 2);
-        computeCmdBuffer->SetComputeDescriptorTable(1, outputTextureHandle);
-        computeCmdBuffer->Dispatch(Constants.Width / 32, Constants.Height / 32, 1);
-
-        computeCmdBuffer->End();
-
-        // Wait for the gfx queue to execute the transitions cmd list
-        computeQueue->WaitForQueue(gfxQueue);
-        computeQueue->ExecuteCommandList(computeCmdBuffer);
-        computeQueue->Flush();
     }
 }

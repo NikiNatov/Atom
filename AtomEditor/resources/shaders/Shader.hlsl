@@ -21,6 +21,7 @@ struct Camera
 {
     matrix ViewMatrix;
     matrix ProjectionMatrix;
+    float3 CameraPosition;
 };
 
 ConstantBuffer<Camera> CameraCB : register(b0);
@@ -37,6 +38,7 @@ PSInput VSMain(in VSInput input)
 
     return output;
 }
+
 cbuffer MaterialCB : register(b1)
 {
     float4 AlbedoColor;
@@ -48,6 +50,5 @@ SamplerState AlbedoTextureSampler : register(s0);
 
 float4 PSMain(in PSInput input) : SV_TARGET
 {
-    // Sample only mip 0 for now until support for mip generation is added
-    return UseAlbedoTexture ? AlbedoTexture.SampleLevel(AlbedoTextureSampler, input.UV, 0) : AlbedoColor;
+    return UseAlbedoTexture ? AlbedoTexture.Sample(AlbedoTextureSampler, input.UV) : AlbedoColor;
 }

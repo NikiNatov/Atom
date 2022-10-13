@@ -39,9 +39,12 @@ namespace Atom
                 }
 
                 auto state = m_SubresourceStates.find(subresource);
-                ATOM_ENGINE_ASSERT(state != m_SubresourceStates.end());
+                if (state != m_SubresourceStates.end())
+                {
+                    return state->second;
+                }
 
-                return state->second;
+                return m_State;
             }
         private:
             D3D12_RESOURCE_STATES           m_State;
@@ -52,6 +55,7 @@ namespace Atom
         ~ResourceStateTracker();
 
         void AddTransition(ID3D12Resource* resource, D3D12_RESOURCE_STATES afterState, u32 subresourceIndex = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+        void AddUAVBarrier(ID3D12Resource* resource);
         void CommitPendingBarriers();
         void CommitBarriers();
         void UpdateGlobalStates();

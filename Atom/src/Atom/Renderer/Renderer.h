@@ -16,6 +16,8 @@ namespace Atom
     class Material;
     class Mesh;
     class DescriptorHeap;
+    class TextureCube;
+    class Texture2D;
 
     struct RendererConfig
     {
@@ -32,6 +34,9 @@ namespace Atom
         static void BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear = true);
         static void EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer);
         static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer);
+        static void RenderFullscreenQuad(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const ConstantBuffer* constantBuffer, const Material* material);
+        static std::pair<Ref<TextureCube>, Ref<TextureCube>> CreateEnvironmentMap(const std::filesystem::path& filepath);
+        static void GenerateMips(const Texture2D* texture);
         static void EndFrame();
 
         static const RendererConfig& GetConfig();
@@ -45,5 +50,7 @@ namespace Atom
         inline static Vector<Ref<DescriptorHeap>> ms_SamplerHeaps;
         inline static ShaderLibrary               ms_ShaderLibrary;
         inline static PipelineLibrary             ms_PipelineLibrary;
+        inline static Ref<VertexBuffer>           ms_FullscreenQuadVB;
+        inline static Ref<IndexBuffer>            ms_FullscreenQuadIB;
     };
 }

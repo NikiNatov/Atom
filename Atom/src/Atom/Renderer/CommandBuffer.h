@@ -28,7 +28,9 @@ namespace Atom
         void Begin();
         void BeginRenderPass(const Framebuffer* framebuffer, bool clear = false);
         void EndRenderPass(const Framebuffer* framebuffer);
-        void TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state);
+        void TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+        void AddUAVBarrier(const Texture* texture);
+        void CommitBarriers();
         void SetVertexBuffer(const VertexBuffer* vertexBuffer);
         void SetIndexBuffer(const IndexBuffer* indexBuffer);
         void SetGraphicsPipeline(const GraphicsPipeline* pipeline);
@@ -41,7 +43,8 @@ namespace Atom
         void SetComputeDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);
         void SetDescriptorHeaps(const DescriptorHeap* resourceHeap, const DescriptorHeap* samplerHeap);
         void UploadBufferData(const void* data, const Buffer* buffer);
-        void UploadTextureData(const void* data, const Texture* texture);
+        void UploadTextureData(const void* data, const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
+        void CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
         void DrawIndexed(u32 indexCount, u32 instanceCount = 1, u32 startIndex = 0, u32 startVertex = 0, u32 startInstance = 0);
         void Dispatch(u32 threadCountX, u32 threadCountY, u32 threadCountZ);
         void End();
