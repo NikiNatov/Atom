@@ -273,6 +273,7 @@ namespace Atom
         brdfDesc.Format = TextureFormat::RG16F;
         brdfDesc.MipLevels = 1;
         brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+        brdfDesc.Wrap = TextureWrap::Clamp;
 
         ms_BRDFTexture = CreateRef<Texture2D>(brdfDesc, "BRDFTexture(Renderer)");
 
