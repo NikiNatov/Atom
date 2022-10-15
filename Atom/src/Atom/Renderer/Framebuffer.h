@@ -62,8 +62,8 @@ namespace Atom
         u32 GetHeight() const;
         const glm::vec4& GetClearColor() const;
         bool IsSwapChainTarget() const;
-        const Ref<RenderTexture2D>& GetColorAttachment(AttachmentPoint attachment) const;
-        const Ref<DepthBuffer>& GetDepthAttachment() const;
+        Ref<RenderTexture2D> GetColorAttachment(AttachmentPoint attachment) const;
+        Ref<DepthBuffer> GetDepthAttachment() const;
 
         const D3D12_VIEWPORT& GetViewport() const;
         const D3D12_RECT& GetScissorRect() const;

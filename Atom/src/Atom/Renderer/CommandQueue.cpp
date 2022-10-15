@@ -149,6 +149,8 @@ namespace Atom
             }
 
             lock.unlock();
+            m_CmdBufferProcessingCV.notify_one();
+
             std::this_thread::yield();
         }
     }

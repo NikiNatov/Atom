@@ -51,7 +51,7 @@ namespace Atom
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
         // Create environment map
-        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/kloppenheim_02_4k.hdr");
+        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");
 
         // Create materials
         m_SkyBoxMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None, "SkyBoxMaterial");
@@ -102,7 +102,7 @@ namespace Atom
         // Composite pass
         Renderer::BeginRenderPass(commandBuffer.get(), m_CompositePipeline->GetFramebuffer());
 
-        const Ref<RenderTexture2D>& sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        Ref<RenderTexture2D> sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
         m_CompositeMaterial->SetTexture("SceneTexture", sceneTexture);
 
         Renderer::RenderFullscreenQuad(commandBuffer.get(), m_CompositePipeline.get(), nullptr, m_CompositeMaterial.get());
@@ -193,7 +193,7 @@ namespace Atom
             m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
         }
 
-        const Ref<RenderTexture2D>& finalImage = m_CompositePipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        Ref<RenderTexture2D> finalImage = m_CompositePipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
         ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
         ImGui::End();

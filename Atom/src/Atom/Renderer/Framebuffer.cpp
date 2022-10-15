@@ -73,7 +73,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<RenderTexture2D>& Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
+    Ref<RenderTexture2D> Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
@@ -84,7 +84,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<DepthBuffer>& Framebuffer::GetDepthAttachment() const
+    Ref<DepthBuffer> Framebuffer::GetDepthAttachment() const
     {
         return m_DepthAttachment;
     }
