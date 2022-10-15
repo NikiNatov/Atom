@@ -18,6 +18,7 @@ namespace Atom
     enum class TextureFormat
     {
         None = 0,
+        R8,
         RGBA8,
         RG16F, RGBA16F,
         RG32F, RGBA32F,
