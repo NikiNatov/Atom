@@ -122,9 +122,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const RenderTexture2D* SwapChain::GetBackBuffer() const
+    const Ref<RenderTexture2D>& SwapChain::GetBackBuffer() const
     {
-        return m_BackBuffers[m_BackBufferIndex].get();
+        return m_BackBuffers[m_BackBufferIndex];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

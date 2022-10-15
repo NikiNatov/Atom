@@ -12,8 +12,9 @@ namespace Atom
     {
         glm::mat4 ViewMatrix = glm::mat4(1.0f);
         glm::mat4 ProjMatrix = glm::mat4(1.0f);
+        glm::mat4 Transform = glm::mat4(1.0f);
         glm::vec3 CameraPosition = glm::vec3(0.0f);
-        f32 p[29]{ 0 };
+        f32 p[13]{ 0 };
     };
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -34,11 +35,12 @@ namespace Atom
         Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
 
         // Set the pipelines
-        m_GeometryPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("GeometryPipeline");
+        m_GeometryPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("MeshPBRPipeline");
         m_SkyBoxPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("SkyBoxPipeline");
+        m_CompositePipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("CompositePipeline");
 
         // Load the test mesh
-        m_TestMesh = CreateRef<Mesh>("assets/meshes/x-wing/x-wing.gltf");
+        m_TestMesh = CreateRef<Mesh>("assets/meshes/sphere.gltf");
 
         // Create camera constant buffer
         BufferDescription cbDesc;
@@ -49,9 +51,14 @@ namespace Atom
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
         // Create environment map
-        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/the_sky_is_on_fire_4k.hdr");
+        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/kloppenheim_02_4k.hdr");
+
+        // Create materials
         m_SkyBoxMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None, "SkyBoxMaterial");
         m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
+
+        m_CompositeMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("CompositeShader"), MaterialFlags::None, "CompositeMaterial");
+        m_CompositeMaterial->SetUniform("Exposure", 1.0f);
 
         EditorResources::Initialize();
     }
@@ -87,8 +94,19 @@ namespace Atom
         Renderer::RenderFullscreenQuad(commandBuffer.get(), m_SkyBoxPipeline.get(), nullptr, m_SkyBoxMaterial.get());
 
         // Render mesh
+        m_TestMesh->GetMaterials()[0]->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
+        m_TestMesh->GetMaterials()[0]->SetTexture("IrradianceMap", m_EnvironmentMap.second);
         Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
         Renderer::EndRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+
+        // Composite pass
+        Renderer::BeginRenderPass(commandBuffer.get(), m_CompositePipeline->GetFramebuffer());
+
+        const Ref<RenderTexture2D>& sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        m_CompositeMaterial->SetTexture("SceneTexture", sceneTexture);
+
+        Renderer::RenderFullscreenQuad(commandBuffer.get(), m_CompositePipeline.get(), nullptr, m_CompositeMaterial.get());
+        Renderer::EndRenderPass(commandBuffer.get(), m_CompositePipeline->GetFramebuffer());
 
         commandBuffer->End();
 
@@ -155,6 +173,14 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         ImGui::ShowDemoWindow(false);
 
+        ImGui::Begin("Exposure");
+        f32 exposure = m_CompositeMaterial->GetUniform<f32>("Exposure");
+        if (ImGui::DragFloat("Exposure", &exposure, 0.05f, 0.2f, 5.0f))
+        {
+            m_CompositeMaterial->SetUniform("Exposure", exposure);
+        }
+        ImGui::End();
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
@@ -163,11 +189,12 @@ namespace Atom
         {
             m_ViewportSize = { panelSize.x, panelSize.y };
             m_GeometryPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
+            m_CompositePipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
             m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
         }
 
-        const RenderTexture2D* sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
-        ImGui::Image((ImTextureID)sceneTexture, { (f32)sceneTexture->GetWidth(), (f32)sceneTexture->GetHeight() });
+        const Ref<RenderTexture2D>& finalImage = m_CompositePipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
         ImGui::End();
         ImGui::PopStyleVar();

@@ -98,7 +98,7 @@ namespace Atom
         {
             const aiMaterial* assimpMat = scene->mMaterials[materialIdx];
             
-            Ref<GraphicsShader> shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("Shader");
+            Ref<GraphicsShader> shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader");
 
             MaterialFlags materialFlags = MaterialFlags::DepthTested;
             Ref<Material> material = CreateRef<Material>(shader, materialFlags, "UnnamedMaterial");
@@ -111,18 +111,28 @@ namespace Atom
             }
 
             // Set albedo color
-            aiColor3D albedo;
-            if (assimpMat->Get(AI_MATKEY_COLOR_DIFFUSE, albedo) == AI_SUCCESS)
+            aiColor4D albedo;
+            if (assimpMat->Get(AI_MATKEY_BASE_COLOR, albedo) == AI_SUCCESS)
             {
                 // Set transparency flag
-                f32 opacity = 1.0f;
-                if (assimpMat->Get(AI_MATKEY_OPACITY, opacity) == AI_SUCCESS)
-                {
-                    if (opacity < 1.0f)
-                        materialFlags |= MaterialFlags::Transparent;
-                }
+                if (albedo.a < 1.0f)
+                    materialFlags |= MaterialFlags::Transparent;
 
-                material->SetUniform("AlbedoColor", glm::vec4(albedo.r, albedo.g, albedo.b, opacity));
+                material->SetUniform("AlbedoColor", glm::vec4(albedo.r, albedo.g, albedo.b, albedo.a));
+            }
+
+            // Set roughness
+            f32 roughness;
+            if (assimpMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == AI_SUCCESS)
+            {
+                material->SetUniform("Roughness", roughness);
+            }
+
+            // Set metalness
+            f32 metalness;
+            if (assimpMat->Get(AI_MATKEY_METALLIC_FACTOR, metalness) == AI_SUCCESS)
+            {
+                material->SetUniform("Metalness", metalness);
             }
 
             // Set two sided flag
@@ -141,6 +151,7 @@ namespace Atom
 
             material->SetFlags(materialFlags);
 
+            // Set textures
             auto SetMaterialTexture = [&](aiTextureType type, const char* uniformName) 
             {
                 aiString aiPath;
@@ -166,7 +177,7 @@ namespace Atom
                     TextureDescription textureDesc;
                     textureDesc.Width = image->GetWidth();
                     textureDesc.Height = image->GetHeight();
-                    textureDesc.Format = TextureFormat::RGBA8;
+                    textureDesc.Format = type == aiTextureType_METALNESS || type == aiTextureType_DIFFUSE_ROUGHNESS ? TextureFormat::R8 : TextureFormat::RGBA8;
                     textureDesc.MipLevels = image->GetMaxMipCount();
                     textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
 
@@ -176,7 +187,32 @@ namespace Atom
                     CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
                     Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
                     copyCommandBuffer->Begin();
-                    copyCommandBuffer->UploadTextureData(image->GetPixelData().data(), texture.get());
+
+                    if (type == aiTextureType_METALNESS)
+                    {
+                        Vector<byte> data;
+
+                        for (u32 i = 0; i < image->GetWidth() * image->GetHeight() * 4; i += 4)
+                        {
+                            data.push_back(image->GetPixelData()[i + 2]);
+                        }
+
+                        copyCommandBuffer->UploadTextureData(data.data(), texture.get());
+                    }
+                    else if (type == aiTextureType_DIFFUSE_ROUGHNESS)
+                    {
+                        Vector<byte> data;
+
+                        for (u32 i = 0; i < image->GetWidth() * image->GetHeight() * 4; i += 4)
+                        {
+                            data.push_back(image->GetPixelData()[i + 1]);
+                        }
+
+                        copyCommandBuffer->UploadTextureData(data.data(), texture.get());
+                    }
+                    else
+                        copyCommandBuffer->UploadTextureData(image->GetPixelData().data(), texture.get());
+
                     copyCommandBuffer->End();
                     copyQueue->ExecuteCommandList(copyCommandBuffer);
 
@@ -189,9 +225,12 @@ namespace Atom
                 }
             };
 
-            // Set albedo texture
-            SetMaterialTexture(aiTextureType_DIFFUSE, "AlbedoTexture");
-            
+            SetMaterialTexture(aiTextureType_BASE_COLOR,        "AlbedoMap");
+            SetMaterialTexture(aiTextureType_NORMALS,           "NormalMap");
+            SetMaterialTexture(aiTextureType_METALNESS,         "MetalnessMap");
+            SetMaterialTexture(aiTextureType_DIFFUSE_ROUGHNESS, "RoughnessMap");
+            material->SetTexture("BRDFMap", Renderer::GetBRDF());
+
             m_Materials.push_back(material);
         }
 

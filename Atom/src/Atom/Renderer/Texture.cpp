@@ -120,13 +120,13 @@ namespace Atom
         D3D12_CLEAR_VALUE clearValue = {};
         if (IsSet(m_Description.UsageFlags & TextureBindFlags::DepthStencil))
         {
-            clearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+            clearValue.Format = Utils::AtomTextureFormatToDSVFormat(m_Description.Format);
             clearValue.DepthStencil.Depth = m_Description.ClearValue.DepthStencil.DepthValue;
             clearValue.DepthStencil.Stencil = m_Description.ClearValue.DepthStencil.StencilValue;
         }
-        else
+        else if(IsSet(m_Description.UsageFlags & TextureBindFlags::RenderTarget))
         {
-            clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            clearValue.Format = Utils::AtomTextureFormatToRTVFormat(m_Description.Format);
             clearValue.Color[0] = m_Description.ClearValue.Color.r;
             clearValue.Color[1] = m_Description.ClearValue.Color.g;
             clearValue.Color[2] = m_Description.ClearValue.Color.b;

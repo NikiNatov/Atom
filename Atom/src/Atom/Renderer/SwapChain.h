@@ -19,7 +19,7 @@ namespace Atom
         u32 GetHeight() const;
         u32 GetCurrentBackBufferIndex() const;
         u32 GetBackBufferCount() const;
-        const RenderTexture2D* GetBackBuffer() const;
+        const Ref<RenderTexture2D>& GetBackBuffer() const;
         inline ComPtr<IDXGISwapChain4> GetDXGISwapChain() const { return m_DXGISwapChain; }
         inline const D3D12_VIEWPORT& GetViewport() const { return m_Viewport; }
         inline const D3D12_RECT& GetScissorRect() const { return m_ScissorRect; }

@@ -18,9 +18,11 @@ namespace Atom
     private:
         Ref<GraphicsPipeline>                         m_GeometryPipeline = nullptr;
         Ref<GraphicsPipeline>                         m_SkyBoxPipeline = nullptr;
+        Ref<GraphicsPipeline>                         m_CompositePipeline = nullptr;
         Ref<ConstantBuffer>                           m_CameraCB = nullptr;
         Ref<Mesh>                                     m_TestMesh = nullptr;
         Ref<Material>                                 m_SkyBoxMaterial = nullptr;
+        Ref<Material>                                 m_CompositeMaterial = nullptr;
         std::pair<Ref<TextureCube>, Ref<TextureCube>> m_EnvironmentMap;
         EditorCamera                                  m_Camera;
         glm::vec2                                     m_ViewportSize = { 0.0f, 0.0f };

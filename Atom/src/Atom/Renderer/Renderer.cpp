@@ -33,13 +33,15 @@ namespace Atom
         }
 
         // Load shaders
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/Shader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/SkyBoxShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/CompositeShader.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/GenerateMips.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/EquirectToCubeMap.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapPrefilter.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapIrradiance.hlsl");
+        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/BRDFShader.hlsl");
 
         // Load pipelines
         {
@@ -48,7 +50,7 @@ namespace Atom
             fbDesc.Width = 1980;
             fbDesc.Height = 1080;
             fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
-            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
+            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA16F, TextureFilter::Linear, TextureWrap::Clamp };
             fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
 
             Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc);
@@ -56,7 +58,7 @@ namespace Atom
             {
                 GraphicsPipelineDescription pipelineDesc;
                 pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("Shader");
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader");
                 pipelineDesc.Framebuffer = frameBuffer;
                 pipelineDesc.Layout = {
                     { "POSITION", ShaderDataType::Float3 },
@@ -71,7 +73,7 @@ namespace Atom
                 pipelineDesc.Wireframe = false;
                 pipelineDesc.BackfaceCulling = true;
 
-                ms_PipelineLibrary.Load<GraphicsPipeline>("GeometryPipeline", pipelineDesc);
+                ms_PipelineLibrary.Load<GraphicsPipeline>("MeshPBRPipeline", pipelineDesc);
             }
 
             {
@@ -90,6 +92,35 @@ namespace Atom
                 pipelineDesc.BackfaceCulling = true;
 
                 ms_PipelineLibrary.Load<GraphicsPipeline>("SkyBoxPipeline", pipelineDesc);
+            }
+        }
+
+        {
+            FramebufferDescription fbDesc;
+            fbDesc.SwapChainFrameBuffer = false;
+            fbDesc.Width = 1980;
+            fbDesc.Height = 1080;
+            fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
+            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
+
+            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc);
+
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("CompositeShader");
+                pipelineDesc.Framebuffer = frameBuffer;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                };
+
+                pipelineDesc.EnableBlend = false;
+                pipelineDesc.EnableDepthTest = false;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.BackfaceCulling = true;
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("CompositePipeline", pipelineDesc);
             }
         }
 
@@ -142,6 +173,13 @@ namespace Atom
             ms_PipelineLibrary.Load<ComputePipeline>("CubeMapIrradiancePipeline", pipelineDesc);
         }
 
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("BRDFShader");
+
+            ms_PipelineLibrary.Load<ComputePipeline>("BRDFPipeline", pipelineDesc);
+        }
+
         // Create fullscreen quad buffers
         struct QuadVertex
         {
@@ -165,7 +203,7 @@ namespace Atom
         vbDesc.ElementSize = sizeof(QuadVertex);
         vbDesc.IsDynamic = false;
 
-        ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB");
+        ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB(Renderer)");
 
         u16 quadIndices[] = { 0, 1, 2, 2, 3, 0 };
 
@@ -174,16 +212,86 @@ namespace Atom
         ibDesc.ElementSize = sizeof(u16);
         ibDesc.IsDynamic = false;
 
-        ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB");
+        ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB(Renderer)");
 
         // Upload the data to the GPU
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
-        copyCommandBuffer->UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer);
+        {
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
+            copyCommandBuffer->UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
+            copyCommandBuffer->End();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
+        }
+
+        // Create error texture
+        TextureDescription errorTextureDesc;
+        errorTextureDesc.Width = 1;
+        errorTextureDesc.Height = 1;
+        errorTextureDesc.Format = TextureFormat::RGBA8;
+        errorTextureDesc.MipLevels = 1;
+
+        ms_ErrorTexture = CreateRef<Texture2D>(errorTextureDesc, "ErrorTexture(Renderer)");
+
+        u32 errorTextureData = 0xFFFF00FF; // Just 1 pixel of pink color
+        {
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->UploadTextureData(&errorTextureData, ms_ErrorTexture.get());
+            copyCommandBuffer->End();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
+        }
+
+        // Create black texture and black texture cube
+        TextureDescription blackTextureDesc;
+        blackTextureDesc.Width = 1;
+        blackTextureDesc.Height = 1;
+        blackTextureDesc.Format = TextureFormat::RGBA8;
+        blackTextureDesc.MipLevels = 1;
+
+        ms_BlackTexture = CreateRef<Texture2D>(blackTextureDesc, "BlackTexture(Renderer)");
+        ms_BlackTextureCube = CreateRef<TextureCube>(blackTextureDesc, "BlackTextureCube(Renderer)");
+
+        u32 blackTextureData = 0xFF000000; // Just 1 pixel of black color
+        {
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->UploadTextureData(&blackTextureData, ms_BlackTexture.get());
+
+            for (u32 arraySlice = 0; arraySlice < 6; arraySlice++)
+                copyCommandBuffer->UploadTextureData(&blackTextureData, ms_BlackTextureCube.get(), 0, arraySlice);
+
+            copyCommandBuffer->End();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
+        }
+
+        // Generate BRDF texture
+        TextureDescription brdfDesc;
+        brdfDesc.Width = 256;
+        brdfDesc.Height = 256;
+        brdfDesc.Format = TextureFormat::RG16F;
+        brdfDesc.MipLevels = 1;
+        brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+
+        ms_BRDFTexture = CreateRef<Texture2D>(brdfDesc, "BRDFTexture(Renderer)");
+
+        u32 currentFrameIdx = GetCurrentFrameIndex();
+        D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = ms_ResourceHeaps[currentFrameIdx]->CopyDescriptor(ms_BRDFTexture->GetUAV());
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+        computeCmdBuffer->Begin();
+        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
+        computeCmdBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIdx].get(), nullptr);
+        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
+        computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
+        computeCmdBuffer->End();
+        computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+        // Wait for all copy/compute operations to complete before we continue
+        computeQueue->Flush();
+        copyQueue->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -195,6 +303,10 @@ namespace Atom
         ms_SamplerHeaps.clear();
         ms_FullscreenQuadVB.reset();
         ms_FullscreenQuadIB.reset();
+        ms_BRDFTexture.reset();
+        ms_ErrorTexture.reset();
+        ms_BlackTexture.reset();
+        ms_BlackTextureCube.reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -258,8 +370,16 @@ namespace Atom
 
             for (const auto& texture : material->GetTextures())
             {
-                textureSRVs.push_back(texture->GetSRV());
-                samplers.push_back(texture->GetSampler());
+                if (!texture)
+                {
+                    textureSRVs.push_back(ms_ErrorTexture->GetSRV());
+                    samplers.push_back(ms_ErrorTexture->GetSampler());
+                }
+                else
+                {
+                    textureSRVs.push_back(texture->GetSRV());
+                    samplers.push_back(texture->GetSampler());
+                }
             }
 
             D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
@@ -306,8 +426,16 @@ namespace Atom
 
         for (const auto& texture : material->GetTextures())
         {
-            textureSRVs.push_back(texture->GetSRV());
-            samplers.push_back(texture->GetSampler());
+            if (!texture)
+            {
+                textureSRVs.push_back(ms_ErrorTexture->GetSRV());
+                samplers.push_back(ms_ErrorTexture->GetSampler());
+            }
+            else
+            {
+                textureSRVs.push_back(texture->GetSRV());
+                samplers.push_back(texture->GetSampler());
+            }
         }
 
         D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
@@ -583,5 +711,29 @@ namespace Atom
     const PipelineLibrary& Renderer::GetPipelineLibrary()
     {
         return ms_PipelineLibrary;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<Texture2D>& Renderer::GetBRDF()
+    {
+        return ms_BRDFTexture;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<Texture2D>& Renderer::GetErrorTexture()
+    {
+        return ms_ErrorTexture;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<Texture2D>& Renderer::GetBlackTexture()
+    {
+        return ms_BlackTexture;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const Ref<TextureCube>& Renderer::GetBlackTextureCube()
+    {
+        return ms_BlackTextureCube;
     }
 }

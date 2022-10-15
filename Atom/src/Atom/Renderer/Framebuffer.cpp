@@ -73,20 +73,20 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const RenderTexture2D* Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
+    const Ref<RenderTexture2D>& Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
             return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain()->GetBackBuffer() : nullptr;
         }
 
-        return m_ColorAttachments[attachment].get();
+        return m_ColorAttachments[attachment];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const DepthBuffer* Framebuffer::GetDepthAttachment() const
+    const Ref<DepthBuffer>& Framebuffer::GetDepthAttachment() const
     {
-        return m_DepthAttachment.get();
+        return m_DepthAttachment;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

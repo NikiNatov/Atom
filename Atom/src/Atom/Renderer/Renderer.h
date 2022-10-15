@@ -44,6 +44,10 @@ namespace Atom
         static u32 GetFramesInFlight();
         static const ShaderLibrary& GetShaderLibrary();
         static const PipelineLibrary& GetPipelineLibrary();
+        static const Ref<Texture2D>& GetBRDF();
+        static const Ref<Texture2D>& GetErrorTexture();
+        static const Ref<Texture2D>& GetBlackTexture();
+        static const Ref<TextureCube>& GetBlackTextureCube();
     private:
         inline static RendererConfig              ms_Config;
         inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;
@@ -52,5 +56,9 @@ namespace Atom
         inline static PipelineLibrary             ms_PipelineLibrary;
         inline static Ref<VertexBuffer>           ms_FullscreenQuadVB;
         inline static Ref<IndexBuffer>            ms_FullscreenQuadIB;
+        inline static Ref<Texture2D>              ms_BRDFTexture;
+        inline static Ref<Texture2D>              ms_ErrorTexture;
+        inline static Ref<Texture2D>              ms_BlackTexture;
+        inline static Ref<TextureCube>            ms_BlackTextureCube;
     };
 }
