@@ -10,7 +10,8 @@ namespace Atom
         None = 0,
         VertexBuffer,
         IndexBuffer,
-        ConstantBuffer
+        ConstantBuffer,
+        StructuredBuffer
     };
 
     struct BufferDescription
@@ -88,5 +89,18 @@ namespace Atom
         virtual void CreateViews() override;
     private:
         D3D12_CPU_DESCRIPTOR_HANDLE m_CBVDescriptor;
+    };
+
+    class StructuredBuffer : public Buffer
+    {
+    public:
+        StructuredBuffer(const BufferDescription& description, const char* debugName = "Unnamed Structured Buffer");
+        ~StructuredBuffer();
+
+        inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
+    private:
+        virtual void CreateViews() override;
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor;
     };
 }

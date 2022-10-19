@@ -20,6 +20,7 @@ namespace Atom
         Ref<GraphicsPipeline>                         m_SkyBoxPipeline = nullptr;
         Ref<GraphicsPipeline>                         m_CompositePipeline = nullptr;
         Ref<ConstantBuffer>                           m_CameraCB = nullptr;
+        Ref<StructuredBuffer>                         m_LightsSB = nullptr;
         Ref<Mesh>                                     m_TestMesh = nullptr;
         Ref<Material>                                 m_SkyBoxMaterial = nullptr;
         Ref<Material>                                 m_CompositeMaterial = nullptr;

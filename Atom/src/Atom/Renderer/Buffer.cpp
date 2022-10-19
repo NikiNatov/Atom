@@ -154,4 +154,34 @@ namespace Atom
         m_CBVDescriptor = Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
         Device::Get().GetD3DDevice()->CreateConstantBufferView(&cbvDesc, m_CBVDescriptor);
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    StructuredBuffer::StructuredBuffer(const BufferDescription& description, const char* debugName)
+        : Buffer(BufferType::StructuredBuffer, description, debugName)
+    {
+        CreateViews();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    StructuredBuffer::~StructuredBuffer()
+    {
+        Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void StructuredBuffer::CreateViews()
+    {
+        auto& dx12Device = Device::Get();
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        srvDesc.Buffer.FirstElement = 0;
+        srvDesc.Buffer.NumElements = m_Description.ElementCount;
+        srvDesc.Buffer.StructureByteStride = m_Description.ElementSize;
+
+        m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
+        dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+    }
 }

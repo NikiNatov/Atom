@@ -283,10 +283,12 @@ namespace Atom
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
+        computeCmdBuffer->TransitionResource(ms_BRDFTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIdx].get(), nullptr);
         computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
         computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
+        computeCmdBuffer->TransitionResource(ms_BRDFTexture.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->End();
         computeQueue->ExecuteCommandList(computeCmdBuffer);
 
@@ -335,7 +337,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer)
+    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer, const StructuredBuffer* structuredBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline);
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
@@ -362,6 +364,11 @@ namespace Atom
                 commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
             }
 
+            if (structuredBuffer)
+            {
+                commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer);
+            }
+
             // Set textures and samplers
             Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
             textureSRVs.reserve(material->GetTextures().size());
@@ -373,11 +380,13 @@ namespace Atom
             {
                 if (!texture)
                 {
+                    commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                     textureSRVs.push_back(ms_ErrorTexture->GetSRV());
                     samplers.push_back(ms_ErrorTexture->GetSampler());
                 }
                 else
                 {
+                    commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                     textureSRVs.push_back(texture->GetSRV());
                     samplers.push_back(texture->GetSampler());
                 }
@@ -429,11 +438,13 @@ namespace Atom
         {
             if (!texture)
             {
+                commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                 textureSRVs.push_back(ms_ErrorTexture->GetSRV());
                 samplers.push_back(ms_ErrorTexture->GetSampler());
             }
             else
             {
+                commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                 textureSRVs.push_back(texture->GetSRV());
                 samplers.push_back(texture->GetSampler());
             }
@@ -499,10 +510,14 @@ namespace Atom
         Ref<TextureCube> envMapUnfiltered = CreateRef<TextureCube>(envMapDesc, fmt::format("{}(EnvironmentMapUnfiltered)", name).c_str());
 
         {
+            PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
+
             D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(hdrMap->GetSampler());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
+            computeCmdBuffer->TransitionResource(hdrMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
             computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
             computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
@@ -516,10 +531,13 @@ namespace Atom
                 computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
                 computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
             }
-            
+
+            computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_COMMON);
             computeCmdBuffer->End();
             computeQueue->WaitForQueue(copyQueue);
             computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+            PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -532,6 +550,8 @@ namespace Atom
         {
             Ref<CommandBuffer> copyCmdBuffer = copyQueue->GetCommandBuffer();
             copyCmdBuffer->Begin();
+            copyCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+            copyCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 
             for (u32 arraySlice = 0; arraySlice < 6; arraySlice++)
             {
@@ -545,10 +565,14 @@ namespace Atom
         }
 
         {
+            PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "CubeMapPreFilter");
+
             D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMapUnfiltered->GetSampler());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
+            computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapPrefilterPipeline").get());
             computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
             computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
@@ -573,6 +597,8 @@ namespace Atom
             computeCmdBuffer->End();
             computeQueue->WaitForQueue(copyQueue);
             computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+            PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -592,15 +618,23 @@ namespace Atom
         D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
         D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMap->GetSampler());
 
+        PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateIrradianceMap");
+
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
+        computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
         computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
         computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable);
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
+        computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COMMON);
+        computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->End();
         computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+        PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
 
         // Wait for all compute operations to complete
         computeQueue->Flush();
@@ -611,6 +645,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::GenerateMips(const Texture2D* texture)
     {
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
+
         u32 currentFrameIdx = GetCurrentFrameIndex();
         Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
         Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
@@ -635,7 +672,6 @@ namespace Atom
         D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(sampler);
 
         // Run compute shader for each mip
-        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("GenerateMipsPipeline").get());
@@ -660,6 +696,8 @@ namespace Atom
             constants.TexelSize = { 1.0f / width, 1.0f / height };
             constants.TopMipLevel = mip - 1;
 
+            computeCmdBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, mip - 1);
+            computeCmdBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, mip);
             computeCmdBuffer->SetComputeRootConstants(0, &constants, 3);
             computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
@@ -672,10 +710,15 @@ namespace Atom
         }
 
         computeCmdBuffer->End();
+
+        // Wait for any copy operations to complate in order to make sure we have all the data already uploaded before executing
+        computeQueue->WaitForQueue(Device::Get().GetCommandQueue(CommandQueueType::Copy));
         computeQueue->ExecuteCommandList(computeCmdBuffer);
 
         // Wait for the compute operations to finish before continuing
         computeQueue->Flush();
+
+        PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

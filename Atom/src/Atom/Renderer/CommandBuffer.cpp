@@ -126,6 +126,8 @@ namespace Atom
         {
             m_ResourceStateTracker.AddTransition(depthBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_READ);
         }
+
+        m_ResourceStateTracker.CommitBarriers();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -205,6 +207,17 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetGraphicsStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (!structuredBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(structuredBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+        m_CommandList->SetGraphicsRootShaderResourceView(rootParamIndex, structuredBuffer->GetD3DResource()->GetGPUVirtualAddress());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetComputeConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
@@ -213,6 +226,17 @@ namespace Atom
             m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
         m_CommandList->SetComputeRootConstantBufferView(rootParamIndex, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::SetComputeStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (!structuredBuffer->IsDynamic())
+            m_ResourceStateTracker.AddTransition(structuredBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+        m_CommandList->SetComputeRootShaderResourceView(rootParamIndex, structuredBuffer->GetD3DResource()->GetGPUVirtualAddress());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -325,9 +349,6 @@ namespace Atom
     void CommandBuffer::CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        m_ResourceStateTracker.AddTransition(srcTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, subresource);
-        m_ResourceStateTracker.AddTransition(dstTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST, subresource);
 
         CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstTexture->GetD3DResource().Get(), subresource);
         CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);

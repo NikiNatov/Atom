@@ -95,6 +95,17 @@ namespace Atom
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 
+        // Workaround for Windows 11 DX12 Debug Layer
+        D3D12_MESSAGE_ID hide[] =
+        {
+            D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+        };
+
+        D3D12_INFO_QUEUE_FILTER filter = {};
+        filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+        filter.DenyList.pIDList = hide;
+        infoQueue->AddStorageFilterEntries(&filter);
+
 #endif // ATOM_DEBUG
 
         // Create command queues

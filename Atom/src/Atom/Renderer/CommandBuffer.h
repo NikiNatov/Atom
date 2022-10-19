@@ -15,6 +15,7 @@ namespace Atom
     class VertexBuffer;
     class IndexBuffer;
     class ConstantBuffer;
+    class StructuredBuffer;
     class DescriptorHeap;
     class ComputeShader;
     enum class CommandQueueType;
@@ -36,7 +37,9 @@ namespace Atom
         void SetGraphicsPipeline(const GraphicsPipeline* pipeline);
         void SetComputePipeline(const ComputePipeline* pipeline);
         void SetGraphicsConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer);
+        void SetGraphicsStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer);
         void SetComputeConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer);
+        void SetComputeStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer);
         void SetGraphicsRootConstants(u32 rootParamIndex, const void* data, u32 numConstants);
         void SetComputeRootConstants(u32 rootParamIndex, const void* data, u32 numConstants);
         void SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);

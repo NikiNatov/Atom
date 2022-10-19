@@ -43,6 +43,23 @@ PSInput VSMain(in VSInput input)
     return output;
 }
 
+#define DIR_LIGHT   0
+#define POINT_LIGHT 1
+#define SPOT_LIGHT  2
+
+struct Light
+{
+    float4 Position;
+    float4 Direction;
+    float4 Color;
+    float  Intensity;
+    float  ConeAngle;
+    float  ConstAttenuation;
+    float  LinearAttenuation;
+    float  QuadraticAttenuation;
+    uint   LightType;
+};
+
 cbuffer MaterialCB : register(b1)
 {
     float4 AlbedoColor;
@@ -77,6 +94,8 @@ SamplerState IrradianceMapSampler : register(s5);
 
 Texture2D BRDFMap : register(t6);
 SamplerState BRDFMapSampler: register(s6);
+
+StructuredBuffer<Light> LightsBuffer : register(t7);
 
 //GGX/Trowbridge-Reitz normal distribution function
 float NormalDistributionFunction(float alpha, float3 N, float3 H)
@@ -134,6 +153,37 @@ float3 GetNormalFromMap(float2 uv, float3 tangent, float3 bitangent, float3 norm
     return normalMap;
 }
 
+float3 CalculateDirectionalLight(Light light, float3 F0, float3 V, float3 N, float3 albedoColor, float metalness, float roughness)
+{
+    float3 L = normalize(-light.Direction.xyz);
+    float3 H = normalize(V + L);
+
+    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
+
+    float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
+    float3 brdf = Kd * albedoColor + specularColor;
+
+    return brdf * light.Color.rgb * light.Intensity * max(dot(L, N), 0.0);
+}
+
+float3 CalculatePointLight(Light light, float3 F0, float3 V, float3 N, float3 fragmentPos, float3 albedoColor, float metalness, float roughness)
+{
+    float3 L = light.Position.xyz - fragmentPos;
+    float distance = length(L);
+    L = normalize(L);
+    float3 H = normalize(V + L);
+
+    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
+
+    float attenuation = 1.0f / (light.ConstAttenuation + light.LinearAttenuation * distance + light.QuadraticAttenuation * distance * distance);
+    float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
+    float3 brdf = Kd * albedoColor + specularColor;
+
+    return brdf * light.Color.rgb * light.Intensity * attenuation * max(dot(L, N), 0.0);
+}
+
 float4 PSMain(in PSInput input) : SV_Target
 {
     float4 albedoColor = UseAlbedoMap ? AlbedoMap.Sample(AlbedoMapSampler, input.UV).rgba : AlbedoColor;
@@ -147,6 +197,23 @@ float4 PSMain(in PSInput input) : SV_Target
 
     float3 outgoingLightColor = float3(0.0, 0.0, 0.0);
 
+    // Lights
+    uint lightCount, stride;
+    LightsBuffer.GetDimensions(lightCount, stride);
+
+    for (uint i = 0; i < 2; i++)
+    {
+        switch (LightsBuffer[i].LightType)
+        {
+        case POINT_LIGHT:
+            outgoingLightColor += CalculatePointLight(LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
+            break;
+        case DIR_LIGHT:
+            outgoingLightColor += CalculateDirectionalLight(LightsBuffer[i], F0, V, N, albedoColor.rgb, metalness, roughness);
+            break;
+        }
+    }
+
     // IBL
     float3 ambientColor = float3(0.0, 0.0, 0.0);
     {
@@ -156,7 +223,7 @@ float4 PSMain(in PSInput input) : SV_Target
         float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
         float3 diffuseColor = Kd * albedoColor.rgb * irradianceColor;
 
-        float3 envSpecularColor = EnvironmentMap.SampleLevel(EnvironmentMapSampler, reflect(-V, N), roughness * 12).rgb;
+        float3 envSpecularColor = EnvironmentMap.SampleLevel(EnvironmentMapSampler, reflect(-V, N), roughness * 10).rgb;
         float2 specularBRDF = BRDFMap.Sample(BRDFMapSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
         float3 specularColor = envSpecularColor * (Ks * specularBRDF.x + specularBRDF.y);
 

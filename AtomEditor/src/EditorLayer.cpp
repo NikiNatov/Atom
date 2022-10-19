@@ -17,6 +17,19 @@ namespace Atom
         f32 p[13]{ 0 };
     };
 
+    struct Light
+    {
+        glm::vec4 Position;
+        glm::vec4 Direction;
+        glm::vec4 Color;
+        f32 Intensity;
+        f32 ConeAngle;
+        f32 ConstAttenuation;
+        f32 LinearAttenuation;
+        f32 QuadraticAttenuation;
+        u32 LightType;
+    };
+
     // -----------------------------------------------------------------------------------------------------------------------------
     EditorLayer::EditorLayer()
         : Layer("EditorLayer")
@@ -50,6 +63,14 @@ namespace Atom
 
         m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
 
+        // Create lights structured buffer
+        BufferDescription sbDesc;
+        sbDesc.ElementCount = 2;
+        sbDesc.ElementSize = sizeof(Light);
+        sbDesc.IsDynamic = true;
+
+        m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+
         // Create environment map
         m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");
 
@@ -74,6 +95,10 @@ namespace Atom
     {
         m_Camera.OnUpdate(ts);
 
+        static f32 elapsedTime = 0.0f;
+        elapsedTime += ts;
+
+        // Update camera constant buffer
         CameraCB cameraCB;
         cameraCB.ProjMatrix = m_Camera.GetProjectionMatrix();
         cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
@@ -83,6 +108,34 @@ namespace Atom
         memcpy(data, &cameraCB, sizeof(CameraCB));
         m_CameraCB->Unmap();
 
+        // Update lights structured buffer
+        Vector<Light> lights;
+        {
+            // Red directional light
+            Light& light = lights.emplace_back();
+            light.Direction = { sin(elapsedTime), -1.0f, 0.0f, 0.0f };
+            light.Color = { 1.0f, 0.0f, 0.0f, 1.0f };
+            light.Intensity = 1.0f;
+            light.LightType = 0;
+        }
+
+        {
+            // Green point light
+            Light& light = lights.emplace_back();
+            light.Position = { 0.0f, sin(elapsedTime) * 50.0f, 0.0f, 1.0f };
+            light.Color = { 0.0f, 1.0f, 0.0f, 1.0f};
+            light.Intensity = 1.0f;
+            light.ConstAttenuation = 1.0f;
+            light.LinearAttenuation = 0.08f;
+            light.QuadraticAttenuation = 0.0f;
+            light.LightType = 1;
+        }
+
+        void* lightsData = m_LightsSB->Map(0, 0);
+        memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
+        m_LightsSB->Unmap();
+
+        // Render
         CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
         Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
         commandBuffer->Begin();
@@ -96,7 +149,7 @@ namespace Atom
         // Render mesh
         m_TestMesh->GetMaterials()[0]->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
         m_TestMesh->GetMaterials()[0]->SetTexture("IrradianceMap", m_EnvironmentMap.second);
-        Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get());
+        Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get(), m_LightsSB.get());
         Renderer::EndRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
 
         // Composite pass
@@ -173,12 +226,25 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         ImGui::ShowDemoWindow(false);
 
-        ImGui::Begin("Exposure");
+        ImGui::Begin("Values");
         f32 exposure = m_CompositeMaterial->GetUniform<f32>("Exposure");
         if (ImGui::DragFloat("Exposure", &exposure, 0.05f, 0.2f, 5.0f))
         {
             m_CompositeMaterial->SetUniform("Exposure", exposure);
         }
+
+        f32 roughness = m_TestMesh->GetMaterials()[0]->GetUniform<f32>("Roughness");
+        if (ImGui::DragFloat("Roughness", &roughness, 0.05f, 0.0f, 1.0f))
+        {
+            m_TestMesh->GetMaterials()[0]->SetUniform("Roughness", roughness);
+        }
+
+        f32 metalness = m_TestMesh->GetMaterials()[0]->GetUniform<f32>("Metalness");
+        if (ImGui::DragFloat("Metalness", &metalness, 0.05f, 0.0f, 1.0f))
+        {
+            m_TestMesh->GetMaterials()[0]->SetUniform("Metalness", metalness);
+        }
+
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
