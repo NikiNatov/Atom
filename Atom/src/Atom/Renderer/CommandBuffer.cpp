@@ -350,6 +350,9 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
+        m_ResourceStateTracker.AddTransition(srcTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_ResourceStateTracker.AddTransition(dstTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+
         CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstTexture->GetD3DResource().Get(), subresource);
         CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);
 

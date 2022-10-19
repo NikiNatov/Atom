@@ -550,8 +550,6 @@ namespace Atom
         {
             Ref<CommandBuffer> copyCmdBuffer = copyQueue->GetCommandBuffer();
             copyCmdBuffer->Begin();
-            copyCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-            copyCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 
             for (u32 arraySlice = 0; arraySlice < 6; arraySlice++)
             {
@@ -629,8 +627,6 @@ namespace Atom
         computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
         computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable);
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
-        computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COMMON);
-        computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->End();
         computeQueue->ExecuteCommandList(computeCmdBuffer);
 
@@ -703,7 +699,6 @@ namespace Atom
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
             computeCmdBuffer->AddUAVBarrier(texture);
-            computeCmdBuffer->CommitBarriers();
 
             width = glm::max(width / 2, 1u);
             height = glm::max(height / 2, 1u);
