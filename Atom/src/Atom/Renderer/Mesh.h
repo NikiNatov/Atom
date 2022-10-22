@@ -35,8 +35,8 @@ namespace Atom
         Mesh(const std::filesystem::path& filepath);
 
         inline const String& GetName() const { return m_Name; }
-        inline const Ref<VertexBuffer>& GetVertexBuffer() const { return m_VertexBuffer; }
-        inline const Ref<IndexBuffer>& GetIndexBuffer() const { return m_IndexBuffer; }
+        inline Ref<VertexBuffer> GetVertexBuffer() const { return m_VertexBuffer; }
+        inline Ref<IndexBuffer> GetIndexBuffer() const { return m_IndexBuffer; }
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
         inline const Vector<Ref<Material>>& GetMaterials() const { return m_Materials; }
     private:

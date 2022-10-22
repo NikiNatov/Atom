@@ -218,7 +218,7 @@ namespace Atom
 
                     // Make sure all the data is finished uploading before generating mip levels
                     Device::Get().GetCommandQueue(CommandQueueType::Compute)->WaitForQueue(copyQueue);
-                    Renderer::GenerateMips(texture.get());
+                    Renderer::GenerateMips(texture);
 
                     material->SetTexture(uniformName, texture);
                     material->SetUniform(fmt::format("Use{}", uniformName).c_str(), 1);

@@ -140,26 +140,26 @@ namespace Atom
         Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
         commandBuffer->Begin();
 
-        Renderer::BeginRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+        Renderer::BeginRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
 
         // Render skybox
         m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(cameraCB.ViewMatrix * cameraCB.ProjMatrix));
-        Renderer::RenderFullscreenQuad(commandBuffer.get(), m_SkyBoxPipeline.get(), nullptr, m_SkyBoxMaterial.get());
+        Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 
         // Render mesh
         m_TestMesh->GetMaterials()[0]->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
         m_TestMesh->GetMaterials()[0]->SetTexture("IrradianceMap", m_EnvironmentMap.second);
-        Renderer::RenderGeometry(commandBuffer.get(), m_GeometryPipeline.get(), m_TestMesh.get(), m_CameraCB.get(), m_LightsSB.get());
-        Renderer::EndRenderPass(commandBuffer.get(), m_GeometryPipeline->GetFramebuffer());
+        Renderer::RenderGeometry(commandBuffer, m_GeometryPipeline, m_TestMesh, m_CameraCB, m_LightsSB);
+        Renderer::EndRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
 
         // Composite pass
-        Renderer::BeginRenderPass(commandBuffer.get(), m_CompositePipeline->GetFramebuffer());
+        Renderer::BeginRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
 
         Ref<RenderTexture2D> sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
         m_CompositeMaterial->SetTexture("SceneTexture", sceneTexture);
 
-        Renderer::RenderFullscreenQuad(commandBuffer.get(), m_CompositePipeline.get(), nullptr, m_CompositeMaterial.get());
-        Renderer::EndRenderPass(commandBuffer.get(), m_CompositePipeline->GetFramebuffer());
+        Renderer::RenderFullscreenQuad(commandBuffer, m_CompositePipeline, nullptr, m_CompositeMaterial);
+        Renderer::EndRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
 
         commandBuffer->End();
 

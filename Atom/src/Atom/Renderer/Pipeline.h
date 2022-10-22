@@ -114,8 +114,8 @@ namespace Atom
         ~GraphicsPipeline();
 
         const GraphicsPipelineLayout& GetLayout() const;
-        const GraphicsShader* GetShader() const;
-        Framebuffer* GetFramebuffer() const;
+        Ref<GraphicsShader> GetShader() const;
+        Ref<Framebuffer> GetFramebuffer() const;
         Topology GetTopology() const;
         bool IsDepthTestingEnabled() const;
         bool IsBlendingEnabled() const;
@@ -139,7 +139,7 @@ namespace Atom
         ComputePipeline(const ComputePipelineDescription& description, const char* debugName = "Unnamed Compute Pipeline");
         ~ComputePipeline();
 
-        const ComputeShader* GetComputeShader() const;
+        Ref<ComputeShader> GetComputeShader() const;
         inline const D3D12_COMPUTE_PIPELINE_STATE_DESC& GetD3DDescription() const { return m_D3DDescription; }
     private:
         ComputePipelineDescription        m_Description;

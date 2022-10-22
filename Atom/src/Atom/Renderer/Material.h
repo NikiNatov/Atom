@@ -55,7 +55,7 @@ namespace Atom
         inline bool IsTwoSided() const { return (m_Flags & MaterialFlags::TwoSided) != MaterialFlags::None; }
         inline bool IsTransparent() const { return (m_Flags & MaterialFlags::Transparent) != MaterialFlags::None; }
         inline const String& GetName() const { return m_Name; }
-        inline const Ref<GraphicsShader>& GetShader() const { return m_Shader; }
+        inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline MaterialFlags GetFlags() const { return m_Flags; }
         inline const HashMap<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
         inline const Vector<Ref<Texture>>& GetTextures() const { return m_Textures; }

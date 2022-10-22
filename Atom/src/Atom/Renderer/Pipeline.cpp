@@ -167,15 +167,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const GraphicsShader* GraphicsPipeline::GetShader() const
+    Ref<GraphicsShader> GraphicsPipeline::GetShader() const
     {
-        return m_Description.Shader.get();
+        return m_Description.Shader;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Framebuffer* GraphicsPipeline::GetFramebuffer() const
+    Ref<Framebuffer> GraphicsPipeline::GetFramebuffer() const
     {
-        return m_Description.Framebuffer.get();
+        return m_Description.Framebuffer;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -231,8 +231,8 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ComputeShader* ComputePipeline::GetComputeShader() const
+    Ref<ComputeShader> ComputePipeline::GetComputeShader() const
     {
-        return m_Description.Shader.get();
+        return m_Description.Shader;
     }
 }

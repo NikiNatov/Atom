@@ -325,21 +325,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear)
+    void Renderer::BeginRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer, bool clear)
     {
-        commandBuffer->BeginRenderPass(framebuffer, clear);
+        commandBuffer->BeginRenderPass(framebuffer.get(), clear);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer)
+    void Renderer::EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer)
     {
-        commandBuffer->EndRenderPass(framebuffer);
+        commandBuffer->EndRenderPass(framebuffer.get());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer, const StructuredBuffer* structuredBuffer)
+    void Renderer::RenderGeometry(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer)
     {
-        commandBuffer->SetGraphicsPipeline(pipeline);
+        commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
         commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
 
@@ -361,12 +361,12 @@ namespace Atom
             // Set constant buffers and structured buffers
             if (constantBuffer)
             {
-                commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+                commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
             }
 
             if (structuredBuffer)
             {
-                commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer);
+                commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer.get());
             }
 
             // Set textures and samplers
@@ -404,9 +404,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderFullscreenQuad(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const ConstantBuffer* constantBuffer, const Material* material)
+    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material)
     {
-        commandBuffer->SetGraphicsPipeline(pipeline);
+        commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(ms_FullscreenQuadVB.get());
         commandBuffer->SetIndexBuffer(ms_FullscreenQuadIB.get());
 
@@ -424,7 +424,7 @@ namespace Atom
         // Set constant buffers and structured buffers
         if(constantBuffer)
         {
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer);
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
         }
 
         // Set textures and samplers
@@ -494,7 +494,7 @@ namespace Atom
             copyQueue->ExecuteCommandList(copyCmdBuffer);
         }
 
-        Renderer::GenerateMips(hdrMap.get());
+        Renderer::GenerateMips(hdrMap);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //                        Phase 1: Equirectangular map to cubemap                              //
@@ -639,7 +639,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::GenerateMips(const Texture2D* texture)
+    void Renderer::GenerateMips(Ref<Texture2D> texture)
     {
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
@@ -692,13 +692,13 @@ namespace Atom
             constants.TexelSize = { 1.0f / width, 1.0f / height };
             constants.TopMipLevel = mip - 1;
 
-            computeCmdBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, mip - 1);
-            computeCmdBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, mip);
+            computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, mip - 1);
+            computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, mip);
             computeCmdBuffer->SetComputeRootConstants(0, &constants, 3);
             computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
-            computeCmdBuffer->AddUAVBarrier(texture);
+            computeCmdBuffer->AddUAVBarrier(texture.get());
 
             width = glm::max(width / 2, 1u);
             height = glm::max(height / 2, 1u);
@@ -753,25 +753,25 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Texture2D>& Renderer::GetBRDF()
+    Ref<Texture2D> Renderer::GetBRDF()
     {
         return ms_BRDFTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Texture2D>& Renderer::GetErrorTexture()
+    Ref<Texture2D> Renderer::GetErrorTexture()
     {
         return ms_ErrorTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Texture2D>& Renderer::GetBlackTexture()
+    Ref<Texture2D> Renderer::GetBlackTexture()
     {
         return ms_BlackTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<TextureCube>& Renderer::GetBlackTextureCube()
+    Ref<TextureCube> Renderer::GetBlackTextureCube()
     {
         return ms_BlackTextureCube;
     }

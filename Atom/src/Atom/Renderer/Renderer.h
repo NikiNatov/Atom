@@ -32,12 +32,12 @@ namespace Atom
         static void Initialize(const RendererConfig& config = RendererConfig());
         static void Shutdown();
         static void BeginFrame();
-        static void BeginRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer, bool clear = true);
-        static void EndRenderPass(CommandBuffer* commandBuffer, const Framebuffer* framebuffer);
-        static void RenderGeometry(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const Mesh* mesh, const ConstantBuffer* constantBuffer, const StructuredBuffer* structuredBuffer);
-        static void RenderFullscreenQuad(CommandBuffer* commandBuffer, const GraphicsPipeline* pipeline, const ConstantBuffer* constantBuffer, const Material* material);
+        static void BeginRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer, bool clear = true);
+        static void EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer);
+        static void RenderGeometry(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer);
+        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material);
         static std::pair<Ref<TextureCube>, Ref<TextureCube>> CreateEnvironmentMap(const std::filesystem::path& filepath);
-        static void GenerateMips(const Texture2D* texture);
+        static void GenerateMips(Ref<Texture2D> texture);
         static void EndFrame();
 
         static const RendererConfig& GetConfig();
@@ -45,10 +45,10 @@ namespace Atom
         static u32 GetFramesInFlight();
         static const ShaderLibrary& GetShaderLibrary();
         static const PipelineLibrary& GetPipelineLibrary();
-        static const Ref<Texture2D>& GetBRDF();
-        static const Ref<Texture2D>& GetErrorTexture();
-        static const Ref<Texture2D>& GetBlackTexture();
-        static const Ref<TextureCube>& GetBlackTextureCube();
+        static Ref<Texture2D> GetBRDF();
+        static Ref<Texture2D> GetErrorTexture();
+        static Ref<Texture2D> GetBlackTexture();
+        static Ref<TextureCube> GetBlackTextureCube();
     private:
         inline static RendererConfig              ms_Config;
         inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;

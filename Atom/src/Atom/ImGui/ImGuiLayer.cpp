@@ -184,7 +184,7 @@ namespace Atom
             CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
             Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
             commandBuffer->Begin();
-            commandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer(), m_ClearRenderTarget);
+            commandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer().get(), m_ClearRenderTarget);
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
 
@@ -280,7 +280,7 @@ namespace Atom
                 globalVtxOffset += cmdList->VtxBuffer.Size;
             }
 
-            commandBuffer->EndRenderPass(m_Pipeline->GetFramebuffer());
+            commandBuffer->EndRenderPass(m_Pipeline->GetFramebuffer().get());
             commandBuffer->End();
 
             gfxQueue->ExecuteCommandList(commandBuffer);
