@@ -54,10 +54,11 @@ namespace Atom
     class Framebuffer
     {
     public:
-        Framebuffer(const FramebufferDescription& description);
+        Framebuffer(const FramebufferDescription& description, const char* name = "Unnamed Framebuffer");
         ~Framebuffer();
 
         void Resize(u32 width, u32 height);
+        const String& GetName() const;
         u32 GetWidth() const;
         u32 GetHeight() const;
         const glm::vec4& GetClearColor() const;
@@ -70,6 +71,7 @@ namespace Atom
     private:
         void Invalidate();
     private:
+        String                 m_Name;
         FramebufferDescription m_Description;
         D3D12_VIEWPORT         m_Viewport{};
         D3D12_RECT             m_ScissorRect{};

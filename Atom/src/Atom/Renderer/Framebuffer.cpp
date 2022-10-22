@@ -9,8 +9,8 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Framebuffer::Framebuffer(const FramebufferDescription& description)
-        : m_Description(description)
+    Framebuffer::Framebuffer(const FramebufferDescription& description, const char* name)
+        : m_Description(description), m_Name(name)
     {
         if (!m_Description.SwapChainFrameBuffer)
         {
@@ -36,6 +36,12 @@ namespace Atom
                 Invalidate();
             }
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const String& Framebuffer::GetName() const
+    {
+        return m_Name;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -114,7 +120,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Framebuffer::Invalidate()
     {
-        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
+        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
             m_ColorAttachments[i] = nullptr;
 
         for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
@@ -134,12 +140,12 @@ namespace Atom
 
                 if (isDepthAttachment)
                 {
-                    m_DepthAttachment = CreateRef<DepthBuffer>(attachmentDesc, "DepthBuffer");
+                    m_DepthAttachment = CreateRef<DepthBuffer>(attachmentDesc, fmt::format("{}DepthAttachment", m_Name.c_str()).c_str());
                 }
                 else
                 {
                     attachmentDesc.ClearValue.Color = m_Description.ClearColor;
-                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, m_Description.SwapChainFrameBuffer, fmt::format("ColorAttachment[{}]", i).c_str());
+                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, m_Description.SwapChainFrameBuffer, fmt::format("{}ColorAttachment[{}]", m_Name.c_str(), i).c_str());
                 }
             }
         }

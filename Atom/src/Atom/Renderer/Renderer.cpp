@@ -53,7 +53,7 @@ namespace Atom
             fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA16F, TextureFilter::Linear, TextureWrap::Clamp };
             fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
 
-            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc);
+            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "GeometryFramebuffer");
 
             {
                 GraphicsPipelineDescription pipelineDesc;
@@ -103,7 +103,7 @@ namespace Atom
             fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
             fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
 
-            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc);
+            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "CompositeFramebuffer");
 
             {
                 GraphicsPipelineDescription pipelineDesc;
@@ -129,7 +129,7 @@ namespace Atom
             fbDesc.SwapChainFrameBuffer = true;
 
             GraphicsPipelineDescription pipelineDesc;
-            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc);
+            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "ImGuiFramebuffer");
             pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("ImGuiShader");
             pipelineDesc.EnableBlend = true;
             pipelineDesc.EnableDepthTest = false;
