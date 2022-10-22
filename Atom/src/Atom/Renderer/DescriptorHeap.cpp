@@ -121,7 +121,7 @@ namespace Atom
                                descriptor.ptr < m_CPUStartHandle.ptr + m_DescriptorSize * m_Capacity, "Descriptor does not belong to this heap!");
 
             // Return the index back to the free slots array
-            u32 descriptorIndex = (descriptor.ptr - m_CPUStartHandle.ptr) % m_DescriptorSize;
+            u32 descriptorIndex = (descriptor.ptr - m_CPUStartHandle.ptr) / m_DescriptorSize;
 
             if (deferredRelease)
             {

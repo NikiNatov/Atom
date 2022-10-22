@@ -93,6 +93,14 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnUpdate(Timestep ts)
     {
+        if (m_NeedsResize)
+        {
+            m_GeometryPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
+            m_CompositePipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
+            m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
+            m_NeedsResize = false;
+        }
+
         m_Camera.OnUpdate(ts);
 
         static f32 elapsedTime = 0.0f;
@@ -254,9 +262,7 @@ namespace Atom
         if (m_ViewportSize.x != panelSize.x || m_ViewportSize.y != panelSize.y)
         {
             m_ViewportSize = { panelSize.x, panelSize.y };
-            m_GeometryPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
-            m_CompositePipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
-            m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
+            m_NeedsResize = true;
         }
 
         Ref<RenderTexture2D> finalImage = m_CompositePipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);

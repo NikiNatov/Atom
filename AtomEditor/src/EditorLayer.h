@@ -27,6 +27,7 @@ namespace Atom
         std::pair<Ref<TextureCube>, Ref<TextureCube>> m_EnvironmentMap;
         EditorCamera                                  m_Camera;
         glm::vec2                                     m_ViewportSize = { 0.0f, 0.0f };
+        bool                                          m_NeedsResize = false;
     };
 
 }
