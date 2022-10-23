@@ -54,9 +54,7 @@ struct Light
     float4 Color;
     float  Intensity;
     float  ConeAngle;
-    float  ConstAttenuation;
-    float  LinearAttenuation;
-    float  QuadraticAttenuation;
+    float3 AttenuationFactors;
     uint   LightType;
 };
 
@@ -72,6 +70,12 @@ cbuffer MaterialCB : register(b1)
 
     float Roughness;
     bool UseRoughnessMap;
+}
+
+cbuffer LightPropertiesCB : register(b2)
+{
+    uint NumLights;
+    float p0;
 }
 
 Texture2D AlbedoMap : register(t0);
@@ -177,11 +181,34 @@ float3 CalculatePointLight(Light light, float3 F0, float3 V, float3 N, float3 fr
     float3 Ks = FresnelSchlickFunction(F0, V, H);
     float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
 
-    float attenuation = 1.0f / (light.ConstAttenuation + light.LinearAttenuation * distance + light.QuadraticAttenuation * distance * distance);
+    float attenuation = 1.0f / (light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance);
     float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
     float3 brdf = Kd * albedoColor + specularColor;
 
     return brdf * light.Color.rgb * light.Intensity * attenuation * max(dot(L, N), 0.0);
+}
+
+float3 CalculateSpotLight(Light light, float3 F0, float3 V, float3 N, float3 fragmentPos, float3 albedoColor, float metalness, float roughness)
+{
+    float3 L = light.Position.xyz - fragmentPos;
+    float distance = length(L);
+    L = normalize(L);
+    float3 H = normalize(V + L);
+
+    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
+
+    // Calculate spot intensity
+    float minCos = cos(light.ConeAngle);
+    float maxCos = (minCos + 1.0f) / 2.0f;
+    float cosAngle = dot(light.Direction.xyz, -L);
+    float spotIntensity = smoothstep(minCos, maxCos, cosAngle);
+
+    float attenuation = 1.0f / (light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance);
+    float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
+    float3 brdf = Kd * albedoColor + specularColor;
+
+    return brdf * light.Color.rgb * light.Intensity * spotIntensity * attenuation * max(dot(L, N), 0.0);
 }
 
 float4 PSMain(in PSInput input) : SV_Target
@@ -198,10 +225,7 @@ float4 PSMain(in PSInput input) : SV_Target
     float3 outgoingLightColor = float3(0.0, 0.0, 0.0);
 
     // Lights
-    uint lightCount, stride;
-    LightsBuffer.GetDimensions(lightCount, stride);
-
-    for (uint i = 0; i < 2; i++)
+    for (uint i = 0; i < NumLights; i++)
     {
         switch (LightsBuffer[i].LightType)
         {
@@ -210,6 +234,9 @@ float4 PSMain(in PSInput input) : SV_Target
             break;
         case DIR_LIGHT:
             outgoingLightColor += CalculateDirectionalLight(LightsBuffer[i], F0, V, N, albedoColor.rgb, metalness, roughness);
+            break;
+        case SPOT_LIGHT:
+            outgoingLightColor += CalculateSpotLight(LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
             break;
         }
     }

@@ -16,18 +16,10 @@ namespace Atom
         virtual void OnImGuiRender() override;
         virtual void OnEvent(Event& event) override;
     private:
-        Ref<GraphicsPipeline>                         m_GeometryPipeline = nullptr;
-        Ref<GraphicsPipeline>                         m_SkyBoxPipeline = nullptr;
-        Ref<GraphicsPipeline>                         m_CompositePipeline = nullptr;
-        Ref<ConstantBuffer>                           m_CameraCB = nullptr;
-        Ref<StructuredBuffer>                         m_LightsSB = nullptr;
-        Ref<Mesh>                                     m_TestMesh = nullptr;
-        Ref<Material>                                 m_SkyBoxMaterial = nullptr;
-        Ref<Material>                                 m_CompositeMaterial = nullptr;
-        std::pair<Ref<TextureCube>, Ref<TextureCube>> m_EnvironmentMap;
-        EditorCamera                                  m_Camera;
-        glm::vec2                                     m_ViewportSize = { 0.0f, 0.0f };
-        bool                                          m_NeedsResize = false;
+        Ref<Scene>         m_Scene = nullptr;
+        Ref<SceneRenderer> m_Renderer = nullptr;
+        glm::vec2          m_ViewportSize = { 0.0f, 0.0f };
+        bool               m_NeedsResize = false;
     };
 
 }

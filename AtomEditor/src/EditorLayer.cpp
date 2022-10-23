@@ -8,28 +8,6 @@
 
 namespace Atom
 {
-    struct CameraCB
-    {
-        glm::mat4 ViewMatrix = glm::mat4(1.0f);
-        glm::mat4 ProjMatrix = glm::mat4(1.0f);
-        glm::mat4 Transform = glm::mat4(1.0f);
-        glm::vec3 CameraPosition = glm::vec3(0.0f);
-        f32 p[13]{ 0 };
-    };
-
-    struct Light
-    {
-        glm::vec4 Position;
-        glm::vec4 Direction;
-        glm::vec4 Color;
-        f32 Intensity;
-        f32 ConeAngle;
-        f32 ConstAttenuation;
-        f32 LinearAttenuation;
-        f32 QuadraticAttenuation;
-        u32 LightType;
-    };
-
     // -----------------------------------------------------------------------------------------------------------------------------
     EditorLayer::EditorLayer()
         : Layer("EditorLayer")
@@ -46,42 +24,54 @@ namespace Atom
     void EditorLayer::OnAttach()
     {
         Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
-
-        // Set the pipelines
-        m_GeometryPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("MeshPBRPipeline");
-        m_SkyBoxPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("SkyBoxPipeline");
-        m_CompositePipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("CompositePipeline");
-
-        // Load the test mesh
-        m_TestMesh = CreateRef<Mesh>("assets/meshes/sphere.gltf");
-
-        // Create camera constant buffer
-        BufferDescription cbDesc;
-        cbDesc.ElementCount = 1;
-        cbDesc.ElementSize = sizeof(CameraCB);
-        cbDesc.IsDynamic = true;
-
-        m_CameraCB = CreateRef<ConstantBuffer>(cbDesc, "CameraCB");
-
-        // Create lights structured buffer
-        BufferDescription sbDesc;
-        sbDesc.ElementCount = 2;
-        sbDesc.ElementSize = sizeof(Light);
-        sbDesc.IsDynamic = true;
-
-        m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
-
-        // Create environment map
-        m_EnvironmentMap = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");
-
-        // Create materials
-        m_SkyBoxMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None, "SkyBoxMaterial");
-        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
-
-        m_CompositeMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("CompositeShader"), MaterialFlags::None, "CompositeMaterial");
-        m_CompositeMaterial->SetUniform("Exposure", 1.0f);
-
         EditorResources::Initialize();
+
+        auto environment = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");
+
+        m_Scene = CreateRef<Scene>("TestScene");
+
+        {
+            Entity sphere = m_Scene->CreateEntity("Sphere");
+            sphere.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/sphere.gltf"));
+        }
+
+        {
+            Entity skyLight = m_Scene->CreateEntity("SkyLight");
+            auto& slc = skyLight.AddComponent<SkyLightComponent>();
+            slc.EnvironmentMap = environment.first;
+            slc.IrradianceMap = environment.second;
+        }
+
+        {
+            Entity dirLight = m_Scene->CreateEntity("DirLight");
+            dirLight.GetComponent<TransformComponent>().Translation = { 5.0f, 5.0f, 0.0f };
+            auto& dlc = dirLight.AddComponent<DirectionalLightComponent>();
+            dlc.Color = { 1.0f, 0.0f, 0.0f };
+            dlc.Intensity = 5.0f;
+        }
+        
+        {
+            Entity pointLight = m_Scene->CreateEntity("PointLight");
+            pointLight.GetComponent<TransformComponent>().Translation = { -2.0f, 2.0f, 0.0f };
+            auto& plc = pointLight.AddComponent<PointLightComponent>();
+            plc.Color = { 0.0f, 1.0f, 0.0f };
+            plc.Intensity = 15.0f;
+            plc.AttenuationFactors = { 1.0f, 0.08f, 0.0f };
+        }
+
+        {
+            Entity spotLight = m_Scene->CreateEntity("SpotLight");
+            spotLight.GetComponent<TransformComponent>().Translation = { 0.0f, 0.0f, 5.0f };
+            auto& slc = spotLight.AddComponent<SpotLightComponent>();
+            slc.Color = { 0.0f, 0.0f, 1.0f };
+            slc.Direction = { 0.0f, 0.0f, -1.0f };
+            slc.ConeAngle = 2.0f;
+            slc.Intensity = 15.0f;
+            slc.AttenuationFactors = { 1.0f, 0.08f, 0.0f };
+        }
+
+        m_Renderer = CreateRef<SceneRenderer>();
+        m_Renderer->Initialize();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -95,83 +85,13 @@ namespace Atom
     {
         if (m_NeedsResize)
         {
-            m_GeometryPipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
-            m_CompositePipeline->GetFramebuffer()->Resize(m_ViewportSize.x, m_ViewportSize.y);
-            m_Camera.SetViewport(m_ViewportSize.x, m_ViewportSize.y);
+            m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+            m_Renderer->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
             m_NeedsResize = false;
         }
 
-        m_Camera.OnUpdate(ts);
-
-        static f32 elapsedTime = 0.0f;
-        elapsedTime += ts;
-
-        // Update camera constant buffer
-        CameraCB cameraCB;
-        cameraCB.ProjMatrix = m_Camera.GetProjectionMatrix();
-        cameraCB.ViewMatrix = m_Camera.GetViewMatrix();
-        cameraCB.CameraPosition = m_Camera.GetPosition();
-
-        void* data = m_CameraCB->Map(0, 0);
-        memcpy(data, &cameraCB, sizeof(CameraCB));
-        m_CameraCB->Unmap();
-
-        // Update lights structured buffer
-        Vector<Light> lights;
-        {
-            // Red directional light
-            Light& light = lights.emplace_back();
-            light.Direction = { sin(elapsedTime), -1.0f, 0.0f, 0.0f };
-            light.Color = { 1.0f, 0.0f, 0.0f, 1.0f };
-            light.Intensity = 1.0f;
-            light.LightType = 0;
-        }
-
-        {
-            // Green point light
-            Light& light = lights.emplace_back();
-            light.Position = { 0.0f, sin(elapsedTime) * 50.0f, 0.0f, 1.0f };
-            light.Color = { 0.0f, 1.0f, 0.0f, 1.0f};
-            light.Intensity = 1.0f;
-            light.ConstAttenuation = 1.0f;
-            light.LinearAttenuation = 0.08f;
-            light.QuadraticAttenuation = 0.0f;
-            light.LightType = 1;
-        }
-
-        void* lightsData = m_LightsSB->Map(0, 0);
-        memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-        m_LightsSB->Unmap();
-
-        // Render
-        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
-        Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
-        commandBuffer->Begin();
-
-        Renderer::BeginRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
-
-        // Render skybox
-        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(cameraCB.ViewMatrix * cameraCB.ProjMatrix));
-        Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
-
-        // Render mesh
-        m_TestMesh->GetMaterials()[0]->SetTexture("EnvironmentMap", m_EnvironmentMap.first);
-        m_TestMesh->GetMaterials()[0]->SetTexture("IrradianceMap", m_EnvironmentMap.second);
-        Renderer::RenderGeometry(commandBuffer, m_GeometryPipeline, m_TestMesh, m_CameraCB, m_LightsSB);
-        Renderer::EndRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
-
-        // Composite pass
-        Renderer::BeginRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
-
-        Ref<RenderTexture2D> sceneTexture = m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
-        m_CompositeMaterial->SetTexture("SceneTexture", sceneTexture);
-
-        Renderer::RenderFullscreenQuad(commandBuffer, m_CompositePipeline, nullptr, m_CompositeMaterial);
-        Renderer::EndRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
-
-        commandBuffer->End();
-
-        gfxQueue->ExecuteCommandList(commandBuffer);
+        m_Scene->OnUpdate(ts);
+        m_Scene->OnEditRender(m_Renderer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -234,27 +154,6 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         ImGui::ShowDemoWindow(false);
 
-        ImGui::Begin("Values");
-        f32 exposure = m_CompositeMaterial->GetUniform<f32>("Exposure");
-        if (ImGui::DragFloat("Exposure", &exposure, 0.05f, 0.2f, 5.0f))
-        {
-            m_CompositeMaterial->SetUniform("Exposure", exposure);
-        }
-
-        f32 roughness = m_TestMesh->GetMaterials()[0]->GetUniform<f32>("Roughness");
-        if (ImGui::DragFloat("Roughness", &roughness, 0.05f, 0.0f, 1.0f))
-        {
-            m_TestMesh->GetMaterials()[0]->SetUniform("Roughness", roughness);
-        }
-
-        f32 metalness = m_TestMesh->GetMaterials()[0]->GetUniform<f32>("Metalness");
-        if (ImGui::DragFloat("Metalness", &metalness, 0.05f, 0.0f, 1.0f))
-        {
-            m_TestMesh->GetMaterials()[0]->SetUniform("Metalness", metalness);
-        }
-
-        ImGui::End();
-
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
@@ -265,7 +164,7 @@ namespace Atom
             m_NeedsResize = true;
         }
 
-        Ref<RenderTexture2D> finalImage = m_CompositePipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0);
+        Ref<RenderTexture2D> finalImage = m_Renderer->GetFinalImage();
         ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
         ImGui::End();
@@ -277,6 +176,5 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnEvent(Event& event)
     {
-        m_Camera.OnEvent(event);
     }
 }

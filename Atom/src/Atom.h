@@ -35,3 +35,10 @@
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/PipelineLibrary.h"
+#include "Atom/Renderer/LightEnvironment.h"
+
+// Scene
+#include "Atom/Scene/Components.h"
+#include "Atom/Scene/Entity.h"
+#include "Atom/Scene/Scene.h"
+#include "Atom/Scene/SceneRenderer.h"

@@ -17,6 +17,7 @@ workspace "Atom"
 	IncludeDirs["PIX"] = "Atom/vendor/PIX/include"
 	IncludeDirs["stb_image"] = "Atom/vendor/stb_image"
 	IncludeDirs["assimp"] = "Atom/vendor/assimp/include"
+	IncludeDirs["entt"] = "Atom/vendor/entt/include"
 
 	include "Atom/vendor/imgui"
 
@@ -52,6 +53,7 @@ project "Atom"
 		"%{IncludeDirs.PIX}",
 		"%{IncludeDirs.stb_image}",
 		"%{IncludeDirs.assimp}",
+		"%{IncludeDirs.entt}",
 	}
 
 	defines
@@ -110,6 +112,7 @@ project "Sandbox"
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.PIX}",
+		"%{IncludeDirs.entt}",
 	}
 
 	links
@@ -166,6 +169,7 @@ project "AtomEditor"
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.PIX}",
+		"%{IncludeDirs.entt}",
 	}
 
 	links

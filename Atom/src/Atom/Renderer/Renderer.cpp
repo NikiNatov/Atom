@@ -37,6 +37,7 @@ namespace Atom
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/SkyBoxShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/CompositeShader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/FullscreenQuadShader.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/GenerateMips.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/EquirectToCubeMap.hlsl");
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapPrefilter.hlsl");
@@ -67,7 +68,6 @@ namespace Atom
                     { "TANGENT", ShaderDataType::Float3 },
                     { "BITANGENT", ShaderDataType::Float3 },
                 };
-
                 pipelineDesc.EnableBlend = true;
                 pipelineDesc.EnableDepthTest = true;
                 pipelineDesc.Wireframe = false;
@@ -85,7 +85,6 @@ namespace Atom
                     { "POSITION", ShaderDataType::Float3 },
                     { "TEX_COORD", ShaderDataType::Float2 },
                 };
-
                 pipelineDesc.EnableBlend = false;
                 pipelineDesc.EnableDepthTest = false;
                 pipelineDesc.Wireframe = false;
@@ -114,13 +113,29 @@ namespace Atom
                     { "POSITION", ShaderDataType::Float3 },
                     { "TEX_COORD", ShaderDataType::Float2 },
                 };
-
                 pipelineDesc.EnableBlend = false;
                 pipelineDesc.EnableDepthTest = false;
                 pipelineDesc.Wireframe = false;
                 pipelineDesc.BackfaceCulling = true;
 
                 ms_PipelineLibrary.Load<GraphicsPipeline>("CompositePipeline", pipelineDesc);
+            }
+
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("FullscreenQuadShader");
+                pipelineDesc.Framebuffer = frameBuffer;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                };
+                pipelineDesc.EnableBlend = false;
+                pipelineDesc.EnableDepthTest = false;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.BackfaceCulling = true;
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("FullscreenQuadPipeline", pipelineDesc);
             }
         }
 
@@ -337,7 +352,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderGeometry(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer)
+    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
@@ -346,61 +361,58 @@ namespace Atom
         u32 currentFrameIndex = GetCurrentFrameIndex();
         commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
-        for (auto& submesh : mesh->GetSubmeshes())
+        const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
+        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterials()[submesh.MaterialIndex];
+
+        u32 currentRootParameter = 0;
+
+        // Set root constants
+        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
         {
-            Ref<Material> material = mesh->GetMaterials()[submesh.MaterialIndex];
-
-            u32 currentRootParameter = 0;
-
-            // Set root constants
-            for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
-            {
-                commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
-            }
-
-            // Set constant buffers and structured buffers
-            if (constantBuffer)
-            {
-                commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
-            }
-
-            if (structuredBuffer)
-            {
-                commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer.get());
-            }
-
-            // Set textures and samplers
-            Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
-            textureSRVs.reserve(material->GetTextures().size());
-
-            Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
-            samplers.reserve(material->GetTextures().size());
-
-            for (const auto& texture : material->GetTextures())
-            {
-                if (!texture)
-                {
-                    commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                    textureSRVs.push_back(ms_ErrorTexture->GetSRV());
-                    samplers.push_back(ms_ErrorTexture->GetSampler());
-                }
-                else
-                {
-                    commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                    textureSRVs.push_back(texture->GetSRV());
-                    samplers.push_back(texture->GetSampler());
-                }
-            }
-
-            D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
-            commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
-
-            D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
-            commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
-
-            // Draw
-            commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
+            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
         }
+
+        // Set constant buffers and structured buffers
+        if (constantBuffer)
+        {
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
+        }
+
+        if (structuredBuffer)
+        {
+            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer.get());
+        }
+
+        // Set textures and samplers
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
+        textureSRVs.reserve(material->GetTextures().size());
+
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
+        samplers.reserve(material->GetTextures().size());
+
+        for (const auto& texture : material->GetTextures())
+        {
+            if (!texture)
+            {
+                commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                textureSRVs.push_back(ms_ErrorTexture->GetSRV());
+                samplers.push_back(ms_ErrorTexture->GetSampler());
+            }
+            else
+            {
+                commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                textureSRVs.push_back(texture->GetSRV());
+                samplers.push_back(texture->GetSampler());
+            }
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+
+        commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
