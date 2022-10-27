@@ -18,6 +18,7 @@ namespace Atom
 
     class Scene
     {
+        friend class SceneHierarchyPanel;
         friend class Entity;
     public:
         Scene(const String& name = "Unnamed scene");

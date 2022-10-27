@@ -17,7 +17,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     EditorLayer::~EditorLayer()
     {
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -72,6 +71,8 @@ namespace Atom
 
         m_Renderer = CreateRef<SceneRenderer>();
         m_Renderer->Initialize();
+
+        m_SceneHierarchyPanel.SetScene(m_Scene);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -152,7 +153,7 @@ namespace Atom
         }
 
         ConsolePanel::OnImGuiRender();
-        ImGui::ShowDemoWindow(false);
+        m_SceneHierarchyPanel.OnImGuiRender();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
