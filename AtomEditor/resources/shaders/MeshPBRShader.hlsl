@@ -181,7 +181,7 @@ float3 CalculatePointLight(Light light, float3 F0, float3 V, float3 N, float3 fr
     float3 Ks = FresnelSchlickFunction(F0, V, H);
     float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
 
-    float attenuation = 1.0f / (light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance);
+    float attenuation = 1.0f / max(light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance, Epsilon);
     float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
     float3 brdf = Kd * albedoColor + specularColor;
 
@@ -204,7 +204,7 @@ float3 CalculateSpotLight(Light light, float3 F0, float3 V, float3 N, float3 fra
     float cosAngle = dot(light.Direction.xyz, -L);
     float spotIntensity = smoothstep(minCos, maxCos, cosAngle);
 
-    float attenuation = 1.0f / (light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance);
+    float attenuation = 1.0f / max(light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance, Epsilon);
     float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
     float3 brdf = Kd * albedoColor + specularColor;
 
