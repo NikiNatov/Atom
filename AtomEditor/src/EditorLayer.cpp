@@ -152,8 +152,12 @@ namespace Atom
             ImGui::EndMenuBar();
         }
 
+        // Render panels
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
+
+        m_EntityInspectorPanel.SetEntity(m_SceneHierarchyPanel.GetSelectedEntity());
+        m_EntityInspectorPanel.OnImGuiRender();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
