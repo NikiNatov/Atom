@@ -22,7 +22,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnAttach()
     {
-        Application::Get().GetImGuiLayer().SetClearRenderTarget(true);
         EditorResources::Initialize();
 
         auto environment = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");

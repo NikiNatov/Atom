@@ -86,6 +86,7 @@ namespace Atom
         m_BlockEvents = block;
     }
 
+    // -----------------------------------------------------------------------------------------------------------------------------
     void ImGuiLayer::SetClearRenderTarget(bool clear)
     {
         m_ClearRenderTarget = clear;
