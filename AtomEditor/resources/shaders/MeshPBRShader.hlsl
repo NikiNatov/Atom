@@ -24,20 +24,25 @@ struct Camera
 {
     matrix ViewMatrix;
     matrix ProjectionMatrix;
-    matrix Transform;
     float3 CameraPosition;
 };
 
 ConstantBuffer<Camera> CameraCB : register(b0);
 
+cbuffer TransformCB : register(b1)
+{
+    matrix Transform;
+    float p0;
+}
+
 PSInput VSMain(in VSInput input)
 {
     PSInput output;
-    output.Position = mul(float4(input.Position, 1.0), CameraCB.Transform).xyz;
+    output.Position = mul(float4(input.Position, 1.0), Transform).xyz;
     output.UV = input.UV;
-    output.Normal = normalize(mul(input.Normal, (float3x3)CameraCB.Transform));
-    output.Tangent = normalize(mul(input.Tangent, (float3x3)CameraCB.Transform));
-    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)CameraCB.Transform));
+    output.Normal = normalize(mul(input.Normal, (float3x3)Transform));
+    output.Tangent = normalize(mul(input.Tangent, (float3x3)Transform));
+    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)Transform));
     output.CameraPosition = CameraCB.CameraPosition;
     output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
     return output;
@@ -58,7 +63,7 @@ struct Light
     uint   LightType;
 };
 
-cbuffer MaterialCB : register(b1)
+cbuffer MaterialCB : register(b2)
 {
     float4 AlbedoColor;
     bool UseAlbedoMap;
@@ -72,10 +77,10 @@ cbuffer MaterialCB : register(b1)
     bool UseRoughnessMap;
 }
 
-cbuffer LightPropertiesCB : register(b2)
+cbuffer LightPropertiesCB : register(b3)
 {
     uint NumLights;
-    float p0;
+    float p1;
 }
 
 Texture2D AlbedoMap : register(t0);

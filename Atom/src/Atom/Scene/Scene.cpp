@@ -18,6 +18,7 @@ namespace Atom
         Entity entity(m_Registry.create(), this);
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<TransformComponent>();
+        entity.AddComponent<SceneHierarchyComponent>();
 
         return entity;
     }
@@ -25,6 +26,38 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::DeleteEntity(Entity entity)
     {
+        auto& shc = entity.GetComponent<SceneHierarchyComponent>();
+        Entity currentChild = shc.FirstChild;
+
+        // Delete all children recursively first
+        while (currentChild)
+        {
+            Entity nextSibling = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+            DeleteEntity(currentChild);
+            currentChild = nextSibling;
+        }
+
+        // Fix links between neighbouring entities
+        Entity parent = shc.Parent;
+        if (parent && parent.GetComponent<SceneHierarchyComponent>().FirstChild == entity)
+        {
+            Entity nextSibling = shc.NextSibling;
+            parent.GetComponent<SceneHierarchyComponent>().FirstChild = nextSibling;
+
+            if (nextSibling)
+                nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
+        }
+        else
+        {
+            Entity prev = shc.PreviousSibling;
+            Entity next = shc.NextSibling;
+
+            if (prev)
+                prev.GetComponent<SceneHierarchyComponent>().NextSibling = next;
+            if (next)
+                next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev;
+        }
+
         m_Registry.destroy((entt::entity)entity);
     }
 
@@ -100,11 +133,26 @@ namespace Atom
 
         // Submit meshes
         {
-            auto view = m_Registry.view<MeshComponent, TransformComponent>();
+            auto view = m_Registry.view<MeshComponent, TransformComponent, SceneHierarchyComponent>();
             for (auto entity : view)
             {
-                auto [mc, tc] = view.get<MeshComponent, TransformComponent>(entity);
-                renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
+                auto [mc, tc, shc] = view.get<MeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
+
+                if (shc.Parent)
+                {
+                    auto accumulatedTransform = shc.Parent.GetComponent<TransformComponent>().GetTransform();
+                    Entity currentParent = shc.Parent;
+
+                    while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                    {
+                        currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                        accumulatedTransform = accumulatedTransform * currentParent.GetComponent<TransformComponent>().GetTransform();
+                    }
+
+                    renderer->SubmitMesh(mc.Mesh, tc.GetTransform() * accumulatedTransform, {});
+                }
+                else
+                    renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
             }
         }
 

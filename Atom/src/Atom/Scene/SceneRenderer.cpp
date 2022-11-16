@@ -65,6 +65,10 @@ namespace Atom
         void* lightsData = m_LightsSB->Map(0, 0);
         memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
         m_LightsSB->Unmap();
+
+        void* data = m_TransformCB->Map(0, 0);
+        memcpy(data, &m_TransformData, sizeof(TransformCB));
+        m_TransformCB->Unmap();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -94,6 +98,10 @@ namespace Atom
         void* lightsData = m_LightsSB->Map(0, 0);
         memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
         m_LightsSB->Unmap();
+
+        void* data = m_TransformCB->Map(0, 0);
+        memcpy(data, &m_TransformData, sizeof(TransformCB));
+        m_TransformCB->Unmap();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -159,16 +167,11 @@ namespace Atom
         // Render meshes
         for (auto& drawCommand : m_DrawList)
         {
-            m_TransformData.ModelMatrix = drawCommand.Transform;
-
-            void* data = m_TransformCB->Map(0, 0);
-            memcpy(data, &m_TransformData, sizeof(TransformCB));
-            m_TransformCB->Unmap();
-
             drawCommand.Material->SetTexture("EnvironmentMap", m_EnvironmentMap);
             drawCommand.Material->SetTexture("IrradianceMap", m_IrradianceMap);
 
-            // TODO: Separate the NumLights constant from the material
+            // TODO: These should not be set by the material
+            drawCommand.Material->SetUniform("Transform", drawCommand.Transform);
             drawCommand.Material->SetUniform("NumLights", m_LightsSB->GetElementCount());
 
             Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_TransformCB, m_LightsSB);

@@ -4,12 +4,25 @@
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Texture.h"
+#include "Atom/Scene/Entity.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Atom
 {
+	struct SceneHierarchyComponent
+	{
+		Entity Parent{};
+		Entity FirstChild{};
+		Entity LastChild{};
+		Entity PreviousSibling{};
+		Entity NextSibling{};
+
+		SceneHierarchyComponent() = default;
+		SceneHierarchyComponent(const SceneHierarchyComponent& other) = default;
+	};
+
     struct TagComponent
     {
         String Tag = "";

@@ -15,6 +15,8 @@ namespace Atom
         void SetScene(const Ref<Scene>& scene);
         inline Entity GetSelectedEntity() const { return m_SelectedEntity; }
     private:
+        void DrawEntityNode(Entity entity);
+    private:
         Ref<Scene> m_Scene;
         Entity     m_SelectedEntity = {};
     };

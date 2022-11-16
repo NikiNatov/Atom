@@ -15,6 +15,8 @@ namespace Atom
 		Entity(entt::entity entity, Scene* scene);
 		Entity(const Entity& other) = default;
 
+		void AddChild(Entity entity);
+
 		template<typename T, typename... Args>
 		T& AddComponent(Args&&... args)
 		{

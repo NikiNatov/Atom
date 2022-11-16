@@ -47,9 +47,8 @@ namespace Atom
         {
             glm::mat4 ViewMatrix = glm::mat4(1.0f);
             glm::mat4 ProjectionMatrix = glm::mat4(1.0f);
-            glm::mat4 ModelMatrix = glm::mat4(1.0f);
             glm::vec3 CameraPosition = glm::vec3(0.0f);
-            f32 p[13]{ 0 };
+            f32 p[29]{ 0 };
         };
 
         Ref<TextureCube>      m_EnvironmentMap = nullptr;
