@@ -16,6 +16,8 @@ namespace Atom
 		Entity(const Entity& other) = default;
 
 		void AddChild(Entity entity);
+		void RemoveChild(Entity child);
+		bool IsDescendantOf(Entity entity);
 
 		template<typename T, typename... Args>
 		T& AddComponent(Args&&... args)

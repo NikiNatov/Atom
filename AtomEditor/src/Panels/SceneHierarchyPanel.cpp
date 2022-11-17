@@ -69,6 +69,32 @@ namespace Atom
 
 			ImGui::EndPopup();
 		}
+
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("DRAG_SRC_ENTITY", &entity, sizeof(Entity));
+			ImGui::EndDragDropSource();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
+			{
+				Entity srcEntity = *(Entity*)payload->Data;
+				Entity srcEntityParent = srcEntity.GetComponent<SceneHierarchyComponent>().Parent;
+
+				if (entity != srcEntityParent && !entity.IsDescendantOf(srcEntity))
+				{
+					if (srcEntityParent)
+						srcEntityParent.RemoveChild(srcEntity);
+
+					entity.AddChild(srcEntity);
+				}
+			}
+			
+			ImGui::EndDragDropTarget();
+		}
+
 		ImGui::PopID();
 
 		if (isOpen)

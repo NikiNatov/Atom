@@ -15,7 +15,6 @@ namespace Atom
 	{
 		Entity Parent{};
 		Entity FirstChild{};
-		Entity LastChild{};
 		Entity PreviousSibling{};
 		Entity NextSibling{};
 

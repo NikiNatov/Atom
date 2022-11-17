@@ -22,15 +22,90 @@ namespace Atom
 		if (!shc.FirstChild)
 		{
 			shc.FirstChild = entity;
-			shc.LastChild = entity;
 		}
 		else
 		{
-			shc.LastChild.GetComponent<SceneHierarchyComponent>().NextSibling = entity;
-			entity.GetComponent<SceneHierarchyComponent>().PreviousSibling = shc.LastChild;
-			shc.LastChild = entity;
+			Entity currentChild = shc.FirstChild;
+
+			while (currentChild.GetComponent<SceneHierarchyComponent>().NextSibling)
+				currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+
+			currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = entity;
+			entity.GetComponent<SceneHierarchyComponent>().PreviousSibling = currentChild;
 		}
 
 		entity.GetComponent<SceneHierarchyComponent>().Parent = *this;
     }
+
+	// -----------------------------------------------------------------------------------------------------------------------------
+	void Entity::RemoveChild(Entity child)
+	{
+		auto& shc = GetComponent<SceneHierarchyComponent>();
+		Entity currentChild = shc.FirstChild;
+
+		while (currentChild)
+		{
+			if (currentChild == child)
+			{
+				if (currentChild == shc.FirstChild)
+				{
+					Entity nextSibling = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+					shc.FirstChild = nextSibling;
+
+					if (nextSibling)
+						nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
+				}
+				else
+				{
+					Entity prev = currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling;
+					Entity next = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+
+					if (prev)
+						prev.GetComponent<SceneHierarchyComponent>().NextSibling = next;
+					if (next)
+						next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev;
+				}
+
+				currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = {};
+				currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
+				currentChild.GetComponent<SceneHierarchyComponent>().Parent = {};
+
+				return;
+			}
+
+			currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+		}
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------------------
+	bool Entity::IsDescendantOf(Entity entity)
+	{
+		Queue<Entity> q;
+
+		// Enqueue all the children of the queried entity
+		Entity currentChild = entity.GetComponent<SceneHierarchyComponent>().FirstChild;
+		while (currentChild)
+		{
+			q.push(currentChild);
+			currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+		}
+
+		while (!q.empty())
+		{
+			Entity child = q.front();
+			q.pop();
+
+			if (child == *this)
+				return true;
+
+			currentChild = child.GetComponent<SceneHierarchyComponent>().FirstChild;
+			while (currentChild)
+			{
+				q.push(currentChild);
+				currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+			}
+		}
+
+		return false;
+	}
 }
