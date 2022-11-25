@@ -13,8 +13,8 @@ namespace Atom
     namespace py = pybind11;
     namespace wrappers = Atom::ScriptWrappers;
 
-    PYBIND11_EMBEDDED_MODULE(Atom, m) {
-
+    PYBIND11_EMBEDDED_MODULE(Atom, m) 
+    {
         py::class_<glm::vec2>(m, "Vec2")
             .def(py::init<>())
             .def(py::init<f32>())
@@ -51,7 +51,7 @@ namespace Atom
         py::class_<wrappers::Entity>(m, "Entity")
             .def(py::init<>())
             .def(py::init<u64>())
-            .def("get_transform_component", &wrappers::Entity::GetComponent<TransformComponent>)
+            .def("get_transform_component", &wrappers::Entity::GetComponent<TransformComponent>, py::return_value_policy::reference)
             .def_property_readonly("ID", &wrappers::Entity::GetUUID)
             .def_property_readonly("Tag", &wrappers::Entity::GetTag);
 

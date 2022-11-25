@@ -503,11 +503,12 @@ namespace Atom
 								ImGui::NextColumn();
 
 								ScriptVariableType varType = variable.GetType();
+								String imguiID = fmt::format("##{}", name.c_str());
 
 								if (varType == ScriptVariableType::Float)
 								{
 									f32 data = scriptInstance->GetMemberValue<f32>(name);
-									if (ImGui::DragFloat("##float", &data))
+									if (ImGui::DragFloat(imguiID.c_str(), &data))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -515,7 +516,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Int)
 								{
 									s32 data = scriptInstance->GetMemberValue<s32>(name);
-									if (ImGui::DragInt("##int", &data))
+									if (ImGui::DragInt(imguiID.c_str(), &data))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -523,7 +524,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Bool)
 								{
 									bool data = scriptInstance->GetMemberValue<bool>(name);
-									if (ImGui::Checkbox("##bool", &data))
+									if (ImGui::Checkbox(imguiID.c_str(), &data))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -531,7 +532,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec2)
 								{
 									glm::vec2& data = scriptInstance->GetMemberValue<glm::vec2>(name);
-									if (ImGui::DragFloat2("##float2", glm::value_ptr(data)))
+									if (ImGui::DragFloat2(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -539,7 +540,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec3)
 								{
 									glm::vec3& data = scriptInstance->GetMemberValue<glm::vec3>(name);
-									if (ImGui::DragFloat3("##float3", glm::value_ptr(data)))
+									if (ImGui::DragFloat3(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -547,7 +548,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec4)
 								{
 									glm::vec4& data = scriptInstance->GetMemberValue<glm::vec4>(name);
-									if (ImGui::DragFloat4("##float4", glm::value_ptr(data)))
+									if (ImGui::DragFloat4(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										scriptInstance->SetMemberValue(name, data);
 									}
@@ -580,11 +581,12 @@ namespace Atom
 
 								ScriptVariable& var = scriptVarMap[name];
 								ScriptVariableType varType = var.GetType();
+								String imguiID = fmt::format("##{}", name.c_str());
 
 								if (varType == ScriptVariableType::Float)
 								{
 									f32 data = var.GetValue<f32>();
-									if (ImGui::DragFloat("##float", &data))
+									if (ImGui::DragFloat(imguiID.c_str(), &data))
 									{
 										var.SetValue(data);
 									}
@@ -592,7 +594,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Int)
 								{
 									s32 data = var.GetValue<s32>();
-									if (ImGui::DragInt("##int", &data))
+									if (ImGui::DragInt(imguiID.c_str(), &data))
 									{
 										var.SetValue(data);
 									}
@@ -600,7 +602,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Bool)
 								{
 									bool data = var.GetValue<bool>();
-									if (ImGui::Checkbox("##bool", &data))
+									if (ImGui::Checkbox(imguiID.c_str(), &data))
 									{
 										var.SetValue(data);
 									}
@@ -608,7 +610,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec2)
 								{
 									glm::vec2& data = var.GetValue<glm::vec2>();
-									if (ImGui::DragFloat2("##float2", glm::value_ptr(data)))
+									if (ImGui::DragFloat2(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										var.SetValue(data);
 									}
@@ -616,7 +618,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec3)
 								{
 									glm::vec3& data = var.GetValue<glm::vec3>();
-									if (ImGui::DragFloat3("##float3", glm::value_ptr(data)))
+									if (ImGui::DragFloat3(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										var.SetValue(data);
 									}
@@ -624,7 +626,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Vec4)
 								{
 									glm::vec4& data = var.GetValue<glm::vec4>();
-									if (ImGui::DragFloat4("##float4", glm::value_ptr(data)))
+									if (ImGui::DragFloat4(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										var.SetValue(data);
 									}
