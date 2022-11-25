@@ -10,6 +10,9 @@ namespace Atom
         inline static Ref<Texture2D> InfoIcon = nullptr;
         inline static Ref<Texture2D> WarningIcon = nullptr;
         inline static Ref<Texture2D> ErrorIcon = nullptr;
+        inline static Ref<Texture2D> ScenePlayIcon = nullptr;
+        inline static Ref<Texture2D> SceneStopIcon = nullptr;
+        inline static Ref<Texture2D> ScenePauseIcon = nullptr;
 
     public:
         static void Initialize()
@@ -21,6 +24,9 @@ namespace Atom
             InfoIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/info_icon.png", "InfoIcon");
             WarningIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/warning_icon.png", "WarningIcon");
             ErrorIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/error_icon.png", "ErrorIcon");
+            ScenePlayIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_play_icon.png", "ScenePlayIcon");
+            SceneStopIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_stop_icon.png", "SceneStopIcon");
+            ScenePauseIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_pause_icon.png", "ScenePauseIcon");
 
             copyCommandBuffer->End();
             copyQueue->ExecuteCommandList(copyCommandBuffer);
@@ -31,6 +37,9 @@ namespace Atom
             InfoIcon = nullptr;
             WarningIcon = nullptr;
             ErrorIcon = nullptr;
+            ScenePlayIcon = nullptr;
+            SceneStopIcon = nullptr;
+            ScenePauseIcon = nullptr;
         }
 
     private:

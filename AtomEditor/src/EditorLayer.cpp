@@ -29,6 +29,12 @@ namespace Atom
         m_Scene = CreateRef<Scene>("TestScene");
 
         {
+            Entity camera = m_Scene->CreateEntity("Camera");
+            auto& cc = camera.AddComponent<CameraComponent>();
+            cc.Primary = true;
+        }
+
+        {
             Entity sphere = m_Scene->CreateEntity("Sphere");
             sphere.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/sphere.gltf"));
         }
@@ -90,8 +96,21 @@ namespace Atom
             m_NeedsResize = false;
         }
 
-        m_Scene->OnUpdate(ts);
-        m_Scene->OnEditRender(m_Renderer);
+        switch (m_Scene->GetSceneState())
+        {
+            case SceneState::Edit:
+            {
+                m_Scene->GetEditorCamera().OnUpdate(ts);
+                m_Scene->OnEditRender(m_Renderer);
+                break;
+            }
+            case SceneState::Running:
+            {
+                m_Scene->OnUpdate(ts);
+                m_Scene->OnRuntimeRender(m_Renderer);
+                break;
+            }
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -152,6 +171,34 @@ namespace Atom
         }
 
         // Render panels
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
+        ImGui::Begin("##SceneControl", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+        ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
+
+        f32 buttonSize = ImGui::GetWindowHeight() - 4.0f;
+        ImGui::SetCursorPosX((ImGui::GetWindowContentRegionMax().x * 0.5f) - (buttonSize * 0.5f) * 2.0f);
+
+        if (ImGui::ImageButton((ImTextureID)EditorResources::ScenePlayIcon.get(), { buttonSize, buttonSize }, { 0, 1 }, { 1, 0 }))
+        {
+            if (m_Scene->GetSceneState() != SceneState::Running)
+            {
+                m_Scene->SetSceneState(SceneState::Running);
+                m_Scene->OnStart();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::ImageButton((ImTextureID)EditorResources::SceneStopIcon.get(), { buttonSize, buttonSize }, { 0, 1 }, { 1, 0 }))
+        {
+            if (m_Scene->GetSceneState() != SceneState::Edit)
+            {
+                m_Scene->SetSceneState(SceneState::Edit);
+                m_Scene->OnStop();
+            }
+        }
+        ImGui::PopStyleColor();
+        ImGui::End();
+        ImGui::PopStyleVar();
+
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
 

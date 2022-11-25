@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Core/UUID.h"
 
 #include <entt/entt.hpp>
 
@@ -46,6 +47,8 @@ namespace Atom
 		{
 			return m_Scene->m_Registry.try_get<T>(m_Entity);
 		}
+
+		UUID GetUUID();
 
 		inline operator bool() const { return m_Entity != entt::null; }
 		inline operator uint32_t() const { return (uint32_t)m_Entity; }

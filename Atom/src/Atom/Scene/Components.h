@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Core/UUID.h"
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Texture.h"
@@ -11,6 +12,16 @@
 
 namespace Atom
 {
+	struct IDComponent
+	{
+		UUID ID;
+
+		IDComponent() = default;
+		IDComponent(const IDComponent& other) = default;
+		IDComponent(UUID uuid)
+			: ID(uuid) {}
+	};
+
 	struct SceneHierarchyComponent
 	{
 		Entity Parent{};
@@ -121,5 +132,15 @@ namespace Atom
 		SpotLightComponent(const SpotLightComponent& other) = default;
 		SpotLightComponent(const glm::vec3& color, const glm::vec3& direction, f32 coneAngle, f32 intensity, const glm::vec3& attenuationFactors = glm::vec3(1.0f, 1.0f, 1.0f))
 			: Color(color), Direction(direction), ConeAngle(coneAngle), Intensity(intensity), AttenuationFactors(attenuationFactors) {}
+	};
+
+	struct ScriptComponent
+	{
+		String ScriptClass;
+
+		ScriptComponent() = default;
+		ScriptComponent(const ScriptComponent& other) = default;
+		ScriptComponent(const String& scriptClass)
+			: ScriptClass(scriptClass) {}
 	};
 }

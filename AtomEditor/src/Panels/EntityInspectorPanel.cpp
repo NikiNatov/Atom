@@ -1,7 +1,8 @@
 #include "EntityInspectorPanel.h"
 
+#include "Atom/Scripting/ScriptEngine.h"
+
 #include <imgui/imgui.h>
-#include <entt/entt.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Atom
@@ -444,6 +445,204 @@ namespace Atom
 				data.ComponentName = "Spot Light";
 				data.ComponentHash = entt::type_id<SpotLightComponent>().hash();
 				data.AddComponentFn = [](Entity entity) { entity.AddComponent<SpotLightComponent>(); };
+			}
+
+			if (m_Entity.HasComponent<ScriptComponent>())
+			{
+				Utils::DrawComponent<ScriptComponent>("Script", m_Entity, true, [entity = m_Entity](auto& component)
+				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Class");
+					ImGui::NextColumn();
+
+					// Get all class names
+					const auto& scriptClassMap = ScriptEngine::GetScriptClasses();
+
+					HashSet<String> scriptClassNames;
+					scriptClassNames.reserve(scriptClassMap.size());
+
+					for (auto& [clsName, cls] : scriptClassMap)
+						scriptClassNames.insert(clsName);
+
+					auto it = scriptClassNames.find(component.ScriptClass);
+					const char* currentClass = it != scriptClassNames.end() ? (*it).c_str() : "";
+
+					if (ImGui::BeginCombo("##ScriptClass", currentClass))
+					{
+						for (auto& scriptClassName : scriptClassNames)
+						{
+							bool isSelected = currentClass == scriptClassName.c_str();
+							if (ImGui::Selectable(scriptClassName.c_str(), isSelected))
+							{
+								currentClass = scriptClassName.c_str();
+								component.ScriptClass = currentClass;
+							}
+
+							if (isSelected)
+								ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndCombo();
+					}
+
+					ImGui::Columns(1);
+
+					if (Scene* scene = ScriptEngine::GetRunningScene())
+					{
+						// Get the fields from the script instance
+						if (Ref<ScriptInstance> scriptInstance = ScriptEngine::GetScriptInstance(entity))
+						{
+							const ScriptVariableMap& classVariableMap = scriptInstance->GetClass()->GetMemberVariables();
+
+							for (auto& [name, variable] : classVariableMap)
+							{
+								ImGui::Columns(2);
+								ImGui::SetColumnWidth(0, 100.0f);
+								ImGui::Text(name.c_str());
+								ImGui::NextColumn();
+
+								ScriptVariableType varType = variable.GetType();
+
+								if (varType == ScriptVariableType::Float)
+								{
+									f32 data = scriptInstance->GetMemberValue<f32>(name);
+									if (ImGui::DragFloat("##float", &data))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+								else if (varType == ScriptVariableType::Int)
+								{
+									s32 data = scriptInstance->GetMemberValue<s32>(name);
+									if (ImGui::DragInt("##int", &data))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+								else if (varType == ScriptVariableType::Bool)
+								{
+									bool data = scriptInstance->GetMemberValue<bool>(name);
+									if (ImGui::Checkbox("##bool", &data))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec2)
+								{
+									glm::vec2& data = scriptInstance->GetMemberValue<glm::vec2>(name);
+									if (ImGui::DragFloat2("##float2", glm::value_ptr(data)))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec3)
+								{
+									glm::vec3& data = scriptInstance->GetMemberValue<glm::vec3>(name);
+									if (ImGui::DragFloat3("##float3", glm::value_ptr(data)))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec4)
+								{
+									glm::vec4& data = scriptInstance->GetMemberValue<glm::vec4>(name);
+									if (ImGui::DragFloat4("##float4", glm::value_ptr(data)))
+									{
+										scriptInstance->SetMemberValue(name, data);
+									}
+								}
+
+								ImGui::Columns(1);
+							}
+						}
+					}
+					else
+					{
+						// Get the fields from the script field map for the entity
+						if (Ref<ScriptClass> scriptClass = ScriptEngine::GetScriptClass(component.ScriptClass))
+						{
+							const ScriptVariableMap& classVariableMap = scriptClass->GetMemberVariables();
+							ScriptVariableMap& scriptVarMap = ScriptEngine::GetScriptVariableMap(entity);
+
+							for (auto& [name, variable] : classVariableMap)
+							{
+								ImGui::Columns(2);
+								ImGui::SetColumnWidth(0, 100.0f);
+								ImGui::Text(name.c_str());
+								ImGui::NextColumn();
+
+								if (scriptVarMap.find(name) == scriptVarMap.end())
+								{
+									// The field has not been set yet
+									scriptVarMap.emplace(name, variable);
+								}
+
+								ScriptVariable& var = scriptVarMap[name];
+								ScriptVariableType varType = var.GetType();
+
+								if (varType == ScriptVariableType::Float)
+								{
+									f32 data = var.GetValue<f32>();
+									if (ImGui::DragFloat("##float", &data))
+									{
+										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Int)
+								{
+									s32 data = var.GetValue<s32>();
+									if (ImGui::DragInt("##int", &data))
+									{
+										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Bool)
+								{
+									bool data = var.GetValue<bool>();
+									if (ImGui::Checkbox("##bool", &data))
+									{
+										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec2)
+								{
+									glm::vec2& data = var.GetValue<glm::vec2>();
+									if (ImGui::DragFloat2("##float2", glm::value_ptr(data)))
+									{
+										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec3)
+								{
+									glm::vec3& data = var.GetValue<glm::vec3>();
+									if (ImGui::DragFloat3("##float3", glm::value_ptr(data)))
+									{
+										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Vec4)
+								{
+									glm::vec4& data = var.GetValue<glm::vec4>();
+									if (ImGui::DragFloat4("##float4", glm::value_ptr(data)))
+									{
+										var.SetValue(data);
+									}
+								}
+
+								ImGui::Columns(1);
+							}
+						}
+					}
+
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Script";
+				data.ComponentHash = entt::type_id<ScriptComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<ScriptComponent>(); };
 			}
 
 			if (!missingComponents.empty())

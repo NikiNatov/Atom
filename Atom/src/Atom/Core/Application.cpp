@@ -4,8 +4,8 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/Logger.h"
 #include "Atom/Core/Input.h"
-
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Scripting/ScriptEngine.h"
 
 namespace Atom
 {
@@ -29,7 +29,7 @@ namespace Atom
         m_Window = CreateScope<Window>(properties);
 
         Renderer::Initialize();
-
+        ScriptEngine::Initialize();
         Input::Initialize(m_Window->GetWindowHandle());
 
         m_ImGuiLayer = new ImGuiLayer();
@@ -45,6 +45,7 @@ namespace Atom
             layer->OnDetach();
 
         Renderer::Shutdown();
+        ScriptEngine::Shutdown();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

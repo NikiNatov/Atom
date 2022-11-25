@@ -11,6 +11,7 @@
 #include "Atom/Core/Timer.h"
 #include "Atom/Core/Window.h"
 #include "Atom/Core/Input.h"
+#include "Atom/Core/UUID.h"
 #include "Atom/Core/DataStructures/ThreadSafeQueue.h"
 
 // ImGui

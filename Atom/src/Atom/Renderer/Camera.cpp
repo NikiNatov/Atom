@@ -120,7 +120,7 @@ namespace Atom
     void SceneCamera::RecalculateProjection()
     {
         if (m_ProjectionType == ProjectionType::Perspective)
-            m_ProjectionMatrix = glm::perspective(glm::radians(m_PerspectiveFOV), m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar);
+            m_ProjectionMatrix = glm::transpose(glm::perspective(glm::radians(m_PerspectiveFOV), m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar));
         else
         {
             f32 left = -m_OrthographicSize * m_AspectRatio * 0.5f;

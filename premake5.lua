@@ -1,3 +1,63 @@
+function queryTerminal(command)
+    local success, handle = pcall(io.popen, command)
+    if not success then 
+        return ""
+    end
+
+    result = handle:read("*a")
+    handle:close()
+    result = string.gsub(result, "\n$", "") -- remove trailing whitespace
+    return result
+end
+
+function getPythonPath()
+    local p = queryTerminal('python -c "import sys; import os; print(os.path.dirname(sys.executable))"')
+    
+    -- sanitize path before returning it
+    p = string.gsub(p, "\\\\", "\\") -- replace double backslash
+    p = string.gsub(p, "\\", "/") -- flip slashes
+    return p
+end
+
+function getPythonLib()
+    return queryTerminal("python -c \"import sys; import os; import glob; path = os.path.dirname(sys.executable); libs = glob.glob(path + '/libs/python*'); print(os.path.splitext(os.path.basename(libs[0]))[0]);\"")
+end
+
+pythonPath		  = getPythonPath()
+pythonIncludePath = pythonPath .. "/include/"
+pythonLibPath     = pythonPath .. "/libs/"
+pythonLib         = getPythonLib()
+
+if pythonPath == "" or pythonLib == "" then
+    error("Failed to find python path!")
+else
+    print("Python includes: " .. pythonIncludePath)
+    print("Python libs: " .. pythonLibPath)
+    print("lib: " .. pythonLib)
+end
+
+IncludeDirs = {}
+IncludeDirs["spd_log"] = "%{wks.location}/Atom/vendor/spdlog/include"
+IncludeDirs["glm"] = "%{wks.location}/Atom/vendor/glm"
+IncludeDirs["imgui"] = "%{wks.location}/Atom/vendor/imgui"
+IncludeDirs["PIX"] = "%{wks.location}/Atom/vendor/PIX/include"
+IncludeDirs["stb_image"] = "%{wks.location}/Atom/vendor/stb_image"
+IncludeDirs["assimp"] = "%{wks.location}/Atom/vendor/assimp/include"
+IncludeDirs["entt"] = "%{wks.location}/Atom/vendor/entt/include"
+IncludeDirs["pybind11"] = "%{wks.location}/Atom/vendor/pybind11/include"
+IncludeDirs["python"] = pythonIncludePath
+
+LibDirs = {}
+LibDirs["PIX"] = "%{wks.location}/Atom/vendor/PIX/lib"
+LibDirs["assimp"] = "%{wks.location}/Atom/vendor/assimp/lib"
+LibDirs["python"] = pythonLibPath
+
+Libs = {}
+Libs["PIX"] = "%{LibDirs.PIX}/WinPixEventRuntime.lib"
+Libs["assimp_debug"] = "%{LibDirs.assimp}/Debug/assimp-vc143-mtd.lib"
+Libs["assimp_release"] = "%{LibDirs.assimp}/Release/assimp-vc143-mt.lib"
+Libs["python"] = "%{LibDirs.python}/" .. pythonLib
+
 workspace "Atom"
 	architecture "x64"
 	startproject "AtomEditor"
@@ -8,196 +68,14 @@ workspace "Atom"
 		"Release"
 	}
 
+	flags
+	{
+		"MultiProcessorCompile"
+	}
+
 	outputdir = "%{cfg.buildcfg} - %{cfg.system}"
 
-	IncludeDirs = {}
-	IncludeDirs["spd_log"] = "Atom/vendor/spdlog/include"
-	IncludeDirs["glm"] = "Atom/vendor/glm"
-	IncludeDirs["imgui"] = "Atom/vendor/imgui"
-	IncludeDirs["PIX"] = "Atom/vendor/PIX/include"
-	IncludeDirs["stb_image"] = "Atom/vendor/stb_image"
-	IncludeDirs["assimp"] = "Atom/vendor/assimp/include"
-	IncludeDirs["entt"] = "Atom/vendor/entt/include"
-
 	include "Atom/vendor/imgui"
-
-project "Atom"
-	location "Atom"
-	kind "StaticLib"
-	language "C++"
-	cppdialect "C++17"
-	systemversion "latest"
-	staticruntime "on"
-	characterset("ASCII")
-
-	targetdir("bin/" .. outputdir .. "/%{prj.name}")
-	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	pchheader "atompch.h"
-	pchsource "%{prj.name}/src/atompch.cpp"
-
-	files
-	{
-		"%{prj.name}/src/**.cpp",
-		"%{prj.name}/src/**.h",
-		"%{prj.name}/vendor/stb_image/**.h",
-		"%{prj.name}/vendor/stb_image/**.cpp",
-	}
-
-	includedirs
-	{
-		"%{prj.name}/src",
-		"%{IncludeDirs.spd_log}",
-		"%{IncludeDirs.glm}",
-		"%{IncludeDirs.imgui}",
-		"%{IncludeDirs.PIX}",
-		"%{IncludeDirs.stb_image}",
-		"%{IncludeDirs.assimp}",
-		"%{IncludeDirs.entt}",
-	}
-
-	defines
-	{
-		"_CRT_SECURE_NO_WARNINGS"
-	}
-
-	links
-	{
-		"ImGui",
-		"Atom/vendor/PIX/lib/WinPixEventRuntime.lib"
-	}
-
-
-	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-		links
-		{
-			"Atom/vendor/assimp/lib/Debug/assimp-vc143-mtd.lib" 
-		}
-
-	filter "configurations:Release"
-		defines "ATOM_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-		links
-		{
-			"Atom/vendor/assimp/lib/Release/assimp-vc143-mt.lib" 
-		}
-
-project "Sandbox"
-	location "Sandbox"
-	kind "ConsoleApp"
-	language "C++"
-	cppdialect "C++17"
-	staticruntime "on"
-	characterset("ASCII")
-
-	targetdir("bin/" .. outputdir .. "/%{prj.name}")
-	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	files
-	{
-		"%{prj.name}/src/**.cpp",
-		"%{prj.name}/src/**.h"
-	}
-
-	includedirs
-	{
-		"Atom/src",
-		"Atom/vendor",
-		"%{IncludeDirs.spd_log}",
-		"%{IncludeDirs.glm}",
-		"%{IncludeDirs.PIX}",
-		"%{IncludeDirs.entt}",
-	}
-
-	links
-	{
-		"Atom"
-	}
-
-	postbuildcommands
-	{
-		"XCOPY ..\\Atom\\vendor\\PIX\\lib\\WinPixEventRuntime.dll \"%{cfg.targetdir}\"  /S /Y"
-	}
-
-	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-		postbuildcommands
-		{
-			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Debug\\assimp-vc143-mtd.dll \"%{cfg.targetdir}\"  /S /Y"
-		}
-
-	filter "configurations:Release"
-		defines "ATOM_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-		postbuildcommands
-		{
-			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Release\\assimp-vc143-mt.dll \"%{cfg.targetdir}\"  /S /Y"
-		}
-
-project "AtomEditor"
-	location "AtomEditor"
-	kind "ConsoleApp"
-	language "C++"
-	cppdialect "C++17"
-	staticruntime "on"
-	characterset("ASCII")
-
-	targetdir("bin/" .. outputdir .. "/%{prj.name}")
-	objdir("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	files
-	{
-		"%{prj.name}/src/**.cpp",
-		"%{prj.name}/src/**.h"
-	}
-
-	includedirs
-	{
-		"Atom/src",
-		"Atom/vendor",
-		"%{IncludeDirs.spd_log}",
-		"%{IncludeDirs.glm}",
-		"%{IncludeDirs.PIX}",
-		"%{IncludeDirs.entt}",
-	}
-
-	links
-	{
-		"Atom"
-	}
-
-	postbuildcommands
-	{
-		"XCOPY ..\\Atom\\vendor\\PIX\\lib\\WinPixEventRuntime.dll \"%{cfg.targetdir}\"  /S /Y"
-	}
-
-	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-		postbuildcommands
-		{
-			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Debug\\assimp-vc143-mtd.dll \"%{cfg.targetdir}\"  /S /Y"
-		}
-
-	filter "configurations:Release"
-		defines "ATOM_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-		postbuildcommands
-		{
-			"XCOPY ..\\Atom\\vendor\\assimp\\lib\\Release\\assimp-vc143-mt.dll \"%{cfg.targetdir}\"  /S /Y"
-		}
+	include "Atom"
+	include "AtomEditor"
+	include "Sandbox"

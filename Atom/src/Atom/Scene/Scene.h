@@ -25,11 +25,13 @@ namespace Atom
         ~Scene() = default;
 
         Entity CreateEntity(const String& name = "Unnamed Entity");
+        Entity CreateEntityFromUUID(UUID uuid, const String& name = "Unnamed Entity");
         void DeleteEntity(Entity entity);
+        Entity FindEntityByUUID(UUID uuid);
 
         void OnStart();
         void OnUpdate(Timestep ts);
-        void OnEnd();
+        void OnStop();
         void OnEditRender(Ref<SceneRenderer> renderer);
         void OnRuntimeRender(Ref<SceneRenderer> renderer);
         void OnViewportResize(u32 width, u32 height);
@@ -39,9 +41,10 @@ namespace Atom
         inline EditorCamera& GetEditorCamera() { return m_EditorCamera; }
         inline SceneState GetSceneState() const { return m_State; }
     private:
-        String         m_Name;
-        entt::registry m_Registry;
-        EditorCamera   m_EditorCamera;
-        SceneState     m_State = SceneState::Edit;
+        String                m_Name;
+        entt::registry        m_Registry;
+        EditorCamera          m_EditorCamera;
+        SceneState            m_State = SceneState::Edit;
+        HashMap<UUID, Entity> m_EntitiesByID;
     };
 }

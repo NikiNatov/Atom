@@ -44,7 +44,7 @@ namespace Atom
         // Set camera transforms
         m_TransformData.ProjectionMatrix = camera.GetProjection();
         m_TransformData.ViewMatrix = glm::inverse(cameraTransform);
-        m_TransformData.CameraPosition = cameraTransform[3];
+        m_TransformData.CameraPosition = { cameraTransform[0].w, cameraTransform[1].w, cameraTransform[2].w };
 
         // Set lights data
         m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();

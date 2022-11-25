@@ -108,4 +108,10 @@ namespace Atom
 
 		return false;
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------------------
+	UUID Entity::GetUUID()
+	{
+		return GetComponent<IDComponent>().ID;
+	}
 }
