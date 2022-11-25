@@ -73,7 +73,7 @@ namespace Atom
     {
         m_Position = CalculatePosition();
         glm::mat4 rotationMatrix = glm::mat4_cast(glm::conjugate(GetOrientation()));
-        m_ViewMatrix = glm::transpose(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * rotationMatrix * glm::translate(glm::mat4(1.0f), -m_Position));
+        m_ViewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * rotationMatrix * glm::translate(glm::mat4(1.0f), -m_Position);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

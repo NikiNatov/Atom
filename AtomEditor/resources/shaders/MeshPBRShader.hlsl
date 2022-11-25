@@ -22,8 +22,8 @@ struct PSInput
 
 struct Camera
 {
-    matrix ViewMatrix;
-    matrix ProjectionMatrix;
+    row_major matrix ViewMatrix;
+    row_major matrix ProjectionMatrix;
     float3 CameraPosition;
 };
 
@@ -31,7 +31,7 @@ ConstantBuffer<Camera> CameraCB : register(b0);
 
 cbuffer TransformCB : register(b1)
 {
-    matrix Transform;
+    row_major matrix Transform;
     float p0;
 }
 

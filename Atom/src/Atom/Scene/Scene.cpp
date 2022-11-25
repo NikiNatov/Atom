@@ -177,10 +177,10 @@ namespace Atom
                     while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                     {
                         currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
-                        accumulatedTransform = accumulatedTransform * currentParent.GetComponent<TransformComponent>().GetTransform();
+                        accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                     }
 
-                    renderer->SubmitMesh(mc.Mesh, tc.GetTransform() * accumulatedTransform, {});
+                    renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
                 }
                 else
                     renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
@@ -214,10 +214,10 @@ namespace Atom
                     while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                     {
                         currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
-                        accumulatedTransform = accumulatedTransform * currentParent.GetComponent<TransformComponent>().GetTransform();
+                        accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                     }
 
-                    cameraTransform = tc.GetTransform() * accumulatedTransform;
+                    cameraTransform = accumulatedTransform * tc.GetTransform();
                 }
                 else
                 {
@@ -294,10 +294,10 @@ namespace Atom
                         while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                         {
                             currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
-                            accumulatedTransform = accumulatedTransform * currentParent.GetComponent<TransformComponent>().GetTransform();
+                            accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                         }
 
-                        renderer->SubmitMesh(mc.Mesh, tc.GetTransform() * accumulatedTransform, {});
+                        renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
                     }
                     else
                         renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});

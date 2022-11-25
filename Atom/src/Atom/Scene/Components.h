@@ -62,7 +62,7 @@ namespace Atom
 								 glm::rotate(glm::mat4(1.0f), Rotation.y, { 0.0f, 1.0f, 0.0f }) *
 								 glm::rotate(glm::mat4(1.0f), Rotation.x, { 1.0f, 0.0f, 0.0f });
 
-			return glm::transpose(translation * rotation * scale);
+			return translation * rotation * scale;
 		}
 	};
 

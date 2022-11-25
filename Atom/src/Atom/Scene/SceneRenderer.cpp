@@ -44,7 +44,7 @@ namespace Atom
         // Set camera transforms
         m_TransformData.ProjectionMatrix = camera.GetProjection();
         m_TransformData.ViewMatrix = glm::inverse(cameraTransform);
-        m_TransformData.CameraPosition = { cameraTransform[0].w, cameraTransform[1].w, cameraTransform[2].w };
+        m_TransformData.CameraPosition = cameraTransform[3];
 
         // Set lights data
         m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();
@@ -160,7 +160,7 @@ namespace Atom
         Renderer::BeginRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
 
         // Render skybox
-        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_TransformData.ViewMatrix * m_TransformData.ProjectionMatrix));
+        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_TransformData.ProjectionMatrix * m_TransformData.ViewMatrix));
         m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap);
         Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 

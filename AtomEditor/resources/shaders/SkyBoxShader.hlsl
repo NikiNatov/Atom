@@ -13,7 +13,7 @@ struct PSInput
 
 cbuffer SkyBoxCB : register(b0)
 {
-	matrix InvViewProjMatrix;
+	row_major matrix InvViewProjMatrix;
 	float p0;
 }
 
