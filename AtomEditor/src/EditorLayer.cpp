@@ -32,11 +32,19 @@ namespace Atom
             Entity camera = m_Scene->CreateEntity("Camera");
             auto& cc = camera.AddComponent<CameraComponent>();
             cc.Primary = true;
+
+            auto& sc = camera.AddComponent<ScriptComponent>();
+            sc.ScriptClass = "Camera";
+
+            camera.GetComponent<TransformComponent>().Translation.z = 3.0f;
         }
 
         {
-            Entity sphere = m_Scene->CreateEntity("Sphere");
+            Entity sphere = m_Scene->CreateEntity("Player");
             sphere.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/sphere.gltf"));
+
+            auto& sc = sphere.AddComponent<ScriptComponent>();
+            sc.ScriptClass = "Player";
         }
 
         {

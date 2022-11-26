@@ -23,6 +23,7 @@ Atom::Application* Atom::CreateApplication()
 {
     Atom::ApplicationSpecification spec;
     spec.Name = "Atom Editor";
+    spec.VSync = false;
     spec.AppLoggerSinks = {
         { std::make_shared<spdlog::sinks::stdout_color_sink_mt>(), "%^[%T] %n: %v%$" },
         { std::make_shared<ConsoleSink>(), "%^[%T] [%l]: %v%$" }

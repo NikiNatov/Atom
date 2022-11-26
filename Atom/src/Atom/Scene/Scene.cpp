@@ -77,9 +77,23 @@ namespace Atom
         auto it = m_EntitiesByID.find(uuid);
 
         if (it == m_EntitiesByID.end())
-            return Entity();
+            return {};
 
         return it->second;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Entity Scene::FindEntityByName(const String& name)
+    {
+        auto view = m_Registry.view<TagComponent>();
+        for (auto entity : view)
+        {
+            auto& tag = view.get<TagComponent>(entity);
+            if (tag.Tag == name)
+                return { entity, this };
+        }
+
+        return {};
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -101,6 +115,11 @@ namespace Atom
         for (auto entity : view)
         {
             ScriptEngine::UpdateEntityScript(Entity(entity, this), ts);
+        }
+
+        for (auto entity : view)
+        {
+            ScriptEngine::LateUpdateEntityScript(Entity(entity, this), ts);
         }
     }
 

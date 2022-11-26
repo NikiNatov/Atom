@@ -28,6 +28,7 @@ namespace Atom
         Entity CreateEntityFromUUID(UUID uuid, const String& name = "Unnamed Entity");
         void DeleteEntity(Entity entity);
         Entity FindEntityByUUID(UUID uuid);
+        Entity FindEntityByName(const String& name);
 
         void OnStart();
         void OnUpdate(Timestep ts);

@@ -3,65 +3,10 @@
 #include "Atom/Scene/Components.h"
 #include "Atom/Scene/Scene.h"
 
-#include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
-
-#include <glm/glm.hpp>
-#include <pybind11/embed.h>
+#include "Atom/Scripting/ScriptEmbeddedModule.h"
 
 namespace Atom
 {
-    namespace py = pybind11;
-    namespace wrappers = Atom::ScriptWrappers;
-
-    PYBIND11_EMBEDDED_MODULE(Atom, m) 
-    {
-        py::class_<glm::vec2>(m, "Vec2")
-            .def(py::init<>())
-            .def(py::init<f32>())
-            .def(py::init<f32, f32>())
-            .def(py::init<const glm::vec2&>())
-            .def_readwrite("x", &glm::vec2::x)
-            .def_readwrite("y", &glm::vec2::y);
-
-        py::class_<glm::vec3>(m, "Vec3")
-            .def(py::init<>())
-            .def(py::init<f32>())
-            .def(py::init<f32, f32, f32>())
-            .def(py::init<const glm::vec3&>())
-            .def_readwrite("x", &glm::vec3::x)
-            .def_readwrite("y", &glm::vec3::y)
-            .def_readwrite("z", &glm::vec3::z);
-
-        py::class_<glm::vec4>(m, "Vec4")
-            .def(py::init<>())
-            .def(py::init<f32>())
-            .def(py::init<f32, f32, f32, f32>())
-            .def(py::init<const glm::vec4&>())
-            .def_readwrite("x", &glm::vec4::x)
-            .def_readwrite("y", &glm::vec4::y)
-            .def_readwrite("z", &glm::vec4::z)
-            .def_readwrite("w", &glm::vec4::y);
-
-        py::class_<Atom::Logger>(m, "Log")
-            .def_static("Trace", [](const char* message) { ATOM_TRACE(message); })
-            .def_static("Info", [](const char* message) { ATOM_INFO(message); })
-            .def_static("Warning", [](const char* message) { ATOM_WARNING(message); })
-            .def_static("Error", [](const char* message) { ATOM_ERROR(message); });
-
-        py::class_<wrappers::Entity>(m, "Entity")
-            .def(py::init<>())
-            .def(py::init<u64>())
-            .def("get_transform_component", &wrappers::Entity::GetComponent<TransformComponent>, py::return_value_policy::reference)
-            .def_property_readonly("ID", &wrappers::Entity::GetUUID)
-            .def_property_readonly("Tag", &wrappers::Entity::GetTag);
-
-        py::class_<Atom::TransformComponent>(m, "TransformComponent")
-            .def(py::init<>())
-            .def_readwrite("translation", &Atom::TransformComponent::Translation)
-            .def_readwrite("rotation", &Atom::TransformComponent::Translation)
-            .def_readwrite("scale", &Atom::TransformComponent::Scale);
-    }
-
     static HashMap<String, ScriptVariableType> s_ScriptVariableTypes = {
         { "<class 'int'>",         ScriptVariableType::Int    },
         { "<class 'float'>",       ScriptVariableType::Float  },
@@ -179,6 +124,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::LateUpdateEntityScript(Entity entity, Timestep ts)
+    {
+        auto& sc = entity.GetComponent<ScriptComponent>();
+
+        if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
+        {
+            instance->OnLateUpdate(ts);
+        }
+        else
+        {
+            ATOM_ERROR("Entity with ID {} has no script instantiated", entity.GetUUID());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Scene* ScriptEngine::GetRunningScene()
     {
         return ms_RunningScene;
@@ -207,6 +167,17 @@ namespace Atom
         ATOM_ENGINE_ASSERT(entity);
 
         auto it = ms_ScriptInstances.find(entity.GetUUID());
+
+        if (it == ms_ScriptInstances.end())
+            return nullptr;
+
+        return it->second;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<ScriptInstance> ScriptEngine::GetScriptInstance(UUID uuid)
+    {
+        auto it = ms_ScriptInstances.find(uuid);
 
         if (it == ms_ScriptInstances.end())
             return nullptr;
@@ -302,6 +273,8 @@ namespace Atom
                 m_OnCreateFn = m_PythonInstance.attr("on_create");
             if (py::hasattr(m_PythonInstance, "on_update"))
                 m_OnUpdateFn = m_PythonInstance.attr("on_update");
+            if (py::hasattr(m_PythonInstance, "on_late_update"))
+                m_OnLateUpdateFn = m_PythonInstance.attr("on_late_update");
             if (py::hasattr(m_PythonInstance, "on_destroy"))
                 m_OnDestroyFn = m_PythonInstance.attr("on_destroy");
         }
@@ -331,7 +304,21 @@ namespace Atom
         try
         {
             if (!m_OnUpdateFn.is_none())
-                m_OnUpdateFn(ts.GetSeconds());
+                m_OnUpdateFn(ts);
+        }
+        catch (std::exception& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptInstance::OnLateUpdate(Timestep ts)
+    {
+        try
+        {
+            if (!m_OnLateUpdateFn.is_none())
+                m_OnLateUpdateFn(ts);
         }
         catch (std::exception& e)
         {

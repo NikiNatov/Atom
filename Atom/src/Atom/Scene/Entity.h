@@ -49,6 +49,7 @@ namespace Atom
 		}
 
 		UUID GetUUID();
+		const String& GetTag();
 
 		inline operator bool() const { return m_Entity != entt::null; }
 		inline operator uint32_t() const { return (uint32_t)m_Entity; }

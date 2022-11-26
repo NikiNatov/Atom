@@ -18,6 +18,7 @@ namespace Atom
 
             u64 GetUUID() const;
             const String& GetTag() const;
+            pybind11::object GetScriptInstance() const;
 
             template<typename T>
             bool HasComponent() const
@@ -34,6 +35,10 @@ namespace Atom
                 Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
                 return entity.GetComponent<T>();
             }
+
+            inline bool IsValid() const { return m_UUID != 0; }
+        public:
+            static Entity FindEntityByName(const String& name);
 
         private:
             u64 m_UUID;

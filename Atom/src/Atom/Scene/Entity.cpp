@@ -114,4 +114,10 @@ namespace Atom
 	{
 		return GetComponent<IDComponent>().ID;
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------------------
+	const String& Entity::GetTag()
+	{
+		return GetComponent<TagComponent>().Tag;
+	}
 }

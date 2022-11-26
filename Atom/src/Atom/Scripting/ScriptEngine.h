@@ -73,6 +73,7 @@ namespace Atom
 
         void OnCreate();
         void OnUpdate(Timestep ts);
+        void OnLateUpdate(Timestep ts);
         void OnDestroy();
 
         template<typename ValueType>
@@ -90,12 +91,13 @@ namespace Atom
         }
 
         inline Ref<ScriptClass> GetClass() const { return m_Class; }
-        inline const pybind11::object& GetPythonInstance() const { return m_PythonInstance; }
+        inline pybind11::object GetPythonInstance() const { return m_PythonInstance; }
     private:
         Ref<ScriptClass> m_Class;
         pybind11::object m_PythonInstance;
         pybind11::object m_OnCreateFn = pybind11::none();
         pybind11::object m_OnUpdateFn = pybind11::none();
+        pybind11::object m_OnLateUpdateFn = pybind11::none();
         pybind11::object m_OnDestroyFn = pybind11::none();
     };
 
@@ -110,11 +112,13 @@ namespace Atom
 
         static void CreateEntityScript(Entity entity);
         static void UpdateEntityScript(Entity entity, Timestep ts);
+        static void LateUpdateEntityScript(Entity entity, Timestep ts);
 
         static Scene* GetRunningScene();
         static const HashMap<String, Ref<ScriptClass>>& GetScriptClasses();
         static Ref<ScriptClass> GetScriptClass(const String& className);
         static Ref<ScriptInstance> GetScriptInstance(Entity entity);
+        static Ref<ScriptInstance> GetScriptInstance(UUID uuid);
         static ScriptVariableMap& GetScriptVariableMap(Entity entity);
     private:
         static void LoadScriptClasses();
