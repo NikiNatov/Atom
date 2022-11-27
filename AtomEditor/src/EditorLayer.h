@@ -18,6 +18,11 @@ namespace Atom
         virtual void OnUpdate(Timestep ts) override;
         virtual void OnImGuiRender() override;
         virtual void OnEvent(Event& event) override;
+
+        inline const SceneHierarchyPanel& GetSceneHierarchyPanel() const { return m_SceneHierarchyPanel; }
+        inline const EntityInspectorPanel& GetEntityInspectorPanel() const { return m_EntityInspectorPanel; }
+
+        static EditorLayer& Get() { return *ms_Instance; }
     private:
         Ref<Scene>           m_Scene = nullptr;
         Ref<SceneRenderer>   m_Renderer = nullptr;
@@ -25,6 +30,8 @@ namespace Atom
         bool                 m_NeedsResize = false;
         SceneHierarchyPanel  m_SceneHierarchyPanel;
         EntityInspectorPanel m_EntityInspectorPanel;
+    private:
+        inline static EditorLayer* ms_Instance = nullptr;
     };
 
 }

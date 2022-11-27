@@ -40,7 +40,7 @@ namespace Atom
 
 		bool isOpen = ImGui::TreeNodeEx((void*)(u64)(u32)entity, flags, tag.c_str());
 
-		if (ImGui::IsItemClicked())
+		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
 			m_SelectedEntity = entity;
 
 		ImGui::PushID((void*)(u64)(u32)entity);

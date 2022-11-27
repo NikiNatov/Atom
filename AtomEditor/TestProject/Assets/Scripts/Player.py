@@ -10,7 +10,6 @@ class Player(Atom.Entity):
         self.Camera = Atom.Entity(0)
 
     def on_create(self):
-        self.Camera = Atom.Entity.find_entity_by_name("Camera")
         Atom.Log.info("Player::OnCreate")
 
     def on_update(self, ts: Atom.Timestep):

@@ -13,6 +13,7 @@ namespace Atom
         void OnImGuiRender();
 
         void SetScene(const Ref<Scene>& scene);
+        Ref<Scene> GetScene() const { return m_Scene; }
         inline Entity GetSelectedEntity() const { return m_SelectedEntity; }
     private:
         void DrawEntityNode(Entity entity);

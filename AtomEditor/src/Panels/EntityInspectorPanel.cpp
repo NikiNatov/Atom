@@ -1,6 +1,8 @@
 #include "EntityInspectorPanel.h"
+#include "../EditorLayer.h"
 
 #include "Atom/Scripting/ScriptEngine.h"
+#include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 
 #include <imgui/imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -553,6 +555,24 @@ namespace Atom
 										scriptInstance->SetMemberValue(name, data);
 									}
 								}
+								else if (varType == ScriptVariableType::Entity)
+								{
+									ScriptWrappers::Entity& data = scriptInstance->GetMemberValue<ScriptWrappers::Entity>(name);
+									String entityTag = data.IsValid() ? data.GetTag() : "";
+
+									ImGui::InputText(imguiID.c_str(), entityTag.data(), entityTag.size(), ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
+										{
+											Entity srcEntity = *(Entity*)payload->Data;
+											scriptInstance->SetMemberValue(name, ScriptWrappers::Entity(srcEntity.GetUUID()));
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
 
 								ImGui::Columns(1);
 							}
@@ -629,6 +649,27 @@ namespace Atom
 									if (ImGui::DragFloat4(imguiID.c_str(), glm::value_ptr(data)))
 									{
 										var.SetValue(data);
+									}
+								}
+								else if (varType == ScriptVariableType::Entity)
+								{
+									// We don't have a running scene set in the ScriptEngine at the moment so we can't use the ScriptWrappers::Entity directly to get the entity name
+									// so we would have to get the active scene from the SceneHierarchyPanel
+									Ref<Scene> activeScene = EditorLayer::Get().GetSceneHierarchyPanel().GetScene();
+									Entity entity = activeScene->FindEntityByUUID(var.GetValue<ScriptWrappers::Entity>().GetUUID());
+									String entityTag = entity ? entity.GetTag() : "";
+
+									ImGui::InputText(imguiID.c_str(), entityTag.data(), entityTag.size(), ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
+										{
+											Entity srcEntity = *(Entity*)payload->Data;
+											var.SetValue(ScriptWrappers::Entity(srcEntity.GetUUID()));
+										}
+
+										ImGui::EndDragDropTarget();
 									}
 								}
 
