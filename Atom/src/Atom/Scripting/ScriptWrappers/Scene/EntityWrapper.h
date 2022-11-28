@@ -16,8 +16,16 @@ namespace Atom
             Entity();
             Entity(u64 uuid);
 
+            void SetTag(const String& tag);
+            void SetTranslation(const glm::vec3& translation);
+            void SetRotation(const glm::vec3& rotation);
+            void SetScale(const glm::vec3& scale);
+
             u64 GetUUID() const;
             const String& GetTag() const;
+            glm::vec3& GetTranslation() const;
+            glm::vec3& GetRotation() const;
+            glm::vec3& GetScale() const;
             pybind11::object GetScriptInstance() const;
 
             template<typename T>

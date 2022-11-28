@@ -12,5 +12,5 @@ class Camera(Atom.Entity):
 
     def on_update(self, ts: Atom.Timestep):
         if self.Player.is_valid():
-            self.get_transform_component().translation = Atom.Vec3(self.Player.get_transform_component().translation.x, self.Player.get_transform_component().translation.y, self.get_transform_component().translation.z)
+            self.translation = Atom.Vec3(self.Player.translation.x, self.Player.translation.y, self.translation.z)
 

@@ -45,6 +45,7 @@ namespace Atom
             .def_readwrite("z", &glm::vec4::z)
             .def_readwrite("w", &glm::vec4::y);
 
+
         // --------------------------------------------------- Core ------------------------------------------------------------
         py::class_<Atom::Logger>(m, "Log")
             .def_static("trace", [](const char* message) { ATOM_TRACE(message); })
@@ -220,7 +221,6 @@ namespace Atom
             .def("has_dir_light_component", &wrappers::Entity::HasComponent<DirectionalLightComponent>)
             .def("has_point_light_component", &wrappers::Entity::HasComponent<PointLightComponent>)
             .def("has_spot_light_component", &wrappers::Entity::HasComponent<SpotLightComponent>)
-            .def("get_transform_component", &wrappers::Entity::GetComponent<TransformComponent>, py::return_value_policy::reference)
             .def("get_camera_component", &wrappers::Entity::GetComponent<CameraComponent>, py::return_value_policy::reference)
             .def("get_dir_light_component", &wrappers::Entity::GetComponent<DirectionalLightComponent>, py::return_value_policy::reference)
             .def("get_point_light_component", &wrappers::Entity::GetComponent<PointLightComponent>, py::return_value_policy::reference)
@@ -229,6 +229,9 @@ namespace Atom
             .def("is_valid", &wrappers::Entity::IsValid)
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)
             .def_property_readonly("id", &wrappers::Entity::GetUUID)
-            .def_property_readonly("tag", &wrappers::Entity::GetTag);
+            .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag)
+            .def_property("translation", &wrappers::Entity::GetTranslation, &wrappers::Entity::SetTranslation)
+            .def_property("euler_angles", &wrappers::Entity::GetRotation, &wrappers::Entity::SetRotation)
+            .def_property("scale", &wrappers::Entity::GetScale, &wrappers::Entity::SetScale);
     }
 }

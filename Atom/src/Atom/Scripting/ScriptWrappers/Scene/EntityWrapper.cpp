@@ -18,6 +18,38 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
+        void Entity::SetTag(const String& tag)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            entity.GetComponent<TagComponent>().Tag = tag;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Entity::SetTranslation(const glm::vec3& translation)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            entity.GetComponent<TransformComponent>().Translation = translation;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Entity::SetRotation(const glm::vec3& rotation)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            entity.GetComponent<TransformComponent>().Rotation = rotation;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Entity::SetScale(const glm::vec3& scale)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            entity.GetComponent<TransformComponent>().Scale = scale;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
         u64 Entity::GetUUID() const
         {
             return m_UUID;
@@ -29,6 +61,30 @@ namespace Atom
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
             return entity.GetComponent<TagComponent>().Tag;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        glm::vec3& Entity::GetTranslation() const
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            return entity.GetComponent<TransformComponent>().Translation;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        glm::vec3& Entity::GetRotation() const
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            return entity.GetComponent<TransformComponent>().Rotation;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        glm::vec3& Entity::GetScale() const
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            return entity.GetComponent<TransformComponent>().Scale;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
