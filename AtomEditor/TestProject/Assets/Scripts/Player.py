@@ -26,4 +26,4 @@ class Player(Atom.Entity):
             velocity.x = 1.0
 
         velocity = Atom.Vec3(velocity.x * self.MoveSpeed, velocity.y * self.MoveSpeed, velocity.z * self.MoveSpeed)
-        self.translation = Atom.Vec3(self.translation.x + velocity.x * ts.get_seconds(), self.translation.y + velocity.y * ts.get_seconds(), self.translation.z + velocity.z * ts.get_seconds())
+        self.translation += velocity * ts.get_seconds()
