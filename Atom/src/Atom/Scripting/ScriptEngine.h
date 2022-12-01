@@ -6,6 +6,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
+#include <FileWatch.h>
 
 namespace Atom
 {
@@ -122,13 +123,18 @@ namespace Atom
         static ScriptVariableMap& GetScriptVariableMap(Entity entity);
     private:
         static void LoadScriptClasses();
+        static void LoadScriptModules();
+        static void ReloadScriptModules();
     private:
-        inline static Scene*                             ms_RunningScene = nullptr;
-        inline static HashMap<String, Ref<ScriptClass>>  ms_ScriptClasses;
-        inline static HashMap<UUID, Ref<ScriptInstance>> ms_ScriptInstances;
-        inline static HashMap<UUID, ScriptVariableMap>   ms_ScriptVariableMaps;
-        inline static std::filesystem::path              ms_ScriptsDirectory;
-        inline static pybind11::object                   ms_EntityClass;
-        inline static pybind11::object                   ms_ScriptCoreModule;
+        inline static Scene*                                             ms_RunningScene = nullptr;
+        inline static HashMap<String, Ref<ScriptClass>>                  ms_ScriptClasses;
+        inline static HashMap<UUID, Ref<ScriptInstance>>                 ms_ScriptInstances;
+        inline static HashMap<UUID, ScriptVariableMap>                   ms_ScriptVariableMaps;
+        inline static std::filesystem::path                              ms_AppScriptsDirectory;
+        inline static pybind11::object                                   ms_EntityClass;
+        inline static pybind11::module                                   ms_ScriptCoreModule;
+        inline static Vector<pybind11::module>                           ms_AppScriptModules;
+        inline static Scope<filewatch::FileWatch<std::filesystem::path>> ms_FileWatcher;
+        inline static bool                                               ms_PendingScriptReload = false;
     };
 }

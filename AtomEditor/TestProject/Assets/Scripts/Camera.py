@@ -2,10 +2,12 @@ import Atom
 
 class Camera(Atom.Entity):
     Player: Atom.Entity
+    MoveSpeed: int
 
     def __init__(self, entityID: int):
         super().__init__(entityID)
         self.Player = Atom.Entity(0)
+        self.MoveSpeed = 11
 
     def on_create(self):
         Atom.Log.info("Camera::OnCreate")

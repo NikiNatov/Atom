@@ -4,6 +4,7 @@
 #include "Atom/Scene/Scene.h"
 
 #include "Atom/Scripting/ScriptEmbeddedModule.h"
+#include "Atom/Core/Application.h"
 
 namespace Atom
 {
@@ -23,23 +24,30 @@ namespace Atom
     {
         try
         {
-            ms_ScriptsDirectory = "TestProject/Assets/Scripts";
+            ms_AppScriptsDirectory = "TestProject/Assets/Scripts";
 
             py::initialize_interpreter(true, 0, nullptr, false);
-            py::module::import("sys").attr("path").attr("append")(ms_ScriptsDirectory.c_str());
+            py::module::import("sys").attr("path").attr("append")(ms_AppScriptsDirectory.c_str());
 
-            ms_ScriptCoreModule = py::module::import("Atom");
-            ms_EntityClass = ms_ScriptCoreModule.attr("Entity");
-
-            for (const auto& entry : std::filesystem::directory_iterator(ms_ScriptsDirectory))
-            {
-                if (entry.path().extension() == ".py")
-                {
-                    py::module::import(entry.path().stem().string().c_str());
-                }
-            }
-
+            LoadScriptModules();
             LoadScriptClasses();
+
+            ms_FileWatcher = CreateScope<filewatch::FileWatch<std::filesystem::path>>(ms_AppScriptsDirectory, [](const std::filesystem::path& path, const filewatch::Event changeType)
+            {
+                if (changeType == filewatch::Event::modified && !ms_PendingScriptReload)
+                {
+                    ms_PendingScriptReload = true;
+
+                    using namespace std::literals;
+                    std::this_thread::sleep_for(1000ms);
+
+                    Application::Get().SubmitForMainThreadExecution([]()
+                    {
+                        ScriptEngine::ReloadScriptModules();
+                        ScriptEngine::LoadScriptClasses();
+                    });
+                }
+            });
         }
         catch (py::error_already_set& e)
         {
@@ -50,14 +58,13 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ScriptEngine::Shutdown()
     {
-        py::module::import("sys").attr("path").attr("remove")(ms_ScriptsDirectory.c_str());
-
         ms_RunningScene = nullptr;
-        ms_ScriptCoreModule = py::none();
+        ms_ScriptCoreModule.release();
         ms_EntityClass = py::none();
         ms_ScriptClasses.clear();
         ms_ScriptInstances.clear();
         ms_ScriptVariableMaps.clear();
+        ms_AppScriptModules.clear();
 
         py::finalize_interpreter();
     }
@@ -203,6 +210,50 @@ namespace Atom
                 Ref<ScriptClass> scriptClass = CreateRef<ScriptClass>(cls.cast<py::object>());
                 ms_ScriptClasses[scriptClass->GetName()] = scriptClass;
             }
+        }
+        catch (py::error_already_set& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::LoadScriptModules()
+    {
+        try
+        {
+            ms_ScriptCoreModule = py::module::import("Atom");
+            ms_EntityClass = ms_ScriptCoreModule.attr("Entity");
+            ms_AppScriptModules.clear();
+
+            for (const auto& entry : std::filesystem::directory_iterator(ms_AppScriptsDirectory))
+            {
+                if (entry.path().extension() == ".py")
+                {
+                    ms_AppScriptModules.push_back(py::module::import(entry.path().stem().string().c_str()));
+                }
+            }
+        }
+        catch (py::error_already_set& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::ReloadScriptModules()
+    {
+        try
+        {
+            ms_ScriptCoreModule.reload();
+
+            for (auto& script : ms_AppScriptModules)
+                script.reload();
+
+            ms_EntityClass = ms_ScriptCoreModule.attr("Entity");
+
+            ms_PendingScriptReload = false;
+            ATOM_INFO("Scripts reloaded");
         }
         catch (py::error_already_set& e)
         {

@@ -57,6 +57,8 @@ namespace Atom
 
             m_FrameTimer.Reset();
 
+            ExecuteMainThreadQueue();
+
             m_Window->ProcessEvents();
 
             Renderer::BeginFrame();

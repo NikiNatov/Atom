@@ -36,8 +36,24 @@ namespace Atom
         inline Window& GetWindow() { return *m_Window; }
         inline const ApplicationSpecification& GetSpecification() { return m_Specification; }
         inline ImGuiLayer& GetImGuiLayer() { return *m_ImGuiLayer; }
+
+        void SubmitForMainThreadExecution(const std::function<void()>& function)
+        {
+            std::scoped_lock<std::mutex> lock(m_MainThreadQueueMutex);
+            m_MainThreadQueue.push_back(function);
+        }
     private:
         bool OnWindowClosed(WindowClosedEvent& event);
+
+        void ExecuteMainThreadQueue()
+        {
+            std::scoped_lock<std::mutex> lock(m_MainThreadQueueMutex);
+
+            for (auto& fn : m_MainThreadQueue)
+                fn();
+
+            m_MainThreadQueue.clear();
+        }
     public:
         static inline Application& Get() { return *ms_Application; }
     private:
@@ -47,6 +63,9 @@ namespace Atom
         Scope<Window>            m_Window;
         LayerStack               m_LayerStack;
         ImGuiLayer*              m_ImGuiLayer;
+
+        Vector<std::function<void()>> m_MainThreadQueue;
+        std::mutex m_MainThreadQueueMutex;
     private:
         static Application*      ms_Application;
     };
