@@ -278,25 +278,30 @@ namespace Atom
             for (auto& [name, value] : tmpInstance.attr("__dict__").cast<py::dict>())
             {
                 String varName = name.cast<String>();
-                String pythonType = classMembersTypeHints.attr("get")(varName).cast<py::str>();
 
-                ATOM_ENGINE_ASSERT(s_ScriptVariableTypes.find(pythonType) != s_ScriptVariableTypes.end(), "Unsupported type");
-                ScriptVariableType varType = s_ScriptVariableTypes.at(pythonType);
-
-                ScriptVariable scriptVar = ScriptVariable(varName, varType);
-
-                switch (varType)
+                // Variables starting with _ we mark as private and don't include them in the fields
+                if (varName[0] != '_')
                 {
-                    case ScriptVariableType::Int:    scriptVar.SetValue<s32>(value.cast<s32>()); break;
-                    case ScriptVariableType::Float:  scriptVar.SetValue<f32>(value.cast<f32>()); break;
-                    case ScriptVariableType::Bool:   scriptVar.SetValue<bool>(value.cast<bool>()); break;
-                    case ScriptVariableType::Vec2:   scriptVar.SetValue<glm::vec2>(value.cast<glm::vec2>()); break;
-                    case ScriptVariableType::Vec3:   scriptVar.SetValue<glm::vec3>(value.cast<glm::vec3>()); break;
-                    case ScriptVariableType::Vec4:   scriptVar.SetValue<glm::vec4>(value.cast<glm::vec4>()); break;
-                    case ScriptVariableType::Entity: scriptVar.SetValue<wrappers::Entity>(value.cast<wrappers::Entity>()); break;
-                }
+                    String pythonType = classMembersTypeHints.attr("get")(varName).cast<py::str>();
 
-                m_MemberVariables[varName] = scriptVar;
+                    ATOM_ENGINE_ASSERT(s_ScriptVariableTypes.find(pythonType) != s_ScriptVariableTypes.end(), "Unsupported type");
+                    ScriptVariableType varType = s_ScriptVariableTypes.at(pythonType);
+
+                    ScriptVariable scriptVar = ScriptVariable(varName, varType);
+
+                    switch (varType)
+                    {
+                        case ScriptVariableType::Int:    scriptVar.SetValue<s32>(value.cast<s32>()); break;
+                        case ScriptVariableType::Float:  scriptVar.SetValue<f32>(value.cast<f32>()); break;
+                        case ScriptVariableType::Bool:   scriptVar.SetValue<bool>(value.cast<bool>()); break;
+                        case ScriptVariableType::Vec2:   scriptVar.SetValue<glm::vec2>(value.cast<glm::vec2>()); break;
+                        case ScriptVariableType::Vec3:   scriptVar.SetValue<glm::vec3>(value.cast<glm::vec3>()); break;
+                        case ScriptVariableType::Vec4:   scriptVar.SetValue<glm::vec4>(value.cast<glm::vec4>()); break;
+                        case ScriptVariableType::Entity: scriptVar.SetValue<wrappers::Entity>(value.cast<wrappers::Entity>()); break;
+                    }
+
+                    m_MemberVariables[varName] = scriptVar;
+                }
             }
         }
         catch (std::exception& e)
