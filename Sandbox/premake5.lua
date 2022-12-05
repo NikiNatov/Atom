@@ -17,8 +17,8 @@ project "Sandbox"
 	includedirs
 	{
 		"%{wks.location}/Atom/src",
-		"%{wks.location}/Atom/vendor",
 		"%{IncludeDirs.spd_log}",
+		"%{IncludeDirs.imgui}",
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.PIX}",
 		"%{IncludeDirs.entt}",
@@ -43,9 +43,14 @@ project "Sandbox"
 	}
 
 	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
 		runtime "Debug"
 		symbols "on"
+
+		defines
+		{
+			"ATOM_DEBUG",
+			"_DEBUG"
+		}
 
 		postbuildcommands
 		{
@@ -53,9 +58,14 @@ project "Sandbox"
 		}
 
 	filter "configurations:Release"
-		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		defines
+		{
+			"ATOM_RELEASE",
+			"NDEBUG"
+		}
 
 		postbuildcommands
 		{

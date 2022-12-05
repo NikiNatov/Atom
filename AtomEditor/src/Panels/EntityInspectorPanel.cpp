@@ -4,7 +4,7 @@
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Atom
@@ -201,12 +201,16 @@ namespace Atom
 			{
 				Utils::DrawComponent<CameraComponent>("Camera", m_Entity, true, [](auto& component)
 				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Projection");
+					ImGui::NextColumn();
 					auto& camera = component.Camera;
 
 					const char* projTypesStrings[] = { "Perspective", "Orthographic" };
 					const char* currentProjType = projTypesStrings[(s32)camera.GetProjectionType()];
 
-					if (ImGui::BeginCombo("Projection", currentProjType))
+					if (ImGui::BeginCombo("##Projection", currentProjType))
 					{
 						for (u32 i = 0; i < 2; i++)
 						{
@@ -223,6 +227,8 @@ namespace Atom
 
 						ImGui::EndCombo();
 					}
+					ImGui::Columns(1);
+
 					if (camera.GetProjectionType() == SceneCamera::ProjectionType::Perspective)
 					{
 						f32 fov = camera.GetPerspectiveFOV();
@@ -686,6 +692,111 @@ namespace Atom
 				data.ComponentName = "Script";
 				data.ComponentHash = entt::type_id<ScriptComponent>().hash();
 				data.AddComponentFn = [](Entity entity) { entity.AddComponent<ScriptComponent>(); };
+			}
+
+			if (m_Entity.HasComponent<RigidbodyComponent>())
+			{
+				Utils::DrawComponent<RigidbodyComponent>("Rigidbody", m_Entity, true, [](auto& component)
+				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Type");
+					ImGui::NextColumn();
+					const char* bodyTypeStrings[] = { "Static", "Dynamic" };
+					const char* currentBodyType = bodyTypeStrings[(s32)component.Type];
+
+					if (ImGui::BeginCombo("##Type", currentBodyType))
+					{
+						for (u32 i = 0; i < _countof(bodyTypeStrings); i++)
+						{
+							bool isSelected = currentBodyType == bodyTypeStrings[i];
+							if (ImGui::Selectable(bodyTypeStrings[i], isSelected))
+							{
+								currentBodyType = bodyTypeStrings[i];
+								component.Type = (RigidbodyComponent::RigidbodyType)i;
+							}
+
+							if (isSelected)
+								ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndCombo();
+					}
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Mass");
+					ImGui::NextColumn();
+					ImGui::DragFloat("##Mass", &component.Mass, 0.05f, 0.1f, 0.0f, "%.2f");
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Fixed Rotation");
+					ImGui::NextColumn();
+					ImGui::Checkbox("X", &component.FixedRotation[0]);
+					ImGui::SameLine();
+					ImGui::Checkbox("Y", &component.FixedRotation[1]);
+					ImGui::SameLine();
+					ImGui::Checkbox("Z", &component.FixedRotation[2]);
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Rigidbody";
+				data.ComponentHash = entt::type_id<RigidbodyComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<RigidbodyComponent>(); };
+			}
+
+			if (m_Entity.HasComponent<BoxColliderComponent>())
+			{
+				Utils::DrawComponent<BoxColliderComponent>("Box Collider", m_Entity, true, [](auto& component)
+				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Center");
+					ImGui::NextColumn();
+					ImGui::DragFloat3("##Center", glm::value_ptr(component.Center), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Size");
+					ImGui::NextColumn();
+					ImGui::DragFloat3("##Size", glm::value_ptr(component.Size), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Restitution");
+					ImGui::NextColumn();
+					ImGui::DragFloat("##Restitution", &component.Restitution, 0.05f, 0.0f, 1.0f, "%.2f");
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Static Friction");
+					ImGui::NextColumn();
+					ImGui::DragFloat("##StaticFriction", &component.StaticFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::Text("Dynamic Friction");
+					ImGui::NextColumn();
+					ImGui::DragFloat("##DynamicFriction", &component.DynamicFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Box Collider";
+				data.ComponentHash = entt::type_id<BoxColliderComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<BoxColliderComponent>(); };
 			}
 
 			if (!missingComponents.empty())

@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 namespace Atom
 {
@@ -41,11 +41,31 @@ namespace Atom
         }
 
         {
-            Entity sphere = m_Scene->CreateEntity("Player");
-            sphere.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/sphere.gltf"));
+            Entity player = m_Scene->CreateEntity("Player");
+            player.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/cube.gltf"));
 
-            auto& sc = sphere.AddComponent<ScriptComponent>();
+            auto& sc = player.AddComponent<ScriptComponent>();
             sc.ScriptClass = "Player";
+
+            auto& rbc = player.AddComponent<RigidbodyComponent>();
+            rbc.Type = RigidbodyComponent::RigidbodyType::Dynamic;
+
+            auto& bcc = player.AddComponent<BoxColliderComponent>();
+            bcc.Restitution = 1.0f;
+        }
+
+        {
+            Entity ground = m_Scene->CreateEntity("Ground");
+            ground.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/cube.gltf"));
+
+            ground.GetComponent<TransformComponent>().Scale = { 3.0f, 1.0f, 3.0f };
+            ground.GetComponent<TransformComponent>().Translation.y = -3.0f;
+
+            auto& rbc = ground.AddComponent<RigidbodyComponent>();
+            rbc.Type = RigidbodyComponent::RigidbodyType::Static;
+
+            auto& bcc = ground.AddComponent<BoxColliderComponent>();
+            bcc.Size = { 3.0f, 1.0f, 3.0f };
         }
 
         {

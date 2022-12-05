@@ -6,6 +6,7 @@
 #include "Atom/Core/Input.h"
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Scripting/ScriptEngine.h"
+#include "Atom/Physics/PhysicsEngine.h"
 
 namespace Atom
 {
@@ -30,6 +31,7 @@ namespace Atom
 
         Renderer::Initialize();
         ScriptEngine::Initialize();
+        PhysicsEngine::Initialize();
         Input::Initialize(m_Window->GetWindowHandle());
 
         m_ImGuiLayer = new ImGuiLayer();
@@ -46,6 +48,7 @@ namespace Atom
 
         Renderer::Shutdown();
         ScriptEngine::Shutdown();
+        PhysicsEngine::Shutdown();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

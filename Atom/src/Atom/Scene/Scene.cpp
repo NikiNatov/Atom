@@ -4,6 +4,7 @@
 #include "Atom/Scene/Components.h"
 #include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Scripting/ScriptEngine.h"
+#include "Atom/Physics/PhysicsEngine.h"
 
 namespace Atom
 {
@@ -99,18 +100,32 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnStart()
     {
+        // Create script instances
         ScriptEngine::OnSceneStart(this);
 
-        auto view = m_Registry.view<ScriptComponent>();
-        for (auto entity : view)
+        for (auto entity : m_Registry.view<ScriptComponent>())
         {
             ScriptEngine::CreateEntityScript(Entity(entity, this));
+        }
+
+        // Create physics objects
+        PhysicsEngine::OnSceneStart(this);
+
+        for (auto entity : m_Registry.view<RigidbodyComponent>())
+        {
+            PhysicsEngine::CreateRigidbody(Entity(entity, this));
+        }
+
+        for (auto entity : m_Registry.view<BoxColliderComponent>())
+        {
+            PhysicsEngine::CreateBoxCollider(Entity(entity, this));
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnUpdate(Timestep ts)
     {
+        // Update scripts
         auto view = m_Registry.view<ScriptComponent>();
         for (auto entity : view)
         {
@@ -121,12 +136,20 @@ namespace Atom
         {
             ScriptEngine::LateUpdateEntityScript(Entity(entity, this), ts);
         }
+
+        // Simulate physics and update transforms
+        PhysicsEngine::Simulate(ts);
+        for (auto entity : m_Registry.view<RigidbodyComponent>())
+        {
+            PhysicsEngine::UpdateEntity(Entity(entity, this));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnStop()
     {
         ScriptEngine::OnSceneStop();
+        PhysicsEngine::OnSceneStop();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

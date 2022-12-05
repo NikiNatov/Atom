@@ -2,7 +2,7 @@
 #include "ConsolePanel.h"
 #include "../EditorResources.h"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 namespace Atom
 {

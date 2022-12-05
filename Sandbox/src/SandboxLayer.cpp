@@ -1,6 +1,6 @@
 #include "SandboxLayer.h"
 #include <glm/glm.hpp>
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 namespace Atom
 {

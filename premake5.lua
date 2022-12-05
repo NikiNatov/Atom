@@ -47,17 +47,35 @@ IncludeDirs["entt"] = "%{wks.location}/Atom/vendor/entt/include"
 IncludeDirs["pybind11"] = "%{wks.location}/Atom/vendor/pybind11/include"
 IncludeDirs["python"] = pythonIncludePath
 IncludeDirs["filewatch"] = "%{wks.location}/Atom/vendor/filewatch"
+IncludeDirs["physX"] = "%{wks.location}/Atom/vendor/physX/include"
 
 LibDirs = {}
 LibDirs["PIX"] = "%{wks.location}/Atom/vendor/PIX/lib"
 LibDirs["assimp"] = "%{wks.location}/Atom/vendor/assimp/lib"
 LibDirs["python"] = pythonLibPath
+LibDirs["physX"] = "%{wks.location}/Atom/vendor/physX/lib"
 
 Libs = {}
 Libs["PIX"] = "%{LibDirs.PIX}/WinPixEventRuntime.lib"
 Libs["assimp_debug"] = "%{LibDirs.assimp}/Debug/assimp-vc143-mtd.lib"
 Libs["assimp_release"] = "%{LibDirs.assimp}/Release/assimp-vc143-mt.lib"
 Libs["python"] = "%{LibDirs.python}/" .. pythonLib
+Libs["physX_debug"] = "%{LibDirs.physX}/Debug/PhysX_static_64.lib"
+Libs["physX_character_kinematic_debug"] = "%{LibDirs.physX}/Debug/PhysXCharacterKinematic_static_64.lib"
+Libs["physX_common_debug"] = "%{LibDirs.physX}/Debug/PhysXCommon_static_64.lib"
+Libs["physX_cooking_debug"] = "%{LibDirs.physX}/Debug/PhysXCooking_static_64.lib"
+Libs["physX_extensions_debug"] = "%{LibDirs.physX}/Debug/PhysXExtensions_static_64.lib"
+Libs["physX_foundation_debug"] = "%{LibDirs.physX}/Debug/PhysXFoundation_static_64.lib"
+Libs["physX_pvd_debug"] = "%{LibDirs.physX}/Debug/PhysXPvdSDK_static_64.lib"
+Libs["physX_vehicle_debug"] = "%{LibDirs.physX}/Debug/PhysXVehicle_static_64.lib"
+Libs["physX_release"] = "%{LibDirs.physX}/Release/PhysX_static_64.lib"
+Libs["physX_character_kinematic_release"] = "%{LibDirs.physX}/Release/PhysXCharacterKinematic_static_64.lib"
+Libs["physX_common_release"] = "%{LibDirs.physX}/Release/PhysXCommon_static_64.lib"
+Libs["physX_cooking_release"] = "%{LibDirs.physX}/Release/PhysXCooking_static_64.lib"
+Libs["physX_extensions_release"] = "%{LibDirs.physX}/Release/PhysXExtensions_static_64.lib"
+Libs["physX_foundation_release"] = "%{LibDirs.physX}/Release/PhysXFoundation_static_64.lib"
+Libs["physX_pvd_release"] = "%{LibDirs.physX}/Release/PhysXPvdSDK_static_64.lib"
+Libs["physX_vehicle_release"] = "%{LibDirs.physX}/Release/PhysXVehicle_static_64.lib"
 
 workspace "Atom"
 	architecture "x64"

@@ -143,4 +143,28 @@ namespace Atom
 		ScriptComponent(const String& scriptClass)
 			: ScriptClass(scriptClass) {}
 	};
+
+	struct RigidbodyComponent
+	{
+		enum class RigidbodyType { Static, Dynamic };
+
+		RigidbodyType Type = RigidbodyType::Static;
+		f32			  Mass = 1.0f;
+		glm::bvec3	  FixedRotation = { false, false, false };
+
+		RigidbodyComponent() = default;
+		RigidbodyComponent(const RigidbodyComponent& other) = default;
+	};
+
+	struct BoxColliderComponent
+	{
+		glm::vec3 Center = { 0.0f, 0.0f, 0.0f };
+		glm::vec3 Size = { 1.0f, 1.0f, 1.0f };
+		f32		  Restitution = 0.0f;
+		f32		  StaticFriction = 0.5f;
+		f32		  DynamicFriction = 0.5f;
+
+		BoxColliderComponent() = default;
+		BoxColliderComponent(const BoxColliderComponent& other) = default;
+	};
 }

@@ -17,8 +17,8 @@ project "AtomEditor"
 	includedirs
 	{
 		"%{wks.location}/Atom/src",
-		"%{wks.location}/Atom/vendor",
 		"%{IncludeDirs.spd_log}",
+		"%{IncludeDirs.imgui}",
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.PIX}",
 		"%{IncludeDirs.entt}",
@@ -44,9 +44,14 @@ project "AtomEditor"
 	}
 
 	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
 		runtime "Debug"
 		symbols "on"
+
+		defines
+		{
+			"ATOM_DEBUG",
+			"_DEBUG"
+		}
 
 		postbuildcommands
 		{
@@ -57,6 +62,12 @@ project "AtomEditor"
 		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		defines
+		{
+			"ATOM_RELEASE",
+			"NDEBUG"
+		}
 
 		postbuildcommands
 		{

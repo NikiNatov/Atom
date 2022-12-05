@@ -32,7 +32,8 @@ project "Atom"
 		"%{IncludeDirs.entt}",
 		"%{IncludeDirs.pybind11}",
 		"%{IncludeDirs.python}",
-		"%{IncludeDirs.filewatch}"
+		"%{IncludeDirs.filewatch}",
+		"%{IncludeDirs.physX}"
 	}
 
 	libdirs
@@ -40,6 +41,7 @@ project "Atom"
 		"%{LibDirs.PIX}",
 		"%{LibDirs.assimp}",
 		"%{LibDirs.python}",
+		"%{LibDirs.physX}",
 	}
 
 	links
@@ -51,25 +53,57 @@ project "Atom"
 
 	defines
 	{
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"PX_PHYSX_STATIC_LIB",
+	}
+
+	buildoptions
+	{
+		"/bigobj"
 	}
 
 	filter "configurations:Debug"
-		defines "ATOM_DEBUG"
 		runtime "Debug"
 		symbols "on"
 
+		defines
+		{
+			"ATOM_DEBUG",
+			"_DEBUG"
+		}
+
 		links
 		{
-			"%{Libs.assimp_debug}" 
+			"%{Libs.assimp_debug}",
+			"%{Libs.physX_debug}", 
+			"%{Libs.physX_character_kinematic_debug}", 
+			"%{Libs.physX_common_debug}", 
+			"%{Libs.physX_cooking_debug}", 
+			"%{Libs.physX_extensions_debug}", 
+			"%{Libs.physX_foundation_debug}", 
+			"%{Libs.physX_pvd_debug}", 
+			"%{Libs.physX_vehicle_debug}", 
 		}
 
 	filter "configurations:Release"
-		defines "ATOM_RELEASE"
 		runtime "Release"
 		optimize "on"
 
+		defines
+		{
+			"ATOM_RELEASE",
+			"NDEBUG"
+		}
+
 		links
 		{
-			"%{Libs.assimp_release}"  
+			"%{Libs.assimp_release}", 
+			"%{Libs.physX_release}", 
+			"%{Libs.physX_character_kinematic_release}", 
+			"%{Libs.physX_common_release}", 
+			"%{Libs.physX_cooking_release}", 
+			"%{Libs.physX_extensions_release}", 
+			"%{Libs.physX_foundation_release}", 
+			"%{Libs.physX_pvd_release}", 
+			"%{Libs.physX_vehicle_release}", 
 		}
