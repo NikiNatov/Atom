@@ -6,6 +6,7 @@
 #include "Atom/Core/Timer.h"
 
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Scene/ComponentWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Math/MathWrapper.h"
 
 #include <glm/glm.hpp>
@@ -45,6 +46,31 @@ namespace Atom
             .def_readwrite("x", &glm::vec2::x)
             .def_readwrite("y", &glm::vec2::y);
 
+        py::class_<glm::bvec2>(m, "BVec2")
+            .def(py::init<>())
+            .def(py::init<bool>())
+            .def(py::init<bool, bool>())
+            .def(py::init<const glm::bvec2&>())
+            .def(py::self += py::self)
+            .def(py::self -= py::self)
+            .def(py::self *= py::self)
+            .def(py::self /= py::self)
+            .def(py::self + py::self)
+            .def(py::self - py::self)
+            .def(py::self * py::self)
+            .def(py::self / py::self)
+            .def(py::self += bool())
+            .def(py::self -= bool())
+            .def(py::self *= bool())
+            .def(py::self /= bool())
+            .def(py::self + bool())
+            .def(py::self - bool())
+            .def(py::self * bool())
+            .def(py::self / bool())
+            .def(-py::self)
+            .def_readwrite("x", &glm::bvec2::x)
+            .def_readwrite("y", &glm::bvec2::y);
+
         py::class_<glm::vec3>(m, "Vec3")
             .def(py::init<>())
             .def(py::init<f32>())
@@ -70,6 +96,32 @@ namespace Atom
             .def_readwrite("x", &glm::vec3::x)
             .def_readwrite("y", &glm::vec3::y)
             .def_readwrite("z", &glm::vec3::z);
+
+        py::class_<glm::bvec3>(m, "BVec3")
+            .def(py::init<>())
+            .def(py::init<bool>())
+            .def(py::init<bool, bool, bool>())
+            .def(py::init<const glm::bvec3&>())
+            .def(py::self += py::self)
+            .def(py::self -= py::self)
+            .def(py::self *= py::self)
+            .def(py::self /= py::self)
+            .def(py::self + py::self)
+            .def(py::self - py::self)
+            .def(py::self * py::self)
+            .def(py::self / py::self)
+            .def(py::self += bool())
+            .def(py::self -= bool())
+            .def(py::self *= bool())
+            .def(py::self /= bool())
+            .def(py::self + bool())
+            .def(py::self - bool())
+            .def(py::self * bool())
+            .def(py::self / bool())
+            .def(-py::self)
+            .def_readwrite("x", &glm::bvec3::x)
+            .def_readwrite("y", &glm::bvec3::y)
+            .def_readwrite("z", &glm::bvec3::z);
 
         py::class_<glm::vec4>(m, "Vec4")
             .def(py::init<>())
@@ -97,6 +149,33 @@ namespace Atom
             .def_readwrite("y", &glm::vec4::y)
             .def_readwrite("z", &glm::vec4::z)
             .def_readwrite("w", &glm::vec4::y);
+
+        py::class_<glm::bvec4>(m, "BVec4")
+            .def(py::init<>())
+            .def(py::init<bool>())
+            .def(py::init<bool, bool, bool, bool>())
+            .def(py::init<const glm::bvec4&>())
+            .def(py::self += py::self)
+            .def(py::self -= py::self)
+            .def(py::self *= py::self)
+            .def(py::self /= py::self)
+            .def(py::self + py::self)
+            .def(py::self - py::self)
+            .def(py::self * py::self)
+            .def(py::self / py::self)
+            .def(py::self += bool())
+            .def(py::self -= bool())
+            .def(py::self *= bool())
+            .def(py::self /= bool())
+            .def(py::self + bool())
+            .def(py::self - bool())
+            .def(py::self * bool())
+            .def(py::self / bool())
+            .def(-py::self)
+            .def_readwrite("x", &glm::bvec4::x)
+            .def_readwrite("y", &glm::bvec4::y)
+            .def_readwrite("z", &glm::bvec4::z)
+            .def_readwrite("w", &glm::bvec4::y);
 
         py::class_<wrappers::Math>(m, "Math")
             .def_static("abs", &wrappers::Math::Abs<f32>)
@@ -298,48 +377,84 @@ namespace Atom
             .def_property("ortho_near", &Atom::SceneCamera::GetOrthographicNear, &Atom::SceneCamera::SetOrthographicNear)
             .def_property("ortho_far", &Atom::SceneCamera::GetOrthographicFar, &Atom::SceneCamera::SetOrthographicFar);
 
-        py::class_<Atom::TransformComponent>(m, "TransformComponent")
-            .def(py::init<>())
-            .def_readwrite("translation", &Atom::TransformComponent::Translation)
-            .def_readwrite("rotation", &Atom::TransformComponent::Translation)
-            .def_readwrite("scale", &Atom::TransformComponent::Scale);
+        py::enum_<Atom::RigidbodyComponent::RigidbodyType>(m, "RigidbodyType")
+            .value("Static", Atom::RigidbodyComponent::RigidbodyType::Static)
+            .value("Dynamic", Atom::RigidbodyComponent::RigidbodyType::Dynamic);
 
-        py::class_<Atom::CameraComponent>(m, "CameraComponent")
+        py::class_<wrappers::TransformComponent>(m, "TransformComponent")
             .def(py::init<>())
-            .def_readwrite("camera", &Atom::CameraComponent::Camera)
-            .def_readwrite("fixed_aspect_ratio", &Atom::CameraComponent::FixedAspectRatio)
-            .def_readwrite("is_primary_camera", &Atom::CameraComponent::Primary);
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def_property("translation", &wrappers::TransformComponent::GetTranslation, &wrappers::TransformComponent::SetTranslation)
+            .def_property("rotation", &wrappers::TransformComponent::GetRotation, &wrappers::TransformComponent::SetRotation)
+            .def_property("scale", &wrappers::TransformComponent::GetScale, &wrappers::TransformComponent::SetScale);
 
-        py::class_<Atom::DirectionalLightComponent>(m, "DirectionalLightComponent")
+        py::class_<wrappers::CameraComponent>(m, "CameraComponent")
             .def(py::init<>())
-            .def_readwrite("color", &Atom::DirectionalLightComponent::Color)
-            .def_readwrite("intensity", &Atom::DirectionalLightComponent::Intensity);
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def_property("camera", &wrappers::CameraComponent::GetCamera, &wrappers::CameraComponent::SetCamera)
+            .def_property("fixed_aspect_ratio", &wrappers::CameraComponent::GetFixedAspectRatio, &wrappers::CameraComponent::SetFixedAspectRatio)
+            .def_property("is_primary_camera", &wrappers::CameraComponent::GetIsPrimaryCamera, &wrappers::CameraComponent::SetIsPrimaryCamera);
 
-        py::class_<Atom::PointLightComponent>(m, "PointLightComponent")
+        py::class_<wrappers::DirectionalLightComponent>(m, "DirectionalLightComponent")
             .def(py::init<>())
-            .def_readwrite("color", &Atom::PointLightComponent::Color)
-            .def_readwrite("intensity", &Atom::PointLightComponent::Intensity)
-            .def_readwrite("attenuation_factors", &Atom::PointLightComponent::AttenuationFactors);
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def_property("color", &wrappers::DirectionalLightComponent::GetColor, &wrappers::DirectionalLightComponent::SetColor)
+            .def_property("intensity", &wrappers::DirectionalLightComponent::GetIntensity, &wrappers::DirectionalLightComponent::SetIntensity);
 
-        py::class_<Atom::SpotLightComponent>(m, "SpotLightComponent")
+        py::class_<wrappers::PointLightComponent>(m, "PointLightComponent")
             .def(py::init<>())
-            .def_readwrite("color", &Atom::SpotLightComponent::Color)
-            .def_readwrite("intensity", &Atom::SpotLightComponent::Intensity)
-            .def_readwrite("direction", &Atom::SpotLightComponent::Direction)
-            .def_readwrite("cone_angle", &Atom::SpotLightComponent::ConeAngle)
-            .def_readwrite("attenuation_factors", &Atom::SpotLightComponent::AttenuationFactors);
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def_property("color", &wrappers::PointLightComponent::GetColor, &wrappers::PointLightComponent::SetColor)
+            .def_property("intensity", &wrappers::PointLightComponent::GetIntensity, &wrappers::PointLightComponent::SetIntensity)
+            .def_property("attenuation_factors", &wrappers::PointLightComponent::GetAttenuation, &wrappers::PointLightComponent::SetAttenuation);
+
+        py::class_<wrappers::SpotLightComponent>(m, "SpotLightComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def_property("color", &wrappers::SpotLightComponent::GetColor, &wrappers::SpotLightComponent::SetColor)
+            .def_property("intensity", &wrappers::SpotLightComponent::GetIntensity, &wrappers::SpotLightComponent::GetIntensity)
+            .def_property("direction", &wrappers::SpotLightComponent::GetDirection, &wrappers::SpotLightComponent::GetDirection)
+            .def_property("cone_angle", &wrappers::SpotLightComponent::GetConeAngle, &wrappers::SpotLightComponent::GetConeAngle)
+            .def_property("attenuation_factors", &wrappers::SpotLightComponent::GetAttenuation, &wrappers::SpotLightComponent::SetAttenuation);
+
+        py::class_<wrappers::RigidbodyComponent>(m, "RigidbodyComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::TransformComponent::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::TransformComponent::IsValid)
+            .def("add_force", &wrappers::RigidbodyComponent::AddForce)
+            .def("add_impulse", &wrappers::RigidbodyComponent::AddImpulse)
+            .def_property("type", &wrappers::RigidbodyComponent::GetType, &wrappers::RigidbodyComponent::SetType)
+            .def_property("mass", &wrappers::RigidbodyComponent::GetMass, &wrappers::RigidbodyComponent::SetMass)
+            .def_property("fixed_rotation", &wrappers::RigidbodyComponent::GetFixedRotation, &wrappers::RigidbodyComponent::SetFixedRotation);
 
         py::class_<wrappers::Entity>(m, "Entity")
             .def(py::init<>())
             .def(py::init<u64>())
-            .def("has_camera_component", &wrappers::Entity::HasComponent<CameraComponent>)
-            .def("has_dir_light_component", &wrappers::Entity::HasComponent<DirectionalLightComponent>)
-            .def("has_point_light_component", &wrappers::Entity::HasComponent<PointLightComponent>)
-            .def("has_spot_light_component", &wrappers::Entity::HasComponent<SpotLightComponent>)
-            .def("get_camera_component", &wrappers::Entity::GetComponent<CameraComponent>, py::return_value_policy::reference)
-            .def("get_dir_light_component", &wrappers::Entity::GetComponent<DirectionalLightComponent>, py::return_value_policy::reference)
-            .def("get_point_light_component", &wrappers::Entity::GetComponent<PointLightComponent>, py::return_value_policy::reference)
-            .def("get_spot_light_component", &wrappers::Entity::GetComponent<SpotLightComponent>, py::return_value_policy::reference)
+            .def("add_camera_component", &wrappers::Entity::AddComponent<wrappers::CameraComponent>)
+            .def("add_dir_light_component", &wrappers::Entity::AddComponent<wrappers::DirectionalLightComponent>)
+            .def("add_point_light_component", &wrappers::Entity::AddComponent<wrappers::PointLightComponent>)
+            .def("add_spot_light_component", &wrappers::Entity::AddComponent<wrappers::SpotLightComponent>)
+            .def("add_rigidbody_component", &wrappers::Entity::AddComponent<wrappers::RigidbodyComponent>)
+            .def("has_camera_component", &wrappers::Entity::HasComponent<wrappers::CameraComponent>)
+            .def("has_dir_light_component", &wrappers::Entity::HasComponent<wrappers::DirectionalLightComponent>)
+            .def("has_point_light_component", &wrappers::Entity::HasComponent<wrappers::PointLightComponent>)
+            .def("has_spot_light_component", &wrappers::Entity::HasComponent<wrappers::SpotLightComponent>)
+            .def("get_camera_component", &wrappers::Entity::GetComponent<wrappers::CameraComponent>)
+            .def("get_dir_light_component", &wrappers::Entity::GetComponent<wrappers::DirectionalLightComponent>)
+            .def("get_point_light_component", &wrappers::Entity::GetComponent<wrappers::PointLightComponent>)
+            .def("get_spot_light_component", &wrappers::Entity::GetComponent<wrappers::SpotLightComponent>)
+            .def("get_rigidbody_component", &wrappers::Entity::GetComponent<wrappers::RigidbodyComponent>)
             .def("get_script", &wrappers::Entity::GetScriptInstance)
             .def("is_valid", &wrappers::Entity::IsValid)
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)

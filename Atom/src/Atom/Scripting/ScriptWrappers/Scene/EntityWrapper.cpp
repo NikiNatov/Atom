@@ -1,14 +1,41 @@
 #include "atompch.h"
 #include "EntityWrapper.h"
 
+#include "Atom/Scripting/ScriptWrappers/Scene/ComponentWrapper.h"
+
+#include <typeinfo>
+
 namespace Atom
 {
     namespace ScriptWrappers
     {
+        static HashMap<u64, std::function<bool(Atom::Entity)>> s_HasComponentFunctions = {
+
+            { typeid(ScriptWrappers::TransformComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::TransformComponent>(); } },
+            { typeid(ScriptWrappers::CameraComponent).hash_code(),           [](Atom::Entity e) { return e.HasComponent<Atom::CameraComponent>(); } },
+            { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { return e.HasComponent<Atom::DirectionalLightComponent>(); } },
+            { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { return e.HasComponent<Atom::PointLightComponent>(); } },
+            { typeid(ScriptWrappers::SpotLightComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::SpotLightComponent>(); } },
+            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::RigidbodyComponent>(); } }
+
+        };
+
+        static HashMap<u64, std::function<void(Atom::Entity)>> s_AddComponentFunctions = {
+
+            { typeid(ScriptWrappers::TransformComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::TransformComponent>(); } },
+            { typeid(ScriptWrappers::CameraComponent).hash_code(),           [](Atom::Entity e) { e.AddComponent<Atom::CameraComponent>(); } },
+            { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { e.AddComponent<Atom::DirectionalLightComponent>(); } },
+            { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { e.AddComponent<Atom::PointLightComponent>(); } },
+            { typeid(ScriptWrappers::SpotLightComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::SpotLightComponent>(); } },
+            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::RigidbodyComponent>(); } }
+
+        };
+
         // -----------------------------------------------------------------------------------------------------------------------------
         Entity::Entity()
             : m_UUID(0)
         {
+            typeid(int).hash_code();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -22,7 +49,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            entity.GetComponent<TagComponent>().Tag = tag;
+            entity.GetComponent<Atom::TagComponent>().Tag = tag;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -30,7 +57,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            entity.GetComponent<TransformComponent>().Translation = translation;
+            entity.GetComponent<Atom::TransformComponent>().Translation = translation;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -38,7 +65,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            entity.GetComponent<TransformComponent>().Rotation = rotation;
+            entity.GetComponent<Atom::TransformComponent>().Rotation = rotation;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -46,7 +73,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            entity.GetComponent<TransformComponent>().Scale = scale;
+            entity.GetComponent<Atom::TransformComponent>().Scale = scale;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -60,7 +87,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<TagComponent>().Tag;
+            return entity.GetComponent<Atom::TagComponent>().Tag;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -68,7 +95,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<TransformComponent>().Translation;
+            return entity.GetComponent<Atom::TransformComponent>().Translation;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -76,7 +103,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<TransformComponent>().Rotation;
+            return entity.GetComponent<Atom::TransformComponent>().Rotation;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -84,7 +111,7 @@ namespace Atom
         {
             Scene* scene = ScriptEngine::GetRunningScene();
             Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<TransformComponent>().Scale;
+            return entity.GetComponent<Atom::TransformComponent>().Scale;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -101,5 +128,58 @@ namespace Atom
             Ref<ScriptInstance> instance = ScriptEngine::GetScriptInstance(UUID(m_UUID));
             return instance->GetPythonInstance();
         }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        template<typename T>
+        T Entity::AddComponent()
+        {
+            if (HasComponent<T>())
+                return GetComponent<T>();
+
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            s_AddComponentFunctions[typeid(T).hash_code()](entity);
+            return T(*this);
+        }
+
+        template TransformComponent Entity::AddComponent<TransformComponent>();
+        template CameraComponent Entity::AddComponent<CameraComponent>();
+        template DirectionalLightComponent Entity::AddComponent<DirectionalLightComponent>();
+        template PointLightComponent Entity::AddComponent<PointLightComponent>();
+        template SpotLightComponent Entity::AddComponent<SpotLightComponent>();
+        template RigidbodyComponent Entity::AddComponent<RigidbodyComponent>();
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        template<typename T>
+        bool Entity::HasComponent() const
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
+            return s_HasComponentFunctions[typeid(T).hash_code()](entity);
+        }
+
+        template bool Entity::HasComponent<TransformComponent>() const;
+        template bool Entity::HasComponent<CameraComponent>() const;
+        template bool Entity::HasComponent<DirectionalLightComponent>() const;
+        template bool Entity::HasComponent<PointLightComponent>() const;
+        template bool Entity::HasComponent<SpotLightComponent>() const;
+        template bool Entity::HasComponent<RigidbodyComponent>() const;
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        template<typename T>
+        T Entity::GetComponent() const
+        {
+            if (!HasComponent<T>())
+                return T();
+
+            return T(*this);
+        }
+
+        template TransformComponent Entity::GetComponent<TransformComponent>() const;
+        template CameraComponent Entity::GetComponent<CameraComponent>() const;
+        template DirectionalLightComponent Entity::GetComponent<DirectionalLightComponent>() const;
+        template PointLightComponent Entity::GetComponent<PointLightComponent>() const;
+        template SpotLightComponent Entity::GetComponent<SpotLightComponent>() const;
+        template RigidbodyComponent Entity::GetComponent<RigidbodyComponent>() const;
     }
 }

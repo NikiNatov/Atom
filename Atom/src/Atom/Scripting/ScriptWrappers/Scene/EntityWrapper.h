@@ -29,20 +29,13 @@ namespace Atom
             pybind11::object GetScriptInstance() const;
 
             template<typename T>
-            bool HasComponent() const
-            {
-                Scene* scene = ScriptEngine::GetRunningScene();
-                Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-                return entity.HasComponent<T>();
-            }
+            T AddComponent();
 
             template<typename T>
-            T& GetComponent() const
-            {
-                Scene* scene = ScriptEngine::GetRunningScene();
-                Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-                return entity.GetComponent<T>();
-            }
+            bool HasComponent() const;
+
+            template<typename T>
+            T GetComponent() const;
 
             inline bool IsValid() const { return m_UUID != 0; }
         public:
