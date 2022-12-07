@@ -4,7 +4,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <ImGuizmo.h>
 
 namespace Atom
 {
@@ -107,6 +109,7 @@ namespace Atom
         m_Renderer->Initialize();
 
         m_SceneHierarchyPanel.SetScene(m_Scene);
+        m_GuizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -231,12 +234,16 @@ namespace Atom
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
 
-        m_EntityInspectorPanel.SetEntity(m_SceneHierarchyPanel.GetSelectedEntity());
+        Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
+        m_EntityInspectorPanel.SetEntity(selectedEntity);
         m_EntityInspectorPanel.OnImGuiRender();
 
+        // Render scene viewport
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport");
         ImVec2 panelSize = ImGui::GetContentRegionAvail();
+
+        Application::Get().GetImGuiLayer().SetBlockEvents(!ImGui::IsWindowFocused() && !ImGui::IsWindowHovered());
 
         if (m_ViewportSize.x != panelSize.x || m_ViewportSize.y != panelSize.y)
         {
@@ -247,6 +254,58 @@ namespace Atom
         Ref<RenderTexture2D> finalImage = m_Renderer->GetFinalImage();
         ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
+        // Render guizmos
+        if (selectedEntity && m_Scene->GetSceneState() == SceneState::Edit && m_GuizmoOperation != -1)
+        {
+            ImGuizmo::SetOrthographic(false);
+            ImGuizmo::SetDrawlist();
+            ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
+
+            auto& viewMatrix = m_Scene->GetEditorCamera().GetViewMatrix();
+            auto& projMatrix = m_Scene->GetEditorCamera().GetProjection();
+
+            f32 snapValue = m_GuizmoOperation == ImGuizmo::OPERATION::ROTATE ? 45.0f : 0.5f;
+
+            f32 snap[3] = { snapValue, snapValue, snapValue };
+            m_GuizmoSnap = Input::IsKeyPressed(Key::LCtrl);
+
+            auto& tc = selectedEntity.GetComponent<TransformComponent>();
+            glm::mat4 entityTransform = tc.GetTransform();
+            glm::mat4 entityWorldTransform = entityTransform;
+            glm::mat4 parentWorldTransform = glm::mat4(1.0f);
+
+            if (selectedEntity.GetComponent<SceneHierarchyComponent>().Parent)
+            {
+                Entity currentParent = selectedEntity.GetComponent<SceneHierarchyComponent>().Parent;
+                while (currentParent)
+                {
+                    glm::mat4 parentTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
+                    entityWorldTransform = parentTransform * entityWorldTransform;
+                    currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                }
+
+                parentWorldTransform = entityWorldTransform * glm::inverse(entityTransform);
+            }
+
+            ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix), 
+                (ImGuizmo::OPERATION)m_GuizmoOperation, ImGuizmo::LOCAL, glm::value_ptr(entityWorldTransform), NULL, m_GuizmoSnap ? &snap[0] : NULL);
+
+            entityTransform = glm::inverse(parentWorldTransform) * entityWorldTransform;
+
+            if (ImGuizmo::IsUsing())
+            {
+                glm::vec3 translation, rotation, scale;
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(entityTransform), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
+
+                glm::vec3 deltaRotation = glm::radians(rotation) - tc.Rotation;
+
+                tc.Translation = translation;
+                //tc.Rotation = glm::radians(rotation);
+                tc.Rotation += deltaRotation;
+                tc.Scale = scale;
+            }
+        }
+
         ImGui::End();
         ImGui::PopStyleVar();
 
@@ -256,5 +315,38 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnEvent(Event& event)
     {
+        if (m_Scene->GetSceneState() != SceneState::Running && !ImGuizmo::IsUsing())
+            m_Scene->GetEditorCamera().OnEvent(event);
+
+        EventDispatcher dispatcher(event);
+        dispatcher.Dispatch<KeyPressedEvent>(ATOM_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool EditorLayer::OnKeyPressed(KeyPressedEvent& e)
+    {
+        if (e.GetRepeatCount() > 0)
+            return false;
+
+        bool control = Input::IsKeyPressed(Key::LCtrl) || Input::IsKeyPressed(Key::RCtrl);
+        bool shift = Input::IsKeyPressed(Key::LShift) || Input::IsKeyPressed(Key::RShift);
+
+        switch (e.GetKeyCode())
+        {
+            case Key::Q:
+                m_GuizmoOperation = -1;
+                break;
+            case Key::T:
+                m_GuizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+                break;
+            case Key::R:
+                m_GuizmoOperation = ImGuizmo::OPERATION::ROTATE;
+                break;
+            case Key::E:
+                m_GuizmoOperation = ImGuizmo::OPERATION::SCALE;
+                break;
+        }
+
+        return true;
     }
 }

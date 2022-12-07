@@ -48,6 +48,7 @@ IncludeDirs["pybind11"] = "%{wks.location}/Atom/vendor/pybind11/include"
 IncludeDirs["python"] = pythonIncludePath
 IncludeDirs["filewatch"] = "%{wks.location}/Atom/vendor/filewatch"
 IncludeDirs["physX"] = "%{wks.location}/Atom/vendor/physX/include"
+IncludeDirs["imguizmo"] = "%{wks.location}/Atom/vendor/imguizmo"
 
 LibDirs = {}
 LibDirs["PIX"] = "%{wks.location}/Atom/vendor/PIX/lib"

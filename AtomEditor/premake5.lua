@@ -25,6 +25,7 @@ project "AtomEditor"
 		"%{IncludeDirs.pybind11}",
 		"%{IncludeDirs.python}",
 		"%{IncludeDirs.filewatch}",
+		"%{IncludeDirs.imguizmo}"
 	}
 
 	libdirs

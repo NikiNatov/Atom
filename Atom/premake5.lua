@@ -18,6 +18,8 @@ project "Atom"
 		"src/**.h",
 		"vendor/stb_image/**.h",
 		"vendor/stb_image/**.cpp",
+		"vendor/imguizmo/**.h",
+		"vendor/imguizmo/**.cpp",
 	}
 
 	includedirs
@@ -33,7 +35,8 @@ project "Atom"
 		"%{IncludeDirs.pybind11}",
 		"%{IncludeDirs.python}",
 		"%{IncludeDirs.filewatch}",
-		"%{IncludeDirs.physX}"
+		"%{IncludeDirs.physX}",
+		"%{IncludeDirs.imguizmo}"
 	}
 
 	libdirs

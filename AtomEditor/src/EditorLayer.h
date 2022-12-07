@@ -24,10 +24,15 @@ namespace Atom
 
         static EditorLayer& Get() { return *ms_Instance; }
     private:
+        bool OnKeyPressed(KeyPressedEvent& e);
+    private:
         Ref<Scene>           m_Scene = nullptr;
         Ref<SceneRenderer>   m_Renderer = nullptr;
         glm::vec2            m_ViewportSize = { 0.0f, 0.0f };
         bool                 m_NeedsResize = false;
+        Entity               m_SelectedEntity = {};
+        s32                  m_GuizmoOperation = -1;
+        bool                 m_GuizmoSnap = false;
         SceneHierarchyPanel  m_SceneHierarchyPanel;
         EntityInspectorPanel m_EntityInspectorPanel;
     private:
