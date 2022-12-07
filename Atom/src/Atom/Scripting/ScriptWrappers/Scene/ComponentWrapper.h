@@ -112,5 +112,23 @@ namespace Atom
             void AddForce(const glm::vec3& force, bool awake = true);
             void AddImpulse(const glm::vec3& impulse, bool awake = true);
         };
+
+        class BoxColliderComponent : public Component
+        {
+        public:
+            BoxColliderComponent() = default;
+            BoxColliderComponent(Entity entity);
+
+            void SetCenter(const glm::vec3& center);
+            void SetSize(const glm::vec3& size);
+            void SetRestitution(f32 restitution);
+            void SetStaticFriction(f32 staticFriction);
+            void SetDynamicFriction(f32 dynamicFriction);
+            const glm::vec3& GetCenter();
+            const glm::vec3& GetSize();
+            f32 GetRestitution();
+            f32 GetStaticFriction();
+            f32 GetDynamicFriction();
+        };
     }
 }

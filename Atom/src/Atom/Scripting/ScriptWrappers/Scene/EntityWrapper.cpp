@@ -16,7 +16,8 @@ namespace Atom
             { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { return e.HasComponent<Atom::DirectionalLightComponent>(); } },
             { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { return e.HasComponent<Atom::PointLightComponent>(); } },
             { typeid(ScriptWrappers::SpotLightComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::SpotLightComponent>(); } },
-            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::RigidbodyComponent>(); } }
+            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::RigidbodyComponent>(); } },
+            { typeid(ScriptWrappers::BoxColliderComponent).hash_code(),      [](Atom::Entity e) { return e.HasComponent<Atom::BoxColliderComponent>(); } },
 
         };
 
@@ -27,7 +28,8 @@ namespace Atom
             { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { e.AddComponent<Atom::DirectionalLightComponent>(); } },
             { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { e.AddComponent<Atom::PointLightComponent>(); } },
             { typeid(ScriptWrappers::SpotLightComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::SpotLightComponent>(); } },
-            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::RigidbodyComponent>(); } }
+            { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::RigidbodyComponent>(); } },
+            { typeid(ScriptWrappers::BoxColliderComponent).hash_code(),      [](Atom::Entity e) { e.AddComponent<Atom::BoxColliderComponent>(); } },
 
         };
 
@@ -140,6 +142,7 @@ namespace Atom
         template PointLightComponent Entity::AddComponent<PointLightComponent>();
         template SpotLightComponent Entity::AddComponent<SpotLightComponent>();
         template RigidbodyComponent Entity::AddComponent<RigidbodyComponent>();
+        template BoxColliderComponent Entity::AddComponent<BoxColliderComponent>();
 
         // -----------------------------------------------------------------------------------------------------------------------------
         template<typename T>
@@ -156,6 +159,7 @@ namespace Atom
         template bool Entity::HasComponent<PointLightComponent>() const;
         template bool Entity::HasComponent<SpotLightComponent>() const;
         template bool Entity::HasComponent<RigidbodyComponent>() const;
+        template bool Entity::HasComponent<BoxColliderComponent>() const;
 
         // -----------------------------------------------------------------------------------------------------------------------------
         template<typename T>
@@ -173,6 +177,7 @@ namespace Atom
         template PointLightComponent Entity::GetComponent<PointLightComponent>() const;
         template SpotLightComponent Entity::GetComponent<SpotLightComponent>() const;
         template RigidbodyComponent Entity::GetComponent<RigidbodyComponent>() const;
+        template BoxColliderComponent Entity::GetComponent<BoxColliderComponent>() const;
 
         // -----------------------------------------------------------------------------------------------------------------------------
         Entity Entity::FindEntityByName(const String& name)
