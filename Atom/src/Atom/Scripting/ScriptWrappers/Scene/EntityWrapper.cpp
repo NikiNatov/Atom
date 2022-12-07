@@ -115,14 +115,6 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Entity Entity::FindEntityByName(const String& name)
-        {
-            Scene* scene = ScriptEngine::GetRunningScene();
-            Atom::Entity entity = scene->FindEntityByName(name);
-            return Entity(entity ? entity.GetUUID() : 0);
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
         pybind11::object Entity::GetScriptInstance() const
         {
             Ref<ScriptInstance> instance = ScriptEngine::GetScriptInstance(UUID(m_UUID));
@@ -181,5 +173,21 @@ namespace Atom
         template PointLightComponent Entity::GetComponent<PointLightComponent>() const;
         template SpotLightComponent Entity::GetComponent<SpotLightComponent>() const;
         template RigidbodyComponent Entity::GetComponent<RigidbodyComponent>() const;
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        Entity Entity::FindEntityByName(const String& name)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->FindEntityByName(name);
+            return Entity(entity ? entity.GetUUID() : 0);
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        Entity Entity::CreateEntity(const String& name)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            Atom::Entity entity = scene->CreateEntity(name);
+            return Entity(entity.GetUUID());
+        }
     }
 }

@@ -40,6 +40,7 @@ namespace Atom
             inline bool IsValid() const { return m_UUID != 0; }
         public:
             static Entity FindEntityByName(const String& name);
+            static Entity CreateEntity(const String& name);
 
         private:
             u64 m_UUID;

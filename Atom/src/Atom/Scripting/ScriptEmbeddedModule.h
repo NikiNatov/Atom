@@ -458,6 +458,7 @@ namespace Atom
             .def("get_script", &wrappers::Entity::GetScriptInstance)
             .def("is_valid", &wrappers::Entity::IsValid)
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)
+            .def_static("create_entity", &wrappers::Entity::CreateEntity)
             .def_property_readonly("id", &wrappers::Entity::GetUUID)
             .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag)
             .def_property("translation", &wrappers::Entity::GetTranslation, &wrappers::Entity::SetTranslation)
