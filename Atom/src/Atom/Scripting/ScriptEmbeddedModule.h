@@ -436,7 +436,8 @@ namespace Atom
             .def("add_impulse", &wrappers::RigidbodyComponent::AddImpulse)
             .def_property("type", &wrappers::RigidbodyComponent::GetType, &wrappers::RigidbodyComponent::SetType)
             .def_property("mass", &wrappers::RigidbodyComponent::GetMass, &wrappers::RigidbodyComponent::SetMass)
-            .def_property("fixed_rotation", &wrappers::RigidbodyComponent::GetFixedRotation, &wrappers::RigidbodyComponent::SetFixedRotation);
+            .def_property("fixed_rotation", &wrappers::RigidbodyComponent::GetFixedRotation, &wrappers::RigidbodyComponent::SetFixedRotation)
+            .def_property("velocity", &wrappers::RigidbodyComponent::GetVelocity, &wrappers::RigidbodyComponent::SetVelocity);
 
         py::class_<wrappers::BoxColliderComponent>(m, "BoxColliderComponent")
             .def(py::init<>())

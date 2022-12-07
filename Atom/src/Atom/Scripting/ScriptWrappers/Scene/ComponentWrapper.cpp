@@ -100,6 +100,18 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void RigidbodyComponent::SetVelocity(const glm::vec3& velocity)
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            if (physx::PxRigidDynamic* rb = actor->is<physx::PxRigidDynamic>())
+            {
+                rb->setLinearVelocity(physx::PxVec3(velocity.x, velocity.y, velocity.z));
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Atom::RigidbodyComponent::RigidbodyType RigidbodyComponent::GetType()
     {
         Scene* scene = ScriptEngine::GetRunningScene();
@@ -121,6 +133,19 @@ namespace Atom::ScriptWrappers
         Scene* scene = ScriptEngine::GetRunningScene();
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         return entity.GetComponent<Atom::RigidbodyComponent>().FixedRotation;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetVelocity()
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            if (physx::PxRigidDynamic* rb = actor->is<physx::PxRigidDynamic>())
+            {
+                physx::PxVec3 velocity = rb->getLinearVelocity();
+                return { velocity.x, velocity.y, velocity.z };
+            }
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

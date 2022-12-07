@@ -16,17 +16,14 @@ class Player(Atom.Entity):
         velocity = Atom.Vec3(0.0)
 
         if Atom.Input.is_key_pressed(Atom.Key.W):
-            velocity.y = 1.0
+            velocity.z = -1.0
         elif Atom.Input.is_key_pressed(Atom.Key.S):
-            velocity.y = -1.0
+            velocity.z = 1.0
 
         if Atom.Input.is_key_pressed(Atom.Key.A):
             velocity.x = -1.0
         elif Atom.Input.is_key_pressed(Atom.Key.D):
             velocity.x = 1.0
 
-        if Atom.Input.is_key_pressed(Atom.Key.Q):
-            self.get_rigidbody_component().add_impulse(Atom.Vec3(0.0, 0.0, -1.0), True)
-
-        velocity = Atom.Vec3(velocity.x * self.MoveSpeed, velocity.y * self.MoveSpeed, velocity.z * self.MoveSpeed)
-        self.translation += velocity * ts.get_seconds()
+        velocity = Atom.Vec3(velocity.x * self.MoveSpeed, self.get_rigidbody_component().velocity.y, velocity.z * self.MoveSpeed)
+        self.get_rigidbody_component().velocity = velocity

@@ -105,9 +105,11 @@ namespace Atom
             void SetType(Atom::RigidbodyComponent::RigidbodyType type);
             void SetMass(f32 mass);
             void SetFixedRotation(const glm::bvec3& fixedRotation);
+            void SetVelocity(const glm::vec3& velocity);
             Atom::RigidbodyComponent::RigidbodyType GetType();
             f32 GetMass();
             const glm::bvec3& GetFixedRotation();
+            glm::vec3 GetVelocity();
 
             void AddForce(const glm::vec3& force, bool awake = true);
             void AddImpulse(const glm::vec3& impulse, bool awake = true);
