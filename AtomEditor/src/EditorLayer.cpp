@@ -377,9 +377,12 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::SaveScene()
     {
-        const std::filesystem::path& path = "TestProject/Assets/Scenes/TestScene.scene";
-        SceneSerializer serializer(m_Scene);
-        serializer.Serialize(path);
+        const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.scene)\0*.scene\0");
+        if (!path.empty())
+        {
+            SceneSerializer serializer(m_Scene);
+            serializer.Serialize(path);
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -387,20 +390,22 @@ namespace Atom
     {
         m_Scene = CreateRef<Scene>();
         m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
-        //m_Scene->GetEditorCamera().SetPerspective(65.0f, m_ViewportSize.x / m_ViewportSize.y);
         m_SceneHierarchyPanel.SetScene(m_Scene);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OpenScene()
     {
-        const std::filesystem::path& path = "TestProject/Assets/Scenes/TestScene.scene";
-        m_Scene = CreateRef<Scene>();
-        m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
-        //m_Scene->GetCamera().SetProjection(65.0f, m_ViewportSize.x / m_ViewportSize.y);
-        m_SceneHierarchyPanel.SetScene(m_Scene);
+        const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.scene)\0*.scene\0");
 
-        SceneSerializer serializer(m_Scene);
-        serializer.Deserialize(path);
+        if (!path.empty())
+        {
+            m_Scene = CreateRef<Scene>();
+            m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+            m_SceneHierarchyPanel.SetScene(m_Scene);
+
+            SceneSerializer serializer(m_Scene);
+            serializer.Deserialize(path);
+        }
     }
 }
