@@ -24,10 +24,10 @@ namespace Atom
 
 	struct SceneHierarchyComponent
 	{
-		Entity Parent{};
-		Entity FirstChild{};
-		Entity PreviousSibling{};
-		Entity NextSibling{};
+		UUID Parent = UUID(0);
+		UUID FirstChild = UUID(0);
+		UUID PreviousSibling = UUID(0);
+		UUID NextSibling = UUID(0);
 
 		SceneHierarchyComponent() = default;
 		SceneHierarchyComponent(const SceneHierarchyComponent& other) = default;

@@ -43,3 +43,4 @@
 #include "Atom/Scene/Entity.h"
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/SceneRenderer.h"
+#include "Atom/Scene/SceneSerializer.h"

@@ -183,14 +183,17 @@ namespace Atom
             {
                 if (ImGui::MenuItem("New", "Ctrl+N"))
                 {
+                    NewScene();
                 }
 
                 if (ImGui::MenuItem("Open Scene...", "Ctrl+O"))
                 {
+                    OpenScene();
                 }
 
                 if (ImGui::MenuItem("Save As...", "Ctrl+S"))
                 {
+                    SaveScene();
                 }
 
                 if (ImGui::MenuItem("Exit"))
@@ -276,12 +279,12 @@ namespace Atom
 
             if (selectedEntity.GetComponent<SceneHierarchyComponent>().Parent)
             {
-                Entity currentParent = selectedEntity.GetComponent<SceneHierarchyComponent>().Parent;
+                Entity currentParent = m_Scene->FindEntityByUUID(selectedEntity.GetComponent<SceneHierarchyComponent>().Parent);
                 while (currentParent)
                 {
                     glm::mat4 parentTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
                     entityWorldTransform = parentTransform * entityWorldTransform;
-                    currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                    currentParent = m_Scene->FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
                 }
 
                 parentWorldTransform = entityWorldTransform * glm::inverse(entityTransform);
@@ -333,6 +336,27 @@ namespace Atom
 
         switch (e.GetKeyCode())
         {
+            case Key::S:
+            {
+                if (control)
+                    SaveScene();
+
+                break;
+            }
+            case Key::N:
+            {
+                if (control)
+                    NewScene();
+
+                break;
+            }
+            case Key::O:
+            {
+                if (control)
+                    OpenScene();
+
+                break;
+            }
             case Key::Q:
                 m_GuizmoOperation = -1;
                 break;
@@ -348,5 +372,35 @@ namespace Atom
         }
 
         return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::SaveScene()
+    {
+        const std::filesystem::path& path = "TestProject/Assets/Scenes/TestScene.scene";
+        SceneSerializer serializer(m_Scene);
+        serializer.Serialize(path);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::NewScene()
+    {
+        m_Scene = CreateRef<Scene>();
+        m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+        //m_Scene->GetEditorCamera().SetPerspective(65.0f, m_ViewportSize.x / m_ViewportSize.y);
+        m_SceneHierarchyPanel.SetScene(m_Scene);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::OpenScene()
+    {
+        const std::filesystem::path& path = "TestProject/Assets/Scenes/TestScene.scene";
+        m_Scene = CreateRef<Scene>();
+        m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+        //m_Scene->GetCamera().SetProjection(65.0f, m_ViewportSize.x / m_ViewportSize.y);
+        m_SceneHierarchyPanel.SetScene(m_Scene);
+
+        SceneSerializer serializer(m_Scene);
+        serializer.Deserialize(path);
     }
 }

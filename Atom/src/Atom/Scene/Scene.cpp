@@ -37,35 +37,35 @@ namespace Atom
     void Scene::DeleteEntity(Entity entity)
     {
         auto& shc = entity.GetComponent<SceneHierarchyComponent>();
-        Entity currentChild = shc.FirstChild;
+        Entity currentChild = FindEntityByUUID(shc.FirstChild);
 
         // Delete all children recursively first
         while (currentChild)
         {
-            Entity nextSibling = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+            Entity nextSibling = FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
             DeleteEntity(currentChild);
             currentChild = nextSibling;
         }
 
         // Fix links between neighbouring entities
-        Entity parent = shc.Parent;
-        if (parent && parent.GetComponent<SceneHierarchyComponent>().FirstChild == entity)
+        Entity parent = FindEntityByUUID(shc.Parent);
+        if (parent && FindEntityByUUID(parent.GetComponent<SceneHierarchyComponent>().FirstChild) == entity)
         {
-            Entity nextSibling = shc.NextSibling;
-            parent.GetComponent<SceneHierarchyComponent>().FirstChild = nextSibling;
+            Entity nextSibling = FindEntityByUUID(shc.NextSibling);
+            parent.GetComponent<SceneHierarchyComponent>().FirstChild = nextSibling.GetUUID();
 
             if (nextSibling)
-                nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
+                nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = UUID(0);
         }
         else
         {
-            Entity prev = shc.PreviousSibling;
-            Entity next = shc.NextSibling;
+            Entity prev = FindEntityByUUID(shc.PreviousSibling);
+            Entity next = FindEntityByUUID(shc.NextSibling);
 
             if (prev)
-                prev.GetComponent<SceneHierarchyComponent>().NextSibling = next;
+                prev.GetComponent<SceneHierarchyComponent>().NextSibling = next.GetUUID();
             if (next)
-                next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev;
+                next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev.GetUUID();
         }
 
         m_EntitiesByID.erase(entity.GetUUID());
@@ -213,12 +213,12 @@ namespace Atom
 
                 if (shc.Parent)
                 {
-                    auto accumulatedTransform = shc.Parent.GetComponent<TransformComponent>().GetTransform();
-                    Entity currentParent = shc.Parent;
+                    Entity currentParent = FindEntityByUUID(shc.Parent);
+                    auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
 
                     while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                     {
-                        currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                        currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
                         accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                     }
 
@@ -250,12 +250,12 @@ namespace Atom
 
                 if (shc.Parent)
                 {
-                    auto accumulatedTransform = shc.Parent.GetComponent<TransformComponent>().GetTransform();
-                    Entity currentParent = shc.Parent;
+                    Entity currentParent = FindEntityByUUID(shc.Parent);
+                    auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
 
                     while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                     {
-                        currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                        currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
                         accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                     }
 
@@ -330,12 +330,12 @@ namespace Atom
 
                     if (shc.Parent)
                     {
-                        auto accumulatedTransform = shc.Parent.GetComponent<TransformComponent>().GetTransform();
-                        Entity currentParent = shc.Parent;
+                        Entity currentParent = FindEntityByUUID(shc.Parent);
+                        auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
 
                         while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
                         {
-                            currentParent = currentParent.GetComponent<SceneHierarchyComponent>().Parent;
+                            currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
                             accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                         }
 

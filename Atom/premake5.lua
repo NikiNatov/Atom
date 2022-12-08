@@ -36,7 +36,8 @@ project "Atom"
 		"%{IncludeDirs.python}",
 		"%{IncludeDirs.filewatch}",
 		"%{IncludeDirs.physX}",
-		"%{IncludeDirs.imguizmo}"
+		"%{IncludeDirs.imguizmo}",
+		"%{IncludeDirs.yaml}"
 	}
 
 	libdirs
@@ -50,6 +51,7 @@ project "Atom"
 	links
 	{
 		"ImGui",
+		"Yaml",
 		"%{Libs.PIX}",
 		"%{Libs.python}",
 	}

@@ -49,6 +49,7 @@ IncludeDirs["python"] = pythonIncludePath
 IncludeDirs["filewatch"] = "%{wks.location}/Atom/vendor/filewatch"
 IncludeDirs["physX"] = "%{wks.location}/Atom/vendor/physX/include"
 IncludeDirs["imguizmo"] = "%{wks.location}/Atom/vendor/imguizmo"
+IncludeDirs["yaml"] = "%{wks.location}/Atom/vendor/yaml/include"
 
 LibDirs = {}
 LibDirs["PIX"] = "%{wks.location}/Atom/vendor/PIX/lib"
@@ -96,6 +97,7 @@ workspace "Atom"
 	outputdir = "%{cfg.buildcfg} - %{cfg.system}"
 
 	include "Atom/vendor/imgui"
+	include "Atom/vendor/yaml"
 	include "Atom"
 	include "AtomEditor"
 	include "Sandbox"

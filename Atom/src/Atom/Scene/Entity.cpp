@@ -21,59 +21,60 @@ namespace Atom
 
 		if (!shc.FirstChild)
 		{
-			shc.FirstChild = entity;
+			shc.FirstChild = entity.GetUUID();
 		}
 		else
 		{
-			Entity currentChild = shc.FirstChild;
+			Entity currentChild = m_Scene->FindEntityByUUID(shc.FirstChild);
 
 			while (currentChild.GetComponent<SceneHierarchyComponent>().NextSibling)
-				currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+				currentChild = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 
-			currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = entity;
-			entity.GetComponent<SceneHierarchyComponent>().PreviousSibling = currentChild;
+			currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = entity.GetUUID();
+			entity.GetComponent<SceneHierarchyComponent>().PreviousSibling = currentChild.GetUUID();
 		}
 
-		entity.GetComponent<SceneHierarchyComponent>().Parent = *this;
+		entity.GetComponent<SceneHierarchyComponent>().Parent = GetUUID();
     }
 
 	// -----------------------------------------------------------------------------------------------------------------------------
 	void Entity::RemoveChild(Entity child)
 	{
 		auto& shc = GetComponent<SceneHierarchyComponent>();
-		Entity currentChild = shc.FirstChild;
+		Entity firstChild = m_Scene->FindEntityByUUID(shc.FirstChild);
+		Entity currentChild = firstChild;
 
 		while (currentChild)
 		{
 			if (currentChild == child)
 			{
-				if (currentChild == shc.FirstChild)
+				if (currentChild == firstChild)
 				{
-					Entity nextSibling = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
-					shc.FirstChild = nextSibling;
+					Entity nextSibling = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
+					shc.FirstChild = nextSibling.GetUUID();
 
 					if (nextSibling)
-						nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
+						nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = UUID(0);
 				}
 				else
 				{
-					Entity prev = currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling;
-					Entity next = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+					Entity prev = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling);
+					Entity next = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 
 					if (prev)
-						prev.GetComponent<SceneHierarchyComponent>().NextSibling = next;
+						prev.GetComponent<SceneHierarchyComponent>().NextSibling = next.GetUUID();
 					if (next)
-						next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev;
+						next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev.GetUUID();
 				}
 
-				currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = {};
-				currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling = {};
-				currentChild.GetComponent<SceneHierarchyComponent>().Parent = {};
+				currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = UUID(0);
+				currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling = UUID(0);
+				currentChild.GetComponent<SceneHierarchyComponent>().Parent = UUID(0);
 
 				return;
 			}
 
-			currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+			currentChild = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 		}
 	}
 
@@ -83,11 +84,11 @@ namespace Atom
 		Queue<Entity> q;
 
 		// Enqueue all the children of the queried entity
-		Entity currentChild = entity.GetComponent<SceneHierarchyComponent>().FirstChild;
+		Entity currentChild = m_Scene->FindEntityByUUID(entity.GetComponent<SceneHierarchyComponent>().FirstChild);
 		while (currentChild)
 		{
 			q.push(currentChild);
-			currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+			currentChild = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 		}
 
 		while (!q.empty())
@@ -98,11 +99,11 @@ namespace Atom
 			if (child == *this)
 				return true;
 
-			currentChild = child.GetComponent<SceneHierarchyComponent>().FirstChild;
+			currentChild = m_Scene->FindEntityByUUID(child.GetComponent<SceneHierarchyComponent>().FirstChild);
 			while (currentChild)
 			{
 				q.push(currentChild);
-				currentChild = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+				currentChild = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 			}
 		}
 
@@ -112,6 +113,9 @@ namespace Atom
 	// -----------------------------------------------------------------------------------------------------------------------------
 	UUID Entity::GetUUID()
 	{
+		if (!*this)
+			return UUID(0);
+
 		return GetComponent<IDComponent>().ID;
 	}
 

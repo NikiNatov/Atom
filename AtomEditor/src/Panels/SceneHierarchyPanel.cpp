@@ -81,7 +81,7 @@ namespace Atom
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
 			{
 				Entity srcEntity = *(Entity*)payload->Data;
-				Entity srcEntityParent = srcEntity.GetComponent<SceneHierarchyComponent>().Parent;
+				Entity srcEntityParent = m_Scene->FindEntityByUUID(srcEntity.GetComponent<SceneHierarchyComponent>().Parent);
 
 				if (entity != srcEntityParent && !entity.IsDescendantOf(srcEntity))
 				{
@@ -99,12 +99,12 @@ namespace Atom
 
 		if (isOpen)
 		{
-			Entity currentChild = entity.GetComponent<SceneHierarchyComponent>().FirstChild;
+			Entity currentChild = m_Scene->FindEntityByUUID(entity.GetComponent<SceneHierarchyComponent>().FirstChild);
 
 			while (currentChild)
 			{
 				// Get the next sibling from the component here in case the current child gets deleted in the DrawEntityNode() function
-				Entity nextSibling = currentChild.GetComponent<SceneHierarchyComponent>().NextSibling;
+				Entity nextSibling = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
 				DrawEntityNode(currentChild);
 				currentChild = nextSibling;
 			}

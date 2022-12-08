@@ -25,6 +25,10 @@ namespace Atom
         static EditorLayer& Get() { return *ms_Instance; }
     private:
         bool OnKeyPressed(KeyPressedEvent& e);
+
+        void SaveScene();
+        void NewScene();
+        void OpenScene();
     private:
         Ref<Scene>           m_Scene = nullptr;
         Ref<SceneRenderer>   m_Renderer = nullptr;

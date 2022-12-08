@@ -18,6 +18,7 @@ namespace Atom
 
     class Scene
     {
+        friend class SceneSerializer;
         friend class SceneHierarchyPanel;
         friend class Entity;
     public:
