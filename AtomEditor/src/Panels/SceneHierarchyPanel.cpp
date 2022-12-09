@@ -55,7 +55,6 @@ namespace Atom
 				if (ImGui::MenuItem("Empty entity"))
 				{
 					Entity newEntity = m_Scene->CreateEntity();
-					newEntity.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/sphere.gltf"));
 					entity.AddChild(newEntity);
 				}
 

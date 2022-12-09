@@ -27,7 +27,7 @@ namespace Atom
     {
         EditorResources::Initialize();
 
-        auto environment = Renderer::CreateEnvironmentMap("assets/environments/GCanyon_C_YumaPoint_3k.hdr");
+        auto environment = Renderer::CreateEnvironmentMap("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr");
 
         m_Scene = CreateRef<Scene>("TestScene");
 
@@ -44,7 +44,7 @@ namespace Atom
 
         {
             Entity player = m_Scene->CreateEntity("Player");
-            player.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/cube.gltf"));
+            player.AddComponent<MeshComponent>(CreateRef<Mesh>("TestProject/Assets/Meshes/cube.gltf"));
 
             auto& sc = player.AddComponent<ScriptComponent>();
             sc.ScriptClass = "Player";
@@ -58,7 +58,7 @@ namespace Atom
 
         {
             Entity ground = m_Scene->CreateEntity("Ground");
-            ground.AddComponent<MeshComponent>(CreateRef<Mesh>("assets/meshes/cube.gltf"));
+            ground.AddComponent<MeshComponent>(CreateRef<Mesh>("TestProject/Assets/Meshes/cube.gltf"));
 
             ground.GetComponent<TransformComponent>().Scale = { 3.0f, 1.0f, 3.0f };
             ground.GetComponent<TransformComponent>().Translation.y = -3.0f;
