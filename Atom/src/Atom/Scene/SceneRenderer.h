@@ -51,8 +51,7 @@ namespace Atom
             f32 p[29]{ 0 };
         };
 
-        Ref<TextureCube>      m_EnvironmentMap = nullptr;
-        Ref<TextureCube>      m_IrradianceMap = nullptr;
+        Ref<EnvironmentMap>   m_EnvironmentMap;
 
         Vector<DrawCommand>   m_DrawList;
         TransformCB           m_TransformData;

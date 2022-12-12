@@ -4,10 +4,9 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    void LightEnvironment::SetEnvironmentMap(const Ref<TextureCube>& environmentMap, const Ref<TextureCube>& irradianceMap)
+    void LightEnvironment::SetEnvironmentMap(const Ref<EnvironmentMap>& environmentMap)
     {
         m_EnvironmentMap = environmentMap;
-        m_IrradianceMap = irradianceMap;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

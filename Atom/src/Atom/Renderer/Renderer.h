@@ -19,6 +19,7 @@ namespace Atom
     class DescriptorHeap;
     class TextureCube;
     class Texture2D;
+    class EnvironmentMap;
 
     struct RendererConfig
     {
@@ -36,7 +37,7 @@ namespace Atom
         static void EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer);
         static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer);
         static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material);
-        static std::pair<Ref<TextureCube>, Ref<TextureCube>> CreateEnvironmentMap(const std::filesystem::path& filepath);
+        static Ref<EnvironmentMap> CreateEnvironmentMap(const std::filesystem::path& filepath);
         static void GenerateMips(Ref<Texture2D> texture);
         static void EndFrame();
 

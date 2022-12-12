@@ -27,7 +27,7 @@ namespace Atom
     {
         EditorResources::Initialize();
 
-        auto environment = Renderer::CreateEnvironmentMap("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr");
+        Ref<EnvironmentMap> environment = Renderer::CreateEnvironmentMap("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr");
 
         m_Scene = CreateRef<Scene>("TestScene");
 
@@ -73,8 +73,8 @@ namespace Atom
         {
             Entity skyLight = m_Scene->CreateEntity("SkyLight");
             auto& slc = skyLight.AddComponent<SkyLightComponent>();
-            slc.EnvironmentMap = environment.first;
-            slc.IrradianceMap = environment.second;
+            slc.EnvironmentMap = environment->GetEnvironmentTexture();
+            slc.IrradianceMap = environment->GetIrradianceTexture();
         }
 
         {

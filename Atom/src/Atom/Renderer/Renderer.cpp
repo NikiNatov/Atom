@@ -9,6 +9,7 @@
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Renderer/LightEnvironment.h"
 
 namespace Atom
 {
@@ -473,7 +474,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    std::pair<Ref<TextureCube>, Ref<TextureCube>> Renderer::CreateEnvironmentMap(const std::filesystem::path& filepath)
+    Ref<EnvironmentMap> Renderer::CreateEnvironmentMap(const std::filesystem::path& filepath)
     {
         u32 currentFrameIdx = GetCurrentFrameIndex();
         Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
@@ -647,7 +648,7 @@ namespace Atom
         // Wait for all compute operations to complete
         computeQueue->Flush();
 
-        return std::pair<Ref<TextureCube>, Ref<TextureCube>>(envMap, irradianceMap);
+        return CreateRef<EnvironmentMap>(envMap, irradianceMap);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

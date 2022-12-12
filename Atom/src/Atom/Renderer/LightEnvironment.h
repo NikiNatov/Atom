@@ -25,23 +25,35 @@ namespace Atom
         LightType Type;
     };
 
+    class EnvironmentMap
+    {
+    public:
+        EnvironmentMap() = default;
+        EnvironmentMap(const Ref<TextureCube>& environmentTexture, const Ref<TextureCube>& irradianceTexture)
+            : m_EnvironmentTexture(environmentTexture), m_IrradianceTexture(irradianceTexture) {}
+
+        inline Ref<TextureCube> GetEnvironmentTexture() const { return m_EnvironmentTexture; }
+        inline Ref<TextureCube> GetIrradianceTexture() const { return m_IrradianceTexture; }
+    private:
+        Ref<TextureCube> m_EnvironmentTexture;
+        Ref<TextureCube> m_IrradianceTexture;
+    };
+
     class LightEnvironment
     {
     public:
         LightEnvironment() = default;
         ~LightEnvironment() = default;
 
-        void SetEnvironmentMap(const Ref<TextureCube>& environmentMap, const Ref<TextureCube>& irradianceMap);
+        void SetEnvironmentMap(const Ref<EnvironmentMap>& environmentMap);
         void AddDirectionalLight(const glm::vec3& color, const glm::vec3& direction, f32 intensity);
         void AddPointLight(const glm::vec3& color, const glm::vec3& position, f32 intensity, const glm::vec3& attenuationFactors);
         void AddSpotlight(const glm::vec3& color, const glm::vec3& position, const glm::vec3& direction, f32 intensity, f32 coneAngle, const glm::vec3& attenuationFactors);
 
-        inline Ref<TextureCube> GetEnvironmentMap() const { return m_EnvironmentMap; }
-        inline Ref<TextureCube> GetIrradianceMap() const { return m_IrradianceMap; }
+        inline Ref<EnvironmentMap> GetEnvironmentMap() const { return m_EnvironmentMap; }
         inline const Vector<Light>& GetLights() const { return m_Lights; }
     private:
-        Ref<TextureCube> m_EnvironmentMap;
-        Ref<TextureCube> m_IrradianceMap;
-        Vector<Light>    m_Lights;
+        Ref<EnvironmentMap> m_EnvironmentMap;
+        Vector<Light>       m_Lights;
     };
 }

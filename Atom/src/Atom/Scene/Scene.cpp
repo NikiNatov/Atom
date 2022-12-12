@@ -166,7 +166,8 @@ namespace Atom
 
                 if (slc.EnvironmentMap && slc.IrradianceMap)
                 {
-                    lightEnvironment.SetEnvironmentMap(slc.EnvironmentMap, slc.IrradianceMap);
+                    Ref<EnvironmentMap> envMap = CreateRef<EnvironmentMap>(slc.EnvironmentMap, slc.IrradianceMap);
+                    lightEnvironment.SetEnvironmentMap(envMap);
                     break;
                 }
             }
@@ -283,7 +284,8 @@ namespace Atom
 
                     if (slc.EnvironmentMap && slc.IrradianceMap)
                     {
-                        lightEnvironment.SetEnvironmentMap(slc.EnvironmentMap, slc.IrradianceMap);
+                        Ref<EnvironmentMap> envMap = CreateRef<EnvironmentMap>(slc.EnvironmentMap, slc.IrradianceMap);
+                        lightEnvironment.SetEnvironmentMap(envMap);
                         break;
                     }
                 }

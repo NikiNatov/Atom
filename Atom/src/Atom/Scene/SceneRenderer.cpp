@@ -48,7 +48,6 @@ namespace Atom
 
         // Set lights data
         m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();
-        m_IrradianceMap = lightEnvironment.GetIrradianceMap();
 
         const auto& lights = lightEnvironment.GetLights();
 
@@ -81,7 +80,6 @@ namespace Atom
 
         // Set lights data
         m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();
-        m_IrradianceMap = lightEnvironment.GetIrradianceMap();
 
         const auto& lights = lightEnvironment.GetLights();
 
@@ -161,14 +159,14 @@ namespace Atom
 
         // Render skybox
         m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_TransformData.ProjectionMatrix * m_TransformData.ViewMatrix));
-        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap);
+        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap->GetEnvironmentTexture());
         Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 
         // Render meshes
         for (auto& drawCommand : m_DrawList)
         {
-            drawCommand.Material->SetTexture("EnvironmentMap", m_EnvironmentMap);
-            drawCommand.Material->SetTexture("IrradianceMap", m_IrradianceMap);
+            drawCommand.Material->SetTexture("EnvironmentMap", m_EnvironmentMap->GetEnvironmentTexture());
+            drawCommand.Material->SetTexture("IrradianceMap", m_EnvironmentMap->GetIrradianceTexture());
 
             // TODO: These should not be set by the material
             drawCommand.Material->SetUniform("Transform", drawCommand.Transform);
