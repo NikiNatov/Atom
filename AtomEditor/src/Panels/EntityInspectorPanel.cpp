@@ -12,7 +12,7 @@ namespace Atom
 	namespace Utils
 	{
 		// -----------------------------------------------------------------------------------------------------------------------------
-		static void DrawVec3Control(const String& label, glm::vec3& values, f32 resetValue = 0.0f, f32 columnWidth = 100.0f)
+		static void DrawVec3Control(const String& label, glm::vec3& values, f32 resetValue = 0.0f, f32 columnWidth = 150.0f)
 		{
 			ImGuiIO& io = ImGui::GetIO();
 			auto boldFont = io.Fonts->Fonts[0];
@@ -154,10 +154,10 @@ namespace Atom
 				Utils::DrawComponent<TagComponent>("Tag", m_Entity, false, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Tag");
 					ImGui::NextColumn();
-
+					ImGui::PushItemWidth(-1);
 					char buffer[256];
 					memset(buffer, 0, sizeof(buffer));
 					strcpy_s(buffer, sizeof(buffer), component.Tag.c_str());
@@ -166,7 +166,7 @@ namespace Atom
 					{
 						component.Tag = buffer;
 					}
-
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -205,6 +205,7 @@ namespace Atom
 					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Projection");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					auto& camera = component.Camera;
 
 					const char* projTypesStrings[] = { "Perspective", "Orthographic" };
@@ -227,6 +228,7 @@ namespace Atom
 
 						ImGui::EndCombo();
 					}
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					if (camera.GetProjectionType() == SceneCamera::ProjectionType::Perspective)
@@ -239,24 +241,30 @@ namespace Atom
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Perspective FOV");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##PerspectiveFOV", &fov))
 							camera.SetPerspectiveFOV(fov);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Perspective Near");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##PerspectiveNear", &nearPlane))
 							camera.SetPerspectiveNear(nearPlane);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Perspective Far");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##PerspectiveFar", &farPlane))
 							camera.SetPerspectiveFar(farPlane);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 					}
 					else
@@ -269,24 +277,30 @@ namespace Atom
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Orthographic Size");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##OrthographicSize", &orthoSize))
 							camera.SetOrthographicSize(orthoSize);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Orthographic Near");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##OrthographicNear", &orthoNear))
 							camera.SetOrthographicNear(orthoNear);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 150.0f);
 						ImGui::Text("Orthographic Far");
 						ImGui::NextColumn();
+						ImGui::PushItemWidth(-1);
 						if (ImGui::DragFloat("##OrthographicFar", &orthoFar))
 							camera.SetOrthographicFar(orthoFar);
+						ImGui::PopItemWidth();
 						ImGui::Columns(1);
 					}
 
@@ -306,13 +320,12 @@ namespace Atom
 				Utils::DrawComponent<MeshComponent>("Mesh", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Mesh");
 					ImGui::NextColumn();
-
-
+					ImGui::PushItemWidth(-1);
 					ImGui::InputText("##Mesh", component.Mesh ? (char*)component.Mesh->GetName().c_str() : "Null", 50, ImGuiInputTextFlags_ReadOnly);
-
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -329,12 +342,12 @@ namespace Atom
 				Utils::DrawComponent<SkyLightComponent>("Sky Light", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Environment");
 					ImGui::NextColumn();
-
+					ImGui::PushItemWidth(-1);
 					ImGui::InputText("##EnvironmentMap", "EnvironmentMap", 50, ImGuiInputTextFlags_ReadOnly);
-
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -351,17 +364,21 @@ namespace Atom
 				Utils::DrawComponent<DirectionalLightComponent>("Directional Light", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Color");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::ColorEdit3("##Color", glm::value_ptr(component.Color), ImGuiColorEditFlags_DisplayRGB);
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Intensity");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##Intensity", &component.Intensity, 0.05f, 0.1f, 5.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -378,24 +395,30 @@ namespace Atom
 				Utils::DrawComponent<PointLightComponent>("Point Light", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Color");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::ColorEdit3("##Color", glm::value_ptr(component.Color), ImGuiColorEditFlags_DisplayRGB);
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Intensity");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##Intensity", &component.Intensity, 0.05f, 0.1f, 5.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Attenuation");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat3("##Attenuation", glm::value_ptr(component.AttenuationFactors), 0.05f, 0.0f, 10.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -412,38 +435,48 @@ namespace Atom
 				Utils::DrawComponent<SpotLightComponent>("Spot Light", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Color");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::ColorEdit3("##Color", glm::value_ptr(component.Color), ImGuiColorEditFlags_DisplayRGB);
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Direction");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat3("##Direction", glm::value_ptr(component.Direction), 0.05f, -1.0f, 1.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Cone Angle");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##ConeAngle", &component.ConeAngle, 0.05f, 0.0f, 45.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Intensity");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##Intensity", &component.Intensity, 0.05f, 0.1f, 5.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Attenuation");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat3("##Attenuation", glm::value_ptr(component.AttenuationFactors), 0.05f, 0.0f, 10.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -460,9 +493,10 @@ namespace Atom
 				Utils::DrawComponent<ScriptComponent>("Script", m_Entity, true, [entity = m_Entity](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Class");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 
 					// Get all class names
 					const auto& scriptClassMap = ScriptEngine::GetScriptClasses();
@@ -493,7 +527,7 @@ namespace Atom
 
 						ImGui::EndCombo();
 					}
-
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					if (Scene* scene = ScriptEngine::GetRunningScene())
@@ -506,9 +540,10 @@ namespace Atom
 							for (auto& [name, variable] : classVariableMap)
 							{
 								ImGui::Columns(2);
-								ImGui::SetColumnWidth(0, 100.0f);
+								ImGui::SetColumnWidth(0, 150.0f);
 								ImGui::Text(name.c_str());
 								ImGui::NextColumn();
+								ImGui::PushItemWidth(-1);
 
 								ScriptVariableType varType = variable.GetType();
 								String imguiID = fmt::format("##{}", name.c_str());
@@ -580,6 +615,7 @@ namespace Atom
 									}
 								}
 
+								ImGui::PopItemWidth();
 								ImGui::Columns(1);
 							}
 						}
@@ -595,9 +631,10 @@ namespace Atom
 							for (auto& [name, variable] : classVariableMap)
 							{
 								ImGui::Columns(2);
-								ImGui::SetColumnWidth(0, 100.0f);
+								ImGui::SetColumnWidth(0, 150.0f);
 								ImGui::Text(name.c_str());
 								ImGui::NextColumn();
+								ImGui::PushItemWidth(-1);
 
 								if (scriptVarMap.find(name) == scriptVarMap.end())
 								{
@@ -679,6 +716,7 @@ namespace Atom
 									}
 								}
 
+								ImGui::PopItemWidth();
 								ImGui::Columns(1);
 							}
 						}
@@ -699,9 +737,11 @@ namespace Atom
 				Utils::DrawComponent<RigidbodyComponent>("Rigidbody", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Type");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+
 					const char* bodyTypeStrings[] = { "Static", "Dynamic" };
 					const char* currentBodyType = bodyTypeStrings[(s32)component.Type];
 
@@ -722,24 +762,30 @@ namespace Atom
 
 						ImGui::EndCombo();
 					}
+
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Mass");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##Mass", &component.Mass, 0.05f, 0.1f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Fixed Rotation");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::Checkbox("X", &component.FixedRotation[0]);
 					ImGui::SameLine();
 					ImGui::Checkbox("Y", &component.FixedRotation[1]);
 					ImGui::SameLine();
 					ImGui::Checkbox("Z", &component.FixedRotation[2]);
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
@@ -756,38 +802,48 @@ namespace Atom
 				Utils::DrawComponent<BoxColliderComponent>("Box Collider", m_Entity, true, [](auto& component)
 				{
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Center");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat3("##Center", glm::value_ptr(component.Center), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Size");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat3("##Size", glm::value_ptr(component.Size), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Restitution");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##Restitution", &component.Restitution, 0.05f, 0.0f, 1.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Static Friction");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##StaticFriction", &component.StaticFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 100.0f);
+					ImGui::SetColumnWidth(0, 150.0f);
 					ImGui::Text("Dynamic Friction");
 					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
 					ImGui::DragFloat("##DynamicFriction", &component.DynamicFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
 			}
