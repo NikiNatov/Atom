@@ -211,6 +211,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const std::filesystem::path& assetPath)
     {
+        if (std::filesystem::is_directory(assetPath))
+            return;
+
         ATOM_ENGINE_ASSERT(assetPath.extension() == Asset::AssetTypeExtension);
 
         AssetMetaData metaData;

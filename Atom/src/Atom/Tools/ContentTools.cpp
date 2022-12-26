@@ -94,6 +94,9 @@ namespace Atom
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
 
+        if (!std::filesystem::exists(destinationFolder))
+            std::filesystem::create_directory(destinationFolder);
+
         s32 width, height;
         Vector<byte> decodedData;
         TextureFormat format = importSettings.Format;
@@ -178,6 +181,9 @@ namespace Atom
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
 
+        if (!std::filesystem::exists(destinationFolder))
+            std::filesystem::create_directory(destinationFolder);
+
         s32 width, height;
         Vector<byte> decodedData;
         TextureFormat format = importSettings.Format;
@@ -232,6 +238,9 @@ namespace Atom
             ATOM_WARNING("Mesh {} already exists", assetFullPath.string());
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
+
+        if (!std::filesystem::exists(destinationFolder))
+            std::filesystem::create_directory(destinationFolder);
 
         u32 processingFlags = aiProcess_ImproveCacheLocality |
                               aiProcess_LimitBoneWeights |
@@ -508,6 +517,9 @@ namespace Atom
             ATOM_WARNING("Material {} already exists", assetFullPath.string());
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
+
+        if (!std::filesystem::exists(destinationFolder))
+            std::filesystem::create_directory(destinationFolder);
 
         Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"));
         asset->m_AssetFilepath = assetFullPath;
