@@ -78,23 +78,22 @@ namespace Atom
 
 	struct MeshComponent
 	{
-		Ref<Mesh> Mesh = nullptr;
+		UUID Mesh = UUID(0);
 
 		MeshComponent() = default;
 		MeshComponent(const MeshComponent& other) = default;
-		MeshComponent(const Ref<Atom::Mesh>& mesh)
+		MeshComponent(UUID mesh)
 			: Mesh(mesh) {}
 	};
 
 	struct SkyLightComponent
 	{
-		Ref<TextureCube> EnvironmentMap = nullptr;
-		Ref<TextureCube> IrradianceMap = nullptr;
+		UUID EnvironmentMap = UUID(0);
 
 		SkyLightComponent() = default;
 		SkyLightComponent(const SkyLightComponent& other) = default;
-		SkyLightComponent(const Ref<TextureCube>& environmentMap, const Ref<TextureCube>& irradianceMap)
-			: EnvironmentMap(environmentMap), IrradianceMap(irradianceMap) {}
+		SkyLightComponent(UUID environmentMap)
+			: EnvironmentMap(environmentMap) {}
 	};
 
 	struct DirectionalLightComponent

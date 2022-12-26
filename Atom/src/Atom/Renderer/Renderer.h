@@ -12,13 +12,16 @@ namespace Atom
     class Framebuffer;
     class VertexBuffer;
     class IndexBuffer;
+    class Buffer;
     class ConstantBuffer;
     class StructuredBuffer;
+    class ReadbackBuffer;
     class Material;
     class Mesh;
     class DescriptorHeap;
     class TextureCube;
     class Texture2D;
+    class Texture;
     class EnvironmentMap;
 
     struct RendererConfig
@@ -37,8 +40,12 @@ namespace Atom
         static void EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer);
         static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer);
         static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material);
-        static Ref<EnvironmentMap> CreateEnvironmentMap(const std::filesystem::path& filepath);
+        static Ref<TextureCube> CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize);
+        static Ref<TextureCube> CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize);
         static void GenerateMips(Ref<Texture2D> texture);
+        static void UploadBufferData(const void* srcData, const Buffer* buffer);
+        static void UploadTextureData(const void* srcData, const Texture* texture, u32 mip = 0, u32 slice = 0);
+        static Ref<ReadbackBuffer> ReadbackTextureData(const Texture* texture, u32 mip = 0, u32 slice = 0);
         static void EndFrame();
 
         static const RendererConfig& GetConfig();
@@ -50,6 +57,8 @@ namespace Atom
         static Ref<Texture2D> GetErrorTexture();
         static Ref<Texture2D> GetBlackTexture();
         static Ref<TextureCube> GetBlackTextureCube();
+        static Ref<DescriptorHeap> GetCurrentResourceHeap();
+        static Ref<DescriptorHeap> GetCurrentSamplerHeap();
     private:
         inline static RendererConfig              ms_Config;
         inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;

@@ -6,70 +6,13 @@
 #include "Texture.h"
 #include "Device.h"
 #include "ResourceStateTracker.h"
+#include "Renderer.h"
 
 #include "stb_image.h"
 #include <glm/glm.hpp>
 
 namespace Atom
 {
-    namespace Utils
-    {
-        u32 GetMaxMipCount(u32 width, u32 height)
-        {
-            return (u32)glm::log2((f32)glm::max(width, height)) + 1;
-        }
-    }
-
-    // ------------------------------------------------------ Image2D --------------------------------------------------------------
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Image2D::Image2D(u32 width, u32 height, u32 bytesPerPixel, u32 maxMipCount, bool isHDR, const byte* pixelData)
-        : m_Width(width), m_Height(height), m_BytesPerPixel(bytesPerPixel), m_MaxMipCount(maxMipCount), m_IsHDR(isHDR)
-    {
-        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
-        memcpy(m_PixelData.data(), pixelData, m_Width * m_Height * m_BytesPerPixel);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Image2D::Image2D(const std::filesystem::path& filepath, u32 desiredChannels)
-    {
-        String pathStr = filepath.string();
-        m_IsHDR = stbi_is_hdr(pathStr.c_str());
-
-        s32 width, height;
-        byte* data = m_IsHDR ? (byte*)stbi_loadf(pathStr.c_str(), &width, &height, nullptr, desiredChannels) : stbi_load(pathStr.c_str(), &width, &height, nullptr, desiredChannels);
-        ATOM_ENGINE_ASSERT(data, fmt::format("Failed to load texture file \"{}\"", filepath));
-
-        m_Width = (u32)width;
-        m_Height = (u32)height;
-        m_BytesPerPixel = m_IsHDR ? desiredChannels * 4 : desiredChannels * 1;
-        m_MaxMipCount = Utils::GetMaxMipCount(m_Width, m_Height);
-
-        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
-        memcpy(m_PixelData.data(), data, m_Width * m_Height * m_BytesPerPixel);
-
-        stbi_image_free(data);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Image2D::Image2D(const byte* compressedData, u32 dataSize, u32 desiredChannels)
-    {
-        m_IsHDR = stbi_is_hdr_from_memory(compressedData, dataSize);
-
-        s32 width, height;
-        byte* decompressedData = m_IsHDR ? (byte*)stbi_loadf_from_memory(compressedData, dataSize, &width, &height, nullptr, desiredChannels) : stbi_load_from_memory(compressedData, dataSize, &width, &height, nullptr, desiredChannels);
-        ATOM_ENGINE_ASSERT(decompressedData, "Failed to decompress texture!");
-
-        m_Width = (u32)width;
-        m_Height = (u32)height;
-        m_BytesPerPixel = m_IsHDR ? desiredChannels * 4 : desiredChannels * 1;
-        m_MaxMipCount = Utils::GetMaxMipCount(m_Width, m_Height);
-
-        m_PixelData.resize(m_Width * m_Height * m_BytesPerPixel);
-        memcpy(m_PixelData.data(), decompressedData, m_Width * m_Height * m_BytesPerPixel);
-
-        stbi_image_free(decompressedData);
-    }
-
     // ------------------------------------------------------ Texture --------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(TextureType type, const TextureDescription& description, const char* debugName)
@@ -142,6 +85,10 @@ namespace Atom
 #endif
 
         ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+
+        // Create descriptors
+        CreateSRV();
+        CreateSampler();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -168,6 +115,10 @@ namespace Atom
 #endif
 
         ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+
+        // Create descriptors
+        CreateSRV();
+        CreateSampler();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -178,6 +129,19 @@ namespace Atom
         Device::Get().ReleaseResource(m_D3DResource.Detach(), m_Type != TextureType::SwapChainBuffer);
     }
 
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Texture::SetFilter(TextureFilter filter)
+    {
+        m_Description.Filter = filter;
+        CreateSampler();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Texture::SetWrap(TextureWrap wrap)
+    {
+        m_Description.Wrap = wrap;
+        CreateSampler();
+    }
     
     // -----------------------------------------------------------------------------------------------------------------------------
     TextureType Texture::GetType() const
@@ -234,9 +198,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::CreateViews()
+    void Texture::CreateSRV()
     {
         auto& dx12Device = Device::Get();
+
+        if (m_SRVDescriptor.ptr)
+            dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, m_Type != TextureType::SwapChainBuffer);
 
         // Create SRV
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -258,8 +225,16 @@ namespace Atom
 
         m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
         dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+    }
 
-        // Create Sampler
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Texture::CreateSampler()
+    {
+        auto& dx12Device = Device::Get();
+
+        if(m_SamplerDescriptor.ptr)
+            dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, m_Type != TextureType::SwapChainBuffer);
+
         D3D12_SAMPLER_DESC samplerDesc = {};
         samplerDesc.AddressU = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
         samplerDesc.AddressV = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
@@ -276,17 +251,31 @@ namespace Atom
 
     // ------------------------------------------------- Texture2D -----------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    Texture2D::Texture2D(const TextureDescription& description, const char* debugName)
-        : Texture(TextureType::Texture2D, description, debugName)
+    Texture2D::Texture2D(const TextureDescription& description, const Vector<Vector<byte>>& pixelData, bool isReadable, const char* debugName)
+        : Texture(TextureType::Texture2D, description, debugName), m_IsReadable(isReadable), Asset(AssetType::Texture2D)
     {
-        CreateViews();
+        // Copy the data if any is provided
+        m_PixelData.resize(m_Description.MipLevels);
+        for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+        {
+            if (!pixelData[mip].empty())
+            {
+                Renderer::UploadTextureData(pixelData[mip].data(), this, mip);
+
+                // For readable textures, store a copy of the data in CPU memory
+                if (m_IsReadable)
+                    m_PixelData[mip] = pixelData[mip];
+            }
+        }
+
+        CreateUAV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture2D::Texture2D(ID3D12Resource* textureHandle, const char* debugName)
-        : Texture(TextureType::Texture2D, textureHandle, debugName)
+        : Texture(TextureType::Texture2D, textureHandle, debugName), m_IsReadable(false), Asset(AssetType::Texture2D)
     {
-        CreateViews();
+        CreateUAV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -302,6 +291,48 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void Texture2D::UpdateGPUData(bool makeNonReadable)
+    {
+        if (m_IsReadable)
+        {
+            m_IsReadable = !makeNonReadable;
+
+            for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+            {
+                if (!m_PixelData.empty())
+                {
+                    Renderer::UploadTextureData(m_PixelData[mip].data(), this, mip);
+
+                    if (makeNonReadable)
+                        m_PixelData[mip].clear();
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Texture2D::SetPixels(const Vector<byte>& pixels, u32 mipLevel)
+    {
+        if(m_IsReadable)
+            m_PixelData[mipLevel] = pixels;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Vector<byte>* Texture2D::GetPixels(u32 mipLevel)
+    {
+        if (m_IsReadable)
+            return &m_PixelData[mipLevel];
+
+        return nullptr;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool Texture2D::IsReadable() const
+    {
+        return m_IsReadable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     D3D12_CPU_DESCRIPTOR_HANDLE Texture2D::GetUAV(u32 mip) const
     {
         ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels); 
@@ -310,18 +341,19 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture2D::CreateViews()
+    void Texture2D::CreateUAV()
     {
-        auto& dx12Device = Device::Get();
-
-        Texture::CreateViews();
-
         // Create UAVs
         if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
         {
+            auto& dx12Device = Device::Get();
+
             m_UAVDescriptors.resize(m_Description.MipLevels);
             for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
             {
+                if(m_UAVDescriptors[mip].ptr)
+                    dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[mip], true);
+
                 D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
                 uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
                 uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -339,7 +371,7 @@ namespace Atom
         : Texture(swapChainBuffer ? TextureType::SwapChainBuffer : TextureType::Texture2D, description, debugName)
     {
         m_Description.UsageFlags |= TextureBindFlags::RenderTarget;
-        CreateViews();
+        CreateRTV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -347,7 +379,7 @@ namespace Atom
         : Texture(swapChainBuffer ? TextureType::SwapChainBuffer : TextureType::Texture2D, textureHandle, debugName)
     {
         m_Description.UsageFlags |= TextureBindFlags::RenderTarget;
-        CreateViews();
+        CreateRTV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -367,16 +399,17 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderTexture2D::CreateViews()
+    void RenderTexture2D::CreateRTV()
     {
         auto& dx12Device = Device::Get();
-
-        Texture::CreateViews();
 
         // Create RTVs
         m_RTVDescriptors.resize(m_Description.MipLevels);
         for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
         {
+            if(m_RTVDescriptors[mip].ptr)
+                dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->ReleaseDescriptor(m_RTVDescriptors[mip], m_Type != TextureType::SwapChainBuffer);
+
             D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
             rtvDesc.Format = Utils::AtomTextureFormatToRTVFormat(m_Description.Format);
             rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -395,7 +428,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_Description.Format == TextureFormat::Depth24Stencil8 || m_Description.Format == TextureFormat::Depth32);
         m_Description.UsageFlags |= TextureBindFlags::DepthStencil;
 
-        CreateViews();
+        CreateDSV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -405,7 +438,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_Description.Format == TextureFormat::Depth24Stencil8 || m_Description.Format == TextureFormat::Depth32);
         m_Description.UsageFlags |= TextureBindFlags::DepthStencil;
 
-        CreateViews();
+        CreateDSV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -425,16 +458,17 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DepthBuffer::CreateViews()
+    void DepthBuffer::CreateDSV()
     {
         auto& dx12Device = Device::Get();
-
-        Texture::CreateViews();
 
         // Create DSVs
         m_DSVDescriptors.resize(m_Description.MipLevels);
         for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
         {
+            if(m_DSVDescriptors[mip].ptr)
+                dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->ReleaseDescriptor(m_DSVDescriptors[mip], true);
+
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
             dsvDesc.Format = Utils::AtomTextureFormatToDSVFormat(m_Description.Format);
             dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
@@ -447,17 +481,35 @@ namespace Atom
 
     // --------------------------------------------------- TextureCube -------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    TextureCube::TextureCube(const TextureDescription& description, const char* debugName)
-        : Texture(TextureType::TextureCube, description, debugName)
+    TextureCube::TextureCube(const TextureDescription& description, Vector<Vector<byte>> pixelData[6], bool isReadable, const char* debugName)
+        : Texture(TextureType::TextureCube, description, debugName), m_IsReadable(isReadable), Asset(AssetType::TextureCube)
     {
-        CreateViews();
+        // Copy the data if any is provided
+        for (u32 face = 0; face < 6; face++)
+        {
+            m_PixelData[face].resize(m_Description.MipLevels);
+
+            for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+            {
+                if (!pixelData[face][mip].empty())
+                {
+                    Renderer::UploadTextureData(pixelData[face][mip].data(), this, mip, face);
+
+                    // For readable textures, store a copy of the data in CPU memory
+                    if (m_IsReadable)
+                        m_PixelData[face][mip] = pixelData[face][mip];
+                }
+            }
+        }
+
+        CreateUAV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     TextureCube::TextureCube(ID3D12Resource* textureHandle, const char* debugName)
-        : Texture(TextureType::TextureCube, textureHandle, debugName)
+        : Texture(TextureType::TextureCube, textureHandle, debugName), m_IsReadable(false), Asset(AssetType::TextureCube)
     {
-        CreateViews();
+        CreateUAV();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -478,6 +530,55 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void TextureCube::UpdateGPUData(bool makeNonReadable)
+    {
+        if (m_IsReadable)
+        {
+            m_IsReadable = !makeNonReadable;
+
+            for (u32 face = 0; face < 6; face++)
+            {
+                for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+                {
+                    if (!m_PixelData[face][mip].empty())
+                    {
+                        Renderer::UploadTextureData(m_PixelData[face][mip].data(), this, mip, face);
+
+                        if (makeNonReadable)
+                            m_PixelData[face][mip].clear();
+                    }
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void TextureCube::SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel)
+    {
+        ATOM_ENGINE_ASSERT(cubeFace < 6);
+
+        if (m_IsReadable)
+            m_PixelData[cubeFace][mipLevel] = pixels;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Vector<byte>* TextureCube::GetPixels(u32 cubeFace, u32 mipLevel)
+    {
+        ATOM_ENGINE_ASSERT(cubeFace < 6);
+
+        if (m_IsReadable)
+            return &m_PixelData[cubeFace][mipLevel];
+
+        return nullptr;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool TextureCube::IsReadable() const
+    {
+        return m_IsReadable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     D3D12_CPU_DESCRIPTOR_HANDLE TextureCube::GetUAV(u32 slice, u32 mip) const
     {
         ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels && slice < 6);
@@ -495,15 +596,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void TextureCube::CreateViews()
+    void TextureCube::CreateUAV()
     {
-        auto& dx12Device = Device::Get();
-
-        Texture::CreateViews();
-
         // Create UAVs
         if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
         {
+            auto& dx12Device = Device::Get();
+
             // Create descriptors for each individual subresource
             m_UAVDescriptors.resize(m_Description.MipLevels * 6);
 
@@ -512,6 +611,9 @@ namespace Atom
                 for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
                 {
                     u32 subresourceIdx = D3D12CalcSubresource(mip, slice, 0, m_Description.MipLevels, 6);
+
+                    if(m_UAVDescriptors[subresourceIdx].ptr)
+                        dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[subresourceIdx], true);
 
                     D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
                     uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
@@ -530,6 +632,9 @@ namespace Atom
 
             for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
             {
+                if(m_ArrayUAVDescriptors[mip].ptr)
+                    dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_ArrayUAVDescriptors[mip], true);
+
                 D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
                 uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
                 uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;

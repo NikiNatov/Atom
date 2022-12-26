@@ -324,7 +324,8 @@ namespace Atom
 					ImGui::Text("Mesh");
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
-					ImGui::InputText("##Mesh", component.Mesh ? (char*)component.Mesh->GetName().c_str() : "Null", 50, ImGuiInputTextFlags_ReadOnly);
+					const AssetMetaData* metaData = AssetManager::GetAssetMetaData(component.Mesh);
+					ImGui::InputText("##Mesh", metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
 					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
@@ -346,7 +347,8 @@ namespace Atom
 					ImGui::Text("Environment");
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
-					ImGui::InputText("##EnvironmentMap", "EnvironmentMap", 50, ImGuiInputTextFlags_ReadOnly);
+					const AssetMetaData* metaData = AssetManager::GetAssetMetaData(component.EnvironmentMap);
+					ImGui::InputText("##EnvironmentMap", metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
 					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});

@@ -5,6 +5,7 @@
 #include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
+#include "Atom/Asset/AssetManager.h"
 
 namespace Atom
 {
@@ -12,6 +13,7 @@ namespace Atom
     Scene::Scene(const String& name)
         : m_Name(name)
     {
+        m_LightEnvironment = CreateRef<LightEnvironment>();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -155,7 +157,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnEditRender(Ref<SceneRenderer> renderer)
     {
-        LightEnvironment lightEnvironment;
+        m_LightEnvironment->ClearLights();
 
         // Sky light
         {
@@ -164,10 +166,9 @@ namespace Atom
             {
                 auto& slc = view.get<SkyLightComponent>(entity);
 
-                if (slc.EnvironmentMap && slc.IrradianceMap)
+                if (Ref<TextureCube> envMap = AssetManager::GetAsset<TextureCube>(slc.EnvironmentMap, true))
                 {
-                    Ref<EnvironmentMap> envMap = CreateRef<EnvironmentMap>(slc.EnvironmentMap, slc.IrradianceMap);
-                    lightEnvironment.SetEnvironmentMap(envMap);
+                    m_LightEnvironment->SetEnvironmentMap(envMap);
                     break;
                 }
             }
@@ -179,7 +180,7 @@ namespace Atom
             for (auto entity : view)
             {
                 auto [dlc, tc] = view.get<DirectionalLightComponent, TransformComponent>(entity);
-                lightEnvironment.AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
+                m_LightEnvironment->AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
             }
         }
 
@@ -189,7 +190,7 @@ namespace Atom
             for (auto entity : view)
             {
                 auto [plc, tc] = view.get<PointLightComponent, TransformComponent>(entity);
-                lightEnvironment.AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
+                m_LightEnvironment->AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
             }
         }
 
@@ -199,11 +200,11 @@ namespace Atom
             for (auto entity : view)
             {
                 auto [slc, tc] = view.get<SpotLightComponent, TransformComponent>(entity);
-                lightEnvironment.AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
+                m_LightEnvironment->AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
             }
         }
 
-        renderer->BeginScene(m_EditorCamera, lightEnvironment);
+        renderer->BeginScene(m_EditorCamera, m_LightEnvironment);
 
         // Submit meshes
         {
@@ -212,21 +213,24 @@ namespace Atom
             {
                 auto [mc, tc, shc] = view.get<MeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
 
-                if (shc.Parent)
+                if (Ref<Mesh> mesh = AssetManager::GetAsset<Mesh>(mc.Mesh, true))
                 {
-                    Entity currentParent = FindEntityByUUID(shc.Parent);
-                    auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
-
-                    while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                    if (shc.Parent)
                     {
-                        currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
-                        accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
-                    }
+                        Entity currentParent = FindEntityByUUID(shc.Parent);
+                        auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
 
-                    renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
+                        while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                        {
+                            currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
+                            accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
+                        }
+
+                        renderer->SubmitMesh(mesh, accumulatedTransform * tc.GetTransform(), {});
+                    }
+                    else
+                        renderer->SubmitMesh(mesh, tc.GetTransform(), {});
                 }
-                else
-                    renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
             }
         }
 
@@ -273,7 +277,7 @@ namespace Atom
 
         if (mainCamera)
         {
-            LightEnvironment lightEnvironment;
+            m_LightEnvironment->ClearLights();
 
             // Sky light
             {
@@ -282,10 +286,9 @@ namespace Atom
                 {
                     auto& slc = view.get<SkyLightComponent>(entity);
 
-                    if (slc.EnvironmentMap && slc.IrradianceMap)
+                    if (Ref<TextureCube> envMap = AssetManager::GetAsset<TextureCube>(slc.EnvironmentMap, true))
                     {
-                        Ref<EnvironmentMap> envMap = CreateRef<EnvironmentMap>(slc.EnvironmentMap, slc.IrradianceMap);
-                        lightEnvironment.SetEnvironmentMap(envMap);
+                        m_LightEnvironment->SetEnvironmentMap(envMap);
                         break;
                     }
                 }
@@ -297,7 +300,7 @@ namespace Atom
                 for (auto entity : view)
                 {
                     auto [dlc, tc] = view.get<DirectionalLightComponent, TransformComponent>(entity);
-                    lightEnvironment.AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
+                    m_LightEnvironment->AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
                 }
             }
 
@@ -307,7 +310,7 @@ namespace Atom
                 for (auto entity : view)
                 {
                     auto [plc, tc] = view.get<PointLightComponent, TransformComponent>(entity);
-                    lightEnvironment.AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
+                    m_LightEnvironment->AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
                 }
             }
 
@@ -317,11 +320,11 @@ namespace Atom
                 for (auto entity : view)
                 {
                     auto [slc, tc] = view.get<SpotLightComponent, TransformComponent>(entity);
-                    lightEnvironment.AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
+                    m_LightEnvironment->AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
                 }
             }
 
-            renderer->BeginScene(*mainCamera, cameraTransform, lightEnvironment);
+            renderer->BeginScene(*mainCamera, cameraTransform, m_LightEnvironment);
 
             // Submit meshes
             {
@@ -330,21 +333,24 @@ namespace Atom
                 {
                     auto [mc, tc, shc] = view.get<MeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
 
-                    if (shc.Parent)
+                    if (Ref<Mesh> mesh = AssetManager::GetAsset<Mesh>(mc.Mesh, true))
                     {
-                        Entity currentParent = FindEntityByUUID(shc.Parent);
-                        auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
-
-                        while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                        if (shc.Parent)
                         {
-                            currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
-                            accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
-                        }
+                            Entity currentParent = FindEntityByUUID(shc.Parent);
+                            auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
 
-                        renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
+                            while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                            {
+                                currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
+                                accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
+                            }
+
+                            renderer->SubmitMesh(mesh, accumulatedTransform * tc.GetTransform(), {});
+                        }
+                        else
+                            renderer->SubmitMesh(mesh, tc.GetTransform(), {});
                     }
-                    else
-                        renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
                 }
             }
 

@@ -4,6 +4,7 @@
 
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/EntityInspectorPanel.h"
+#include "Dialogs/ImportDialog.h"
 
 namespace Atom
 {
@@ -39,6 +40,8 @@ namespace Atom
         bool                 m_GuizmoSnap = false;
         SceneHierarchyPanel  m_SceneHierarchyPanel;
         EntityInspectorPanel m_EntityInspectorPanel;
+        TextureImportDialog  m_TextureImportDialog;
+        MeshImportDialog     m_MeshImportDialog;
     private:
         inline static EditorLayer* ms_Instance = nullptr;
     };

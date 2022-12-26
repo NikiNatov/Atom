@@ -326,8 +326,8 @@ namespace Atom
         // Create font texture
         ImGuiIO& io = ImGui::GetIO();
         byte* pixels;
-        s32 width, height;
-        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+        s32 width, height, bytesPerPixel;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytesPerPixel);
 
         TextureDescription fontTextureDesc;
         fontTextureDesc.Format = TextureFormat::RGBA8;
@@ -337,14 +337,11 @@ namespace Atom
         fontTextureDesc.Width = width;
         fontTextureDesc.Height = height;
 
-        m_FontTexture = CreateRef<Texture2D>(fontTextureDesc, "ImGuiFontTexture");
+        Vector<Vector<byte>> pixelData;
+        pixelData.resize(fontTextureDesc.MipLevels);
+        pixelData[0].assign(pixels, pixels + width * height * bytesPerPixel);
 
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadTextureData(pixels, m_FontTexture.get());
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer);
+        m_FontTexture = CreateRef<Texture2D>(fontTextureDesc, pixelData, false, "ImGuiFontTexture");
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
 
@@ -352,6 +349,6 @@ namespace Atom
         m_TextureCache.resize(numFramesInFlight);
 
         // Wait until all copy operations are finished before rendering
-        copyQueue->Flush();
+        Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
     }
 }

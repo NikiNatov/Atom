@@ -11,7 +11,8 @@ namespace Atom
         VertexBuffer,
         IndexBuffer,
         ConstantBuffer,
-        StructuredBuffer
+        StructuredBuffer,
+        ReadbackBuffer
     };
 
     struct BufferDescription
@@ -35,8 +36,7 @@ namespace Atom
         u32 GetSize() const;
         bool IsDynamic() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
-    protected:
-        virtual void CreateViews() = 0;
+
     protected:
         BufferDescription      m_Description;
         BufferType             m_Type;
@@ -52,7 +52,7 @@ namespace Atom
 
         inline const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const { return m_View; }
     private:
-        virtual void CreateViews() override;
+        virtual void CreateViews();
     private:
         D3D12_VERTEX_BUFFER_VIEW m_View {};
     };
@@ -72,7 +72,7 @@ namespace Atom
         IndexBufferFormat GetFormat() const;
         inline const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return m_View; }
     private:
-        virtual void CreateViews() override;
+        virtual void CreateViews();
     private:
         D3D12_INDEX_BUFFER_VIEW m_View {};
         IndexBufferFormat       m_Format;
@@ -86,7 +86,7 @@ namespace Atom
 
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetCBV() const { return m_CBVDescriptor; }
     private:
-        virtual void CreateViews() override;
+        virtual void CreateViews();
     private:
         D3D12_CPU_DESCRIPTOR_HANDLE m_CBVDescriptor;
     };
@@ -99,8 +99,14 @@ namespace Atom
 
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
     private:
-        virtual void CreateViews() override;
+        virtual void CreateViews();
     private:
         D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor;
+    };
+
+    class ReadbackBuffer : public Buffer
+    {
+    public:
+        ReadbackBuffer(const BufferDescription& description, const char* debugName = "Unnamed Readback Buffer");
     };
 }

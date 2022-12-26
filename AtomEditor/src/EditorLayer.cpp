@@ -1,6 +1,8 @@
 #include "EditorLayer.h"
 #include "EditorResources.h"
 #include "Panels/ConsolePanel.h"
+#include "Panels/AssetManagerPanel.h"
+#include "Dialogs/FileDialog.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -26,8 +28,7 @@ namespace Atom
     void EditorLayer::OnAttach()
     {
         EditorResources::Initialize();
-
-        Ref<EnvironmentMap> environment = Renderer::CreateEnvironmentMap("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr");
+        AssetManager::SetAssetFolder("TestProject/Assets");
 
         m_Scene = CreateRef<Scene>("TestScene");
 
@@ -44,7 +45,7 @@ namespace Atom
 
         {
             Entity player = m_Scene->CreateEntity("Player");
-            player.AddComponent<MeshComponent>(CreateRef<Mesh>("TestProject/Assets/Meshes/cube.gltf"));
+            player.AddComponent<MeshComponent>(ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/sphere.gltf", "TestProject/Assets/Meshes/", MeshImportSettings()));
 
             auto& sc = player.AddComponent<ScriptComponent>();
             sc.ScriptClass = "Player";
@@ -58,7 +59,7 @@ namespace Atom
 
         {
             Entity ground = m_Scene->CreateEntity("Ground");
-            ground.AddComponent<MeshComponent>(CreateRef<Mesh>("TestProject/Assets/Meshes/cube.gltf"));
+            ground.AddComponent<MeshComponent>(ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/cube.gltf", "TestProject/Assets/Meshes/", MeshImportSettings()));
 
             ground.GetComponent<TransformComponent>().Scale = { 3.0f, 1.0f, 3.0f };
             ground.GetComponent<TransformComponent>().Translation.y = -3.0f;
@@ -71,40 +72,23 @@ namespace Atom
         }
 
         {
+            TextureImportSettings importSettings;
+            importSettings.Type = TextureType::TextureCube;
+            importSettings.Format = TextureFormat::RGBA32F;
+            UUID uuid  = ContentTools::ImportTextureAsset("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr", "TestProject/Assets/Textures", importSettings);
+
             Entity skyLight = m_Scene->CreateEntity("SkyLight");
-            auto& slc = skyLight.AddComponent<SkyLightComponent>();
-            slc.EnvironmentMap = environment->GetEnvironmentTexture();
-            slc.IrradianceMap = environment->GetIrradianceTexture();
+            skyLight.AddComponent<SkyLightComponent>(uuid);
         }
 
         {
             Entity dirLight = m_Scene->CreateEntity("DirLight");
             dirLight.GetComponent<TransformComponent>().Translation = { 5.0f, 5.0f, 0.0f };
             auto& dlc = dirLight.AddComponent<DirectionalLightComponent>();
-            dlc.Color = { 1.0f, 0.0f, 0.0f };
-            dlc.Intensity = 5.0f;
+            dlc.Color = { 1.0f, 1.0f, 1.0f };
+            dlc.Intensity = 1.0f;
         }
         
-        {
-            Entity pointLight = m_Scene->CreateEntity("PointLight");
-            pointLight.GetComponent<TransformComponent>().Translation = { -2.0f, 2.0f, 0.0f };
-            auto& plc = pointLight.AddComponent<PointLightComponent>();
-            plc.Color = { 0.0f, 1.0f, 0.0f };
-            plc.Intensity = 15.0f;
-            plc.AttenuationFactors = { 1.0f, 0.08f, 0.0f };
-        }
-
-        {
-            Entity spotLight = m_Scene->CreateEntity("SpotLight");
-            spotLight.GetComponent<TransformComponent>().Translation = { 0.0f, 0.0f, 5.0f };
-            auto& slc = spotLight.AddComponent<SpotLightComponent>();
-            slc.Color = { 0.0f, 0.0f, 1.0f };
-            slc.Direction = { 0.0f, 0.0f, -1.0f };
-            slc.ConeAngle = 2.0f;
-            slc.Intensity = 15.0f;
-            slc.AttenuationFactors = { 1.0f, 0.08f, 0.0f };
-        }
-
         m_Renderer = CreateRef<SceneRenderer>();
         m_Renderer->Initialize();
 
@@ -181,7 +165,7 @@ namespace Atom
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("New", "Ctrl+N"))
+                if (ImGui::MenuItem("New Scene", "Ctrl+N"))
                 {
                     NewScene();
                 }
@@ -191,13 +175,35 @@ namespace Atom
                     OpenScene();
                 }
 
-                if (ImGui::MenuItem("Save As...", "Ctrl+S"))
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Save Scene...", "Ctrl+S"))
                 {
                     SaveScene();
                 }
 
-                if (ImGui::MenuItem("Exit"))
+                if (ImGui::MenuItem("Exit", "Alt+F4"))
                     Application::Get().Close();
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Assets"))
+            {
+                if (ImGui::BeginMenu("Import"))
+                {
+                    if (ImGui::MenuItem("Texture", ""))
+                    {
+                        m_TextureImportDialog.Open();
+                    }
+
+                    if (ImGui::MenuItem("Mesh", ""))
+                    {
+                        m_MeshImportDialog.Open();
+                    }
+
+                    ImGui::EndMenu();
+                }
 
                 ImGui::EndMenu();
             }
@@ -234,6 +240,9 @@ namespace Atom
         ImGui::End();
         ImGui::PopStyleVar();
 
+        m_TextureImportDialog.OnImGuiRender();
+        m_MeshImportDialog.OnImGuiRender();
+        AssetManagerPanel::OnImGuiRender();
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
 
@@ -303,7 +312,6 @@ namespace Atom
                 glm::vec3 deltaRotation = glm::radians(rotation) - tc.Rotation;
 
                 tc.Translation = translation;
-                //tc.Rotation = glm::radians(rotation);
                 tc.Rotation += deltaRotation;
                 tc.Scale = scale;
             }
@@ -333,6 +341,7 @@ namespace Atom
 
         bool control = Input::IsKeyPressed(Key::LCtrl) || Input::IsKeyPressed(Key::RCtrl);
         bool shift = Input::IsKeyPressed(Key::LShift) || Input::IsKeyPressed(Key::RShift);
+        bool alt = Input::IsKeyPressed(Key::LAlt) || Input::IsKeyPressed(Key::LAlt);
 
         switch (e.GetKeyCode())
         {
@@ -357,6 +366,13 @@ namespace Atom
 
                 break;
             }
+            case Key::F4:
+            {
+                if (alt)
+                    Application::Get().Close();
+
+                break;
+            }
             case Key::Q:
                 m_GuizmoOperation = -1;
                 break;
@@ -377,7 +393,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::SaveScene()
     {
-        const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.scene)\0*.scene\0");
+        const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.atmscene)\0*.atmscene\0");
         if (!path.empty())
         {
             SceneSerializer serializer(m_Scene);
@@ -388,6 +404,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::NewScene()
     {
+        AssetManager::UnloadAllAssets();
         m_Scene = CreateRef<Scene>();
         m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
         m_SceneHierarchyPanel.SetScene(m_Scene);
@@ -396,10 +413,11 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OpenScene()
     {
-        const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.scene)\0*.scene\0");
+        const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.atmscene)\0*.atmscene\0");
 
         if (!path.empty())
         {
+            AssetManager::UnloadAllAssets();
             m_Scene = CreateRef<Scene>();
             m_Scene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
             m_SceneHierarchyPanel.SetScene(m_Scene);

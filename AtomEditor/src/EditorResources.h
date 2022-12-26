@@ -17,19 +17,14 @@ namespace Atom
     public:
         static void Initialize()
         {
-            CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-            copyCommandBuffer->Begin();
 
-            InfoIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/info_icon.png", "InfoIcon");
-            WarningIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/warning_icon.png", "WarningIcon");
-            ErrorIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/error_icon.png", "ErrorIcon");
-            ScenePlayIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_play_icon.png", "ScenePlayIcon");
-            SceneStopIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_stop_icon.png", "SceneStopIcon");
-            ScenePauseIcon = LoadResourceTexture(copyCommandBuffer, "resources/icons/scene_pause_icon.png", "ScenePauseIcon");
-
-            copyCommandBuffer->End();
-            copyQueue->ExecuteCommandList(copyCommandBuffer);
+            TextureImportSettings importSettings = TextureImportSettings();
+            InfoIcon = ContentTools::ImportTexture("resources/icons/info_icon.png", importSettings);
+            WarningIcon = ContentTools::ImportTexture("resources/icons/warning_icon.png", importSettings);
+            ErrorIcon = ContentTools::ImportTexture("resources/icons/error_icon.png", importSettings);
+            ScenePlayIcon = ContentTools::ImportTexture("resources/icons/scene_play_icon.png", importSettings);
+            SceneStopIcon = ContentTools::ImportTexture("resources/icons/scene_stop_icon.png", importSettings);
+            ScenePauseIcon = ContentTools::ImportTexture("resources/icons/scene_pause_icon.png", importSettings);
         }
 
         static void Shutdown()
@@ -40,22 +35,6 @@ namespace Atom
             ScenePlayIcon = nullptr;
             SceneStopIcon = nullptr;
             ScenePauseIcon = nullptr;
-        }
-
-    private:
-        static Ref<Texture2D> LoadResourceTexture(Ref<CommandBuffer> copyCommandBuffer, const std::filesystem::path& filepath, const char* name)
-        {
-            Image2D image(filepath);
-
-            TextureDescription desc;
-            desc.Format = TextureFormat::RGBA8;
-            desc.Width = image.GetWidth();
-            desc.Height = image.GetHeight();
-
-            Ref<Texture2D> texture = CreateRef<Texture2D>(desc, name);
-            copyCommandBuffer->UploadTextureData(image.GetPixelData().data(), texture.get());
-
-            return texture;
         }
     };
 }

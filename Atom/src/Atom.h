@@ -1,5 +1,9 @@
 #pragma once
 
+// Asset
+#include "Atom/Asset/Asset.h"
+#include "Atom/Asset/AssetManager.h"
+
 // Core
 #include "Atom/Core/Application.h"
 #include "Atom/Core/Core.h"
@@ -12,7 +16,6 @@
 #include "Atom/Core/Window.h"
 #include "Atom/Core/Input.h"
 #include "Atom/Core/UUID.h"
-#include "Atom/Core/FileDialog.h"
 #include "Atom/Core/DataStructures/ThreadSafeQueue.h"
 
 // ImGui
@@ -45,3 +48,6 @@
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/SceneRenderer.h"
 #include "Atom/Scene/SceneSerializer.h"
+
+// Tools
+#include "Atom/Tools/ContentTools.h"

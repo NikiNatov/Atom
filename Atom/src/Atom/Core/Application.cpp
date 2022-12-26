@@ -7,6 +7,7 @@
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
+#include "Atom/Asset/AssetManager.h"
 
 namespace Atom
 {
@@ -46,6 +47,7 @@ namespace Atom
         for (auto layer : m_LayerStack)
             layer->OnDetach();
 
+        AssetManager::Shutdown();
         Renderer::Shutdown();
         ScriptEngine::Shutdown();
         PhysicsEngine::Shutdown();
@@ -123,9 +125,27 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void Application::SubmitForMainThreadExecution(const std::function<void()>& function)
+    {
+        std::scoped_lock<std::mutex> lock(m_MainThreadQueueMutex);
+        m_MainThreadQueue.push_back(function);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     bool Application::OnWindowClosed(WindowClosedEvent& event)
     {
         Close();
         return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Application::ExecuteMainThreadQueue()
+    {
+        std::scoped_lock<std::mutex> lock(m_MainThreadQueueMutex);
+
+        for (auto& fn : m_MainThreadQueue)
+            fn();
+
+        m_MainThreadQueue.clear();
     }
 }

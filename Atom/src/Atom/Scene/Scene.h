@@ -48,5 +48,6 @@ namespace Atom
         EditorCamera          m_EditorCamera;
         SceneState            m_State = SceneState::Edit;
         HashMap<UUID, Entity> m_EntitiesByID;
+        Ref<LightEnvironment> m_LightEnvironment;
     };
 }

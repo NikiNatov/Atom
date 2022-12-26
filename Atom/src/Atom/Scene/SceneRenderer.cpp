@@ -25,9 +25,9 @@ namespace Atom
         m_FullScreenQuadPipeline = pipelineLib.Get<GraphicsPipeline>("FullscreenQuadPipeline");
 
         // Create materials
-        m_SkyBoxMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None, "SkyBoxMaterial");
-        m_CompositeMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("CompositeShader"), MaterialFlags::None, "CompositeMaterial");
-        m_FullScreenQuadMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("FullscreenQuadShader"), MaterialFlags::None, "FullscreenQuadMaterial");
+        m_SkyBoxMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("SkyBoxShader"), MaterialFlags::None);
+        m_CompositeMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("CompositeShader"), MaterialFlags::None);
+        m_FullScreenQuadMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("FullscreenQuadShader"), MaterialFlags::None);
 
         // Create transform constant buffer
         BufferDescription cbDesc;
@@ -39,7 +39,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::BeginScene(Camera& camera, const glm::mat4& cameraTransform, const LightEnvironment& lightEnvironment)
+    void SceneRenderer::BeginScene(Camera& camera, const glm::mat4& cameraTransform, const Ref<LightEnvironment>& lightEnvironment)
     {
         // Set camera transforms
         m_TransformData.ProjectionMatrix = camera.GetProjection();
@@ -47,9 +47,9 @@ namespace Atom
         m_TransformData.CameraPosition = cameraTransform[3];
 
         // Set lights data
-        m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();
+        m_Environment = lightEnvironment;
 
-        const auto& lights = lightEnvironment.GetLights();
+        const auto& lights = m_Environment->GetLights();
 
         if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
         {
@@ -71,7 +71,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::BeginScene(EditorCamera& editorCamera, const LightEnvironment& lightEnvironment)
+    void SceneRenderer::BeginScene(EditorCamera& editorCamera, const Ref<LightEnvironment>& lightEnvironment)
     {
         // Set camera transforms
         m_TransformData.ProjectionMatrix = editorCamera.GetProjection();
@@ -79,9 +79,9 @@ namespace Atom
         m_TransformData.CameraPosition = editorCamera.GetPosition();
 
         // Set lights data
-        m_EnvironmentMap = lightEnvironment.GetEnvironmentMap();
+        m_Environment = lightEnvironment;
 
-        const auto& lights = lightEnvironment.GetLights();
+        const auto& lights = m_Environment->GetLights();
 
         if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
         {
@@ -103,7 +103,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Vector<Ref<Material>>& materials)
+    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const MaterialTable& materialTable)
     {
         if (!mesh)
             return;
@@ -113,12 +113,13 @@ namespace Atom
         for (u32 submeshIdx = 0 ; submeshIdx < submeshes.size(); submeshIdx++)
         {
             const Submesh& submesh = submeshes[submeshIdx];
-
+            const MaterialTable& meshMaterialTable = mesh->GetMaterialTable();
+            
             DrawCommand& drawCommand = m_DrawList.emplace_back();
             drawCommand.Mesh = mesh;
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
-            drawCommand.Material = materials.size() > submeshIdx && materials[submeshIdx] ? materials[submeshIdx] : mesh->GetMaterials()[submesh.MaterialIndex];
+            drawCommand.Material = materialTable.HasMaterial(submeshIdx) ? materialTable.GetMaterial(submeshIdx)->GetMaterial() : meshMaterialTable.GetMaterial(submeshIdx)->GetMaterial();
         }
     }
 
@@ -159,16 +160,16 @@ namespace Atom
 
         // Render skybox
         m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_TransformData.ProjectionMatrix * m_TransformData.ViewMatrix));
-        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_EnvironmentMap->GetEnvironmentTexture());
+        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_Environment->GetEnvironmentMap());
         Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 
         // Render meshes
         for (auto& drawCommand : m_DrawList)
         {
-            drawCommand.Material->SetTexture("EnvironmentMap", m_EnvironmentMap->GetEnvironmentTexture());
-            drawCommand.Material->SetTexture("IrradianceMap", m_EnvironmentMap->GetIrradianceTexture());
-
             // TODO: These should not be set by the material
+            drawCommand.Material->SetTexture("EnvironmentMap", m_Environment->GetEnvironmentMap());
+            drawCommand.Material->SetTexture("IrradianceMap", m_Environment->GetIrradianceMap());
+            drawCommand.Material->SetTexture("BRDFMap", Renderer::GetBRDF());
             drawCommand.Material->SetUniform("Transform", drawCommand.Transform);
             drawCommand.Material->SetUniform("NumLights", m_LightsSB->GetElementCount());
 

@@ -20,9 +20,9 @@ namespace Atom
         ~SceneRenderer();
 
         void Initialize();
-        void BeginScene(Camera& camera, const glm::mat4& cameraTransform, const LightEnvironment& lightEnvironment);
-        void BeginScene(EditorCamera& editorCamera, const LightEnvironment& lightEnvironment);
-        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Vector<Ref<Material>>& materials);
+        void BeginScene(Camera& camera, const glm::mat4& cameraTransform, const Ref<LightEnvironment>& lightEnvironment);
+        void BeginScene(EditorCamera& editorCamera, const Ref<LightEnvironment>& lightEnvironment);
+        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const MaterialTable& materialTable);
         void OnViewportResize(u32 width, u32 height);
         void PreRender();
         void Flush();
@@ -51,7 +51,7 @@ namespace Atom
             f32 p[29]{ 0 };
         };
 
-        Ref<EnvironmentMap>   m_EnvironmentMap;
+        Ref<LightEnvironment> m_Environment;
 
         Vector<DrawCommand>   m_DrawList;
         TransformCB           m_TransformData;

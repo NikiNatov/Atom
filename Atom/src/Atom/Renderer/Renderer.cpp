@@ -11,6 +11,8 @@
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/LightEnvironment.h"
 
+#include "Atom/Tools/ContentTools.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -220,6 +222,7 @@ namespace Atom
         vbDesc.IsDynamic = false;
 
         ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB(Renderer)");
+        UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
 
         u16 quadIndices[] = { 0, 1, 2, 2, 3, 0 };
 
@@ -229,17 +232,7 @@ namespace Atom
         ibDesc.IsDynamic = false;
 
         ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB(Renderer)");
-
-        // Upload the data to the GPU
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        {
-            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-            copyCommandBuffer->Begin();
-            copyCommandBuffer->UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
-            copyCommandBuffer->UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
-            copyCommandBuffer->End();
-            copyQueue->ExecuteCommandList(copyCommandBuffer);
-        }
+        UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
 
         // Create error texture
         TextureDescription errorTextureDesc;
@@ -248,16 +241,11 @@ namespace Atom
         errorTextureDesc.Format = TextureFormat::RGBA8;
         errorTextureDesc.MipLevels = 1;
 
-        ms_ErrorTexture = CreateRef<Texture2D>(errorTextureDesc, "ErrorTexture(Renderer)");
+        Vector<Vector<byte>> errorTextureData;
+        errorTextureData.resize(errorTextureDesc.MipLevels);
+        errorTextureData[0] = { 0xFF, 0x00, 0xFF, 0xFF }; // Just 1 pixel of pink color
 
-        u32 errorTextureData = 0xFFFF00FF; // Just 1 pixel of pink color
-        {
-            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-            copyCommandBuffer->Begin();
-            copyCommandBuffer->UploadTextureData(&errorTextureData, ms_ErrorTexture.get());
-            copyCommandBuffer->End();
-            copyQueue->ExecuteCommandList(copyCommandBuffer);
-        }
+        ms_ErrorTexture = CreateRef<Texture2D>(errorTextureDesc, errorTextureData, false, "ErrorTexture(Renderer)");
 
         // Create black texture and black texture cube
         TextureDescription blackTextureDesc;
@@ -266,21 +254,22 @@ namespace Atom
         blackTextureDesc.Format = TextureFormat::RGBA8;
         blackTextureDesc.MipLevels = 1;
 
-        ms_BlackTexture = CreateRef<Texture2D>(blackTextureDesc, "BlackTexture(Renderer)");
-        ms_BlackTextureCube = CreateRef<TextureCube>(blackTextureDesc, "BlackTextureCube(Renderer)");
+        Vector<Vector<byte>> blackTextureData;
+        blackTextureData.resize(blackTextureDesc.MipLevels);
+        blackTextureData[0] = { 0x00, 0x00, 0x00, 0xFF }; // Just 1 pixel of black color
 
-        u32 blackTextureData = 0xFF000000; // Just 1 pixel of black color
-        {
-            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-            copyCommandBuffer->Begin();
-            copyCommandBuffer->UploadTextureData(&blackTextureData, ms_BlackTexture.get());
+        ms_BlackTexture = CreateRef<Texture2D>(blackTextureDesc, blackTextureData, false, "BlackTexture(Renderer)");
 
-            for (u32 arraySlice = 0; arraySlice < 6; arraySlice++)
-                copyCommandBuffer->UploadTextureData(&blackTextureData, ms_BlackTextureCube.get(), 0, arraySlice);
+        Vector<Vector<byte>> blackTextureCubeData[6] = { 
+            { blackTextureData }, 
+            { blackTextureData }, 
+            { blackTextureData }, 
+            { blackTextureData }, 
+            { blackTextureData }, 
+            { blackTextureData } 
+        };
 
-            copyCommandBuffer->End();
-            copyQueue->ExecuteCommandList(copyCommandBuffer);
-        }
+        ms_BlackTextureCube = CreateRef<TextureCube>(blackTextureDesc, blackTextureCubeData, false, "BlackTextureCube(Renderer)");
 
         // Generate BRDF texture
         TextureDescription brdfDesc;
@@ -291,7 +280,10 @@ namespace Atom
         brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
         brdfDesc.Wrap = TextureWrap::Clamp;
 
-        ms_BRDFTexture = CreateRef<Texture2D>(brdfDesc, "BRDFTexture(Renderer)");
+        Vector<Vector<byte>> emptyData;
+        emptyData.resize(brdfDesc.MipLevels);
+
+        ms_BRDFTexture = CreateRef<Texture2D>(brdfDesc, emptyData, false, "BRDFTexture(Renderer)");
 
         u32 currentFrameIdx = GetCurrentFrameIndex();
         D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = ms_ResourceHeaps[currentFrameIdx]->CopyDescriptor(ms_BRDFTexture->GetUAV());
@@ -310,7 +302,7 @@ namespace Atom
 
         // Wait for all copy/compute operations to complete before we continue
         computeQueue->Flush();
-        copyQueue->Flush();
+        Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -363,7 +355,7 @@ namespace Atom
         commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
-        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterials()[submesh.MaterialIndex];
+        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable().GetMaterial(submesh.MaterialIndex)->GetMaterial();
 
         u32 currentRootParameter = 0;
 
@@ -391,7 +383,7 @@ namespace Atom
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
         samplers.reserve(material->GetTextures().size());
 
-        for (const auto& texture : material->GetTextures())
+        for (const auto& [textureSlot, texture] : material->GetTextures())
         {
             if (!texture)
             {
@@ -447,7 +439,7 @@ namespace Atom
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
         samplers.reserve(material->GetTextures().size());
 
-        for (const auto& texture : material->GetTextures())
+        for (const auto& [textureSlot, texture] : material->GetTextures())
         {
             if (!texture)
             {
@@ -474,7 +466,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<EnvironmentMap> Renderer::CreateEnvironmentMap(const std::filesystem::path& filepath)
+    Ref<TextureCube> Renderer::CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize)
     {
         u32 currentFrameIdx = GetCurrentFrameIndex();
         Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
@@ -484,52 +476,31 @@ namespace Atom
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
-        //                               Phase 0: Load the hdr texture                                 //
-        /////////////////////////////////////////////////////////////////////////////////////////////////
-
-        Image2D hdrImage(filepath);
-
-        TextureDescription textureDesc;
-        textureDesc.Width = hdrImage.GetWidth();
-        textureDesc.Height = hdrImage.GetHeight();
-        textureDesc.Format = TextureFormat::RGBA32F;
-        textureDesc.MipLevels = hdrImage.GetMaxMipCount();
-        textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
-
-        String name = filepath.stem().string();
-        Ref<Texture2D> hdrMap = CreateRef<Texture2D>(textureDesc, name.c_str());
-
-        {
-            Ref<CommandBuffer> copyCmdBuffer = copyQueue->GetCommandBuffer();
-            copyCmdBuffer->Begin();
-            copyCmdBuffer->UploadTextureData(hdrImage.GetPixelData().data(), hdrMap.get());
-            copyCmdBuffer->End();
-            copyQueue->ExecuteCommandList(copyCmdBuffer);
-        }
-
-        Renderer::GenerateMips(hdrMap);
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////
         //                        Phase 1: Equirectangular map to cubemap                              //
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         TextureDescription envMapDesc;
-        envMapDesc.Width = 1024;
-        envMapDesc.Height = 1024;
-        envMapDesc.Format = TextureFormat::RGBA16F;
-        envMapDesc.MipLevels = 11;
-        envMapDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+        envMapDesc.Width = mapSize;
+        envMapDesc.Height = mapSize;
+        envMapDesc.Format = equirectTexture->GetFormat();
+        envMapDesc.MipLevels = (u32)glm::log2((f32)mapSize) + 1;
+        envMapDesc.UsageFlags = equirectTexture->GetBindFlags();
 
-        Ref<TextureCube> envMapUnfiltered = CreateRef<TextureCube>(envMapDesc, fmt::format("{}(EnvironmentMapUnfiltered)", name).c_str());
+        Vector<Vector<byte>> emptyCubeData[6];
+
+        for (u32 face = 0; face < 6; face++)
+            emptyCubeData[face].resize(envMapDesc.MipLevels);
+
+        Ref<TextureCube> envMapUnfiltered = CreateRef<TextureCube>(envMapDesc, emptyCubeData, false, fmt::format("{}(Unfiltered)", equirectTexture->GetAssetFilepath().stem().string()).c_str());
 
         {
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
 
-            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(hdrMap->GetSampler());
+            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(equirectTexture->GetSampler());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
-            computeCmdBuffer->TransitionResource(hdrMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            computeCmdBuffer->TransitionResource(equirectTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
             computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
@@ -537,7 +508,7 @@ namespace Atom
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { hdrMap->GetSRV(), envMapUnfiltered->GetArrayUAV(mip) };
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV(), envMapUnfiltered->GetArrayUAV(mip) };
                 D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
 
                 computeCmdBuffer->SetComputeRootConstants(0, &mip, 1);
@@ -557,7 +528,7 @@ namespace Atom
         //                                    Phase 2: Pre-filtering                                   //
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
-        Ref<TextureCube> envMap = CreateRef<TextureCube>(envMapDesc, fmt::format("{}(EnvironmentMap)", name).c_str());
+        Ref<TextureCube> envMap = CreateRef<TextureCube>(envMapDesc, emptyCubeData, equirectTexture->IsReadable(), fmt::format("{}", equirectTexture->GetAssetFilepath().stem().string()).c_str());
 
         // Copy the first mip of every face from the unfiltered map
         {
@@ -605,6 +576,7 @@ namespace Atom
                 height = glm::max(height / 2, 1u);
             }
 
+            computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COMMON);
             computeCmdBuffer->End();
             computeQueue->WaitForQueue(copyQueue);
             computeQueue->ExecuteCommandList(computeCmdBuffer);
@@ -612,34 +584,78 @@ namespace Atom
             PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
         }
 
-        /////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                    Phase 3: Irradiance map                                  //
-        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // Wait for all compute operations to complete
+        computeQueue->Flush();
+
+        if (envMap->IsReadable())
+        {
+            // If the cubemap is readable, get generated data from the GPU and copy it to the CPU
+            for (u32 face = 0; face < 6; face++)
+            {
+                for (u32 mip = 0; mip < envMap->GetMipLevels(); mip++)
+                {
+                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(envMap.get(), mip, face);
+
+                    Vector<byte> pixelData(buffer->GetSize(), 0);
+                    void* mappedData = buffer->Map(0, 0);
+                    memcpy(pixelData.data(), mappedData, pixelData.size());
+                    buffer->Unmap();
+
+                    envMap->SetPixels(pixelData, face, mip);
+                }
+            }
+        }
+
+        return envMap;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<TextureCube> Renderer::CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize)
+    {
+        u32 currentFrameIdx = GetCurrentFrameIndex();
+        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
+        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+
+        Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
+        gfxCmdBuffer->Begin();
+        gfxCmdBuffer->TransitionResource(environmentMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        gfxCmdBuffer->End();
+        gfxQueue->ExecuteCommandList(gfxCmdBuffer);
 
         TextureDescription irradianceMapDesc;
-        irradianceMapDesc.Width = 32;
-        irradianceMapDesc.Height = 32;
+        irradianceMapDesc.Width = mapSize;
+        irradianceMapDesc.Height = mapSize;
         irradianceMapDesc.Format = TextureFormat::RGBA16F;
         irradianceMapDesc.MipLevels = 1;
         irradianceMapDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
 
-        Ref<TextureCube> irradianceMap = CreateRef<TextureCube>(irradianceMapDesc, fmt::format("{}(IrradianceMap)", name).c_str());
+        Vector<Vector<byte>> emptyCubeData[6];
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMap->GetSRV(), irradianceMap->GetArrayUAV() };
+        for (u32 face = 0; face < 6; face++)
+            emptyCubeData[face].resize(irradianceMapDesc.MipLevels);
+
+        Ref<TextureCube> irradianceMap = CreateRef<TextureCube>(irradianceMapDesc, emptyCubeData, false, fmt::format("{}(IrradianceMap)", environmentMap->GetAssetFilepath().stem().string()).c_str());
+
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV(), irradianceMap->GetArrayUAV() };
         D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMap->GetSampler());
+        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(environmentMap->GetSampler());
 
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateIrradianceMap");
 
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
-        computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
         computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
         computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable);
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
+        computeCmdBuffer->TransitionResource(environmentMap.get(), D3D12_RESOURCE_STATE_COMMON);
+        computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->End();
         computeQueue->ExecuteCommandList(computeCmdBuffer);
 
@@ -648,7 +664,7 @@ namespace Atom
         // Wait for all compute operations to complete
         computeQueue->Flush();
 
-        return CreateRef<EnvironmentMap>(envMap, irradianceMap);
+        return irradianceMap;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -657,9 +673,8 @@ namespace Atom
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
 
-        u32 currentFrameIdx = GetCurrentFrameIndex();
-        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
-        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+        Ref<DescriptorHeap> currentResourceHeap = Renderer::GetCurrentResourceHeap();
+        Ref<DescriptorHeap> currentSamplerHeap = Renderer::GetCurrentSamplerHeap();
 
         // Create bilinear clamp sampler to use for mip generation
         D3D12_SAMPLER_DESC samplerDesc = {};
@@ -683,7 +698,7 @@ namespace Atom
         // Run compute shader for each mip
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
-        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("GenerateMipsPipeline").get());
+        computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("GenerateMipsPipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
         computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
 
@@ -717,16 +732,70 @@ namespace Atom
             height = glm::max(height / 2, 1u);
         }
 
+        for(u32 mip = 0; mip < texture->GetMipLevels(); mip++)
+            computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_COMMON, mip);
+
         computeCmdBuffer->End();
 
         // Wait for any copy operations to complate in order to make sure we have all the data already uploaded before executing
         computeQueue->WaitForQueue(Device::Get().GetCommandQueue(CommandQueueType::Copy));
         computeQueue->ExecuteCommandList(computeCmdBuffer);
-
-        // Wait for the compute operations to finish before continuing
         computeQueue->Flush();
 
+        dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(sampler, true);
+
+        if (texture->IsReadable())
+        {
+            // If the texture is readable, get generated data from the GPU and copy it to the CPU
+            for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
+            {
+                Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture.get(), mip);
+
+                Vector<byte> pixelData(buffer->GetSize(), 0);
+                void* mappedData = buffer->Map(0, 0);
+                memcpy(pixelData.data(), mappedData, pixelData.size());
+                buffer->Unmap();
+
+                texture->SetPixels(pixelData, mip);
+            }
+        }
+
         PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::UploadBufferData(const void* srcData, const Buffer* buffer)
+    {
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+        copyCommandBuffer->Begin();
+        copyCommandBuffer->UploadBufferData(srcData, buffer);
+        copyCommandBuffer->End();
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::UploadTextureData(const void* srcData, const Texture* texture, u32 mip, u32 slice)
+    {
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+        copyCommandBuffer->Begin();
+        copyCommandBuffer->UploadTextureData(srcData, texture, mip, slice);
+        copyCommandBuffer->End();
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<ReadbackBuffer> Renderer::ReadbackTextureData(const Texture* texture, u32 mip, u32 slice)
+    {
+        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+        copyCommandBuffer->Begin();
+        Ref<ReadbackBuffer> readbackBuffer = copyCommandBuffer->ReadbackTextureData(texture, mip, slice);
+        copyCommandBuffer->End();
+        copyQueue->ExecuteCommandList(copyCommandBuffer);
+        copyQueue->Flush();
+        return readbackBuffer;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -787,5 +856,17 @@ namespace Atom
     Ref<TextureCube> Renderer::GetBlackTextureCube()
     {
         return ms_BlackTextureCube;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<DescriptorHeap> Renderer::GetCurrentResourceHeap()
+    {
+        return ms_ResourceHeaps[GetCurrentFrameIndex()];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<DescriptorHeap> Renderer::GetCurrentSamplerHeap()
+    {
+        return ms_SamplerHeaps[GetCurrentFrameIndex()];
     }
 }

@@ -1,12 +1,25 @@
 #include "atompch.h"
 #include "LightEnvironment.h"
 
+#include "Atom/Renderer/Renderer.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    void LightEnvironment::SetEnvironmentMap(const Ref<EnvironmentMap>& environmentMap)
+    LightEnvironment::LightEnvironment()
     {
-        m_EnvironmentMap = environmentMap;
+        m_EnvironmentMap = Renderer::GetBlackTextureCube();
+        m_IrradianceMap = Renderer::GetBlackTextureCube();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void LightEnvironment::SetEnvironmentMap(const Ref<TextureCube>& environmentMap)
+    {
+        if (!m_EnvironmentMap || m_EnvironmentMap->GetUUID() != environmentMap->GetUUID())
+        {
+            m_EnvironmentMap = environmentMap;
+            m_IrradianceMap = Renderer::CreateIrradianceMap(m_EnvironmentMap, 32);
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -41,5 +54,11 @@ namespace Atom
         light.ConeAngle = coneAngle;
         light.AttenuationFactors = attenuationFactors;
         light.Type = LightType::SpotLight;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void LightEnvironment::ClearLights()
+    {
+        m_Lights.clear();
     }
 }

@@ -16,6 +16,7 @@ namespace Atom
     class IndexBuffer;
     class ConstantBuffer;
     class StructuredBuffer;
+    class ReadbackBuffer;
     class DescriptorHeap;
     class ComputeShader;
     enum class CommandQueueType;
@@ -47,6 +48,7 @@ namespace Atom
         void SetDescriptorHeaps(const DescriptorHeap* resourceHeap, const DescriptorHeap* samplerHeap);
         void UploadBufferData(const void* data, const Buffer* buffer);
         void UploadTextureData(const void* data, const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
+        Ref<ReadbackBuffer> ReadbackTextureData(const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
         void CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
         void DrawIndexed(u32 indexCount, u32 instanceCount = 1, u32 startIndex = 0, u32 startVertex = 0, u32 startInstance = 0);
         void Dispatch(u32 threadCountX, u32 threadCountY, u32 threadCountZ);

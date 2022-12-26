@@ -53,6 +53,10 @@ static EnumType operator|(EnumType a, EnumType b) \
 { \
     return (EnumType)((u8)a | (u8)b); \
 } \
+static EnumType operator~(EnumType a) \
+{ \
+    return (EnumType)(~(u8)a); \
+} \
 static EnumType& operator|=(EnumType& a, EnumType b) \
 { \
     a = (EnumType)((u8)a | (u8)b); \

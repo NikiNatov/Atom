@@ -24,6 +24,7 @@ project "Sandbox"
 		"%{IncludeDirs.entt}",
 		"%{IncludeDirs.pybind11}",
 		"%{IncludeDirs.python}",
+		"%{IncludeDirs.filewatch}",
 	}
 
 	libdirs

@@ -18,9 +18,20 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(GetSize());
-        D3D12_RESOURCE_STATES initialState = m_Description.IsDynamic ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_COMMON;
+        D3D12_RESOURCE_STATES initialState;
+        CD3DX12_HEAP_PROPERTIES heapProps;
 
-        auto heapProps = CD3DX12_HEAP_PROPERTIES(m_Description.IsDynamic ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT);
+        if (m_Type == BufferType::ReadbackBuffer)
+        {
+            initialState = D3D12_RESOURCE_STATE_COPY_DEST;
+            heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+        }
+        else
+        {
+            initialState = m_Description.IsDynamic ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_COMMON;
+            heapProps = CD3DX12_HEAP_PROPERTIES(m_Description.IsDynamic ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT);
+        }
+
         DXCall(d3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&m_D3DResource)));
 
 #if defined (ATOM_DEBUG)
@@ -183,5 +194,11 @@ namespace Atom
 
         m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
         dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ReadbackBuffer::ReadbackBuffer(const BufferDescription& description, const char* debugName)
+        : Buffer(BufferType::ReadbackBuffer, description, debugName)
+    {
     }
 }

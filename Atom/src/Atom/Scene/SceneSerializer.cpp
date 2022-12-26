@@ -156,7 +156,7 @@ namespace Atom
 				auto& mc = entity.GetComponent<MeshComponent>();
 				out << YAML::Key << "MeshComponent";
 				out << YAML::BeginMap;
-				//out << YAML::Key << "Mesh" << YAML::Value << mc.Mesh->GetName();
+				out << YAML::Key << "Mesh" << YAML::Value << mc.Mesh;
 				out << YAML::EndMap;
 			}
 
@@ -165,8 +165,7 @@ namespace Atom
 				auto& slc = entity.GetComponent<SkyLightComponent>();
 				out << YAML::Key << "SkyLightComponent";
 				out << YAML::BeginMap;
-				//out << YAML::Key << "EnvironmentMap" << YAML::Value << slc.EnvironmentMap;
-				//out << YAML::Key << "IrradianceMap" << YAML::Value << slc.IrradianceMap;
+				out << YAML::Key << "EnvironmentMap" << YAML::Value << slc.EnvironmentMap;
 				out << YAML::EndMap;
 			}
 
@@ -310,11 +309,13 @@ namespace Atom
 				if (YAML::Node meshComponent = entities[it]["MeshComponent"])
 				{
 					auto& mc = deserializedEntity.AddComponent<MeshComponent>();
+					mc.Mesh = meshComponent["Mesh"].as<u64>();
 				}
 
 				if (YAML::Node skyLightComponent = entities[it]["SkyLightComponent"])
 				{
 					auto& slc = deserializedEntity.AddComponent<SkyLightComponent>();
+					slc.EnvironmentMap = skyLightComponent["EnvironmentMap"].as<u64>();
 				}
 
 				if (YAML::Node dirLightComponent = entities[it]["DirectionalLightComponent"])
