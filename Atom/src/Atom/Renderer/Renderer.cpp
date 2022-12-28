@@ -300,6 +300,17 @@ namespace Atom
         computeCmdBuffer->End();
         computeQueue->ExecuteCommandList(computeCmdBuffer);
 
+        // Create renderer materials
+        ms_DefaultMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ms_DefaultMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        ms_DefaultMaterial->SetUniform("Metalness", 0.5f);
+        ms_DefaultMaterial->SetUniform("Roughness", 0.5f);
+
+        ms_ErrorMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ms_ErrorMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
+        ms_ErrorMaterial->SetUniform("Metalness", 0.0f);
+        ms_ErrorMaterial->SetUniform("Roughness", 1.0f);
+
         // Wait for all copy/compute operations to complete before we continue
         computeQueue->Flush();
         Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
@@ -318,6 +329,8 @@ namespace Atom
         ms_ErrorTexture.reset();
         ms_BlackTexture.reset();
         ms_BlackTextureCube.reset();
+        ms_DefaultMaterial.reset();
+        ms_ErrorMaterial.reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -856,6 +869,18 @@ namespace Atom
     Ref<TextureCube> Renderer::GetBlackTextureCube()
     {
         return ms_BlackTextureCube;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Material> Renderer::GetDefaultMaterial()
+    {
+        return ms_DefaultMaterial;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Material> Renderer::GetErrorMaterial()
+    {
+        return ms_ErrorMaterial;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

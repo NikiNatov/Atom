@@ -57,6 +57,8 @@ namespace Atom
         static Ref<Texture2D> GetErrorTexture();
         static Ref<Texture2D> GetBlackTexture();
         static Ref<TextureCube> GetBlackTextureCube();
+        static Ref<Material> GetDefaultMaterial();
+        static Ref<Material> GetErrorMaterial();
         static Ref<DescriptorHeap> GetCurrentResourceHeap();
         static Ref<DescriptorHeap> GetCurrentSamplerHeap();
     private:
@@ -71,5 +73,7 @@ namespace Atom
         inline static Ref<Texture2D>              ms_ErrorTexture;
         inline static Ref<Texture2D>              ms_BlackTexture;
         inline static Ref<TextureCube>            ms_BlackTextureCube;
+        inline static Ref<Material>               ms_DefaultMaterial;
+        inline static Ref<Material>               ms_ErrorMaterial;
     };
 }

@@ -114,12 +114,13 @@ namespace Atom
         {
             const Submesh& submesh = submeshes[submeshIdx];
             const MaterialTable& meshMaterialTable = mesh->GetMaterialTable();
-            
+            Ref<MaterialAsset> materialAsset = materialTable.HasMaterial(submeshIdx) ? materialTable.GetMaterial(submeshIdx) : meshMaterialTable.GetMaterial(submeshIdx);
+
             DrawCommand& drawCommand = m_DrawList.emplace_back();
             drawCommand.Mesh = mesh;
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
-            drawCommand.Material = materialTable.HasMaterial(submeshIdx) ? materialTable.GetMaterial(submeshIdx)->GetMaterial() : meshMaterialTable.GetMaterial(submeshIdx)->GetMaterial();
+            drawCommand.Material = materialAsset ? materialAsset->GetMaterial() : Renderer::GetErrorMaterial();
         }
     }
 
