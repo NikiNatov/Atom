@@ -26,6 +26,12 @@ namespace Atom
         Material(const Ref<GraphicsShader>& shader, MaterialFlags flags);
         ~Material() = default;
 
+        Material(const Material& rhs) = delete;
+        Material& operator=(const Material& rhs) = delete;
+
+        Material(Material&& rhs) noexcept;
+        Material& operator=(Material&& rhs) noexcept;
+
         void SetTexture(const char* uniformName, const Ref<Texture>& texture);
         Ref<Texture> GetTexture(const char* uniformName);
         bool HasTexture(const char* name);

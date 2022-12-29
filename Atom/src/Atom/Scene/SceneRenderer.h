@@ -22,7 +22,7 @@ namespace Atom
         void Initialize();
         void BeginScene(Camera& camera, const glm::mat4& cameraTransform, const Ref<LightEnvironment>& lightEnvironment);
         void BeginScene(EditorCamera& editorCamera, const Ref<LightEnvironment>& lightEnvironment);
-        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const MaterialTable& materialTable);
+        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable);
         void OnViewportResize(u32 width, u32 height);
         void PreRender();
         void Flush();

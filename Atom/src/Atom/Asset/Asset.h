@@ -22,6 +22,15 @@ namespace Atom
 
     IMPL_ENUM_OPERATORS(AssetFlags)
 
+    struct AssetMetaData
+    {
+        UUID                  UUID;
+        AssetType             Type;
+        AssetFlags            Flags;
+        std::filesystem::path SourceFilepath;
+        std::filesystem::path AssetFilepath;
+    };
+
     class Asset
     {
         friend class AssetSerializer;
@@ -31,21 +40,21 @@ namespace Atom
     public:
         virtual ~Asset() = default;
 
-        inline void SetAssetFlag(AssetFlags flag, bool state = true) { if (state) m_AssetFlags |= flag; else m_AssetFlags &= ~flag; }
-        inline UUID GetUUID() const { return m_UUID; }
-        inline AssetType GetAssetType() const { return m_AssetType; }
-        inline bool GetAssetFlag(AssetFlags flag) const { return (m_AssetFlags & flag) != AssetFlags::None; }
-        inline AssetFlags GetAssetFlags() const { return m_AssetFlags; }
-        inline const std::filesystem::path& GetAssetFilepath() const { return m_AssetFilepath; }
-        inline const std::filesystem::path& GetSourceFilepath() const { return m_SourceFilepath; }
+        inline void SetAssetFlag(AssetFlags flag, bool state = true) { if (state) m_MetaData.Flags |= flag; else m_MetaData.Flags &= ~flag; }
+        inline UUID GetUUID() const { return m_MetaData.UUID; }
+        inline AssetType GetAssetType() const { return m_MetaData.Type; }
+        inline bool GetAssetFlag(AssetFlags flag) const { return (m_MetaData.Flags & flag) != AssetFlags::None; }
+        inline AssetFlags GetAssetFlags() const { return m_MetaData.Flags; }
+        inline const std::filesystem::path& GetAssetFilepath() const { return m_MetaData.AssetFilepath; }
+        inline const std::filesystem::path& GetSourceFilepath() const { return m_MetaData.SourceFilepath; }
+        inline const AssetMetaData& GetMetaData() const { return m_MetaData; }
     protected:
         Asset(AssetType type, AssetFlags flags = AssetFlags::None)
-            : m_AssetType(type), m_AssetFlags(flags) {}
+        {
+            m_MetaData.Type = type;
+            m_MetaData.Flags = flags;
+        }
     protected:
-        UUID                  m_UUID;
-        AssetType             m_AssetType;
-        AssetFlags            m_AssetFlags;
-        std::filesystem::path m_AssetFilepath;
-        std::filesystem::path m_SourceFilepath;
+        AssetMetaData m_MetaData;
     };
 }

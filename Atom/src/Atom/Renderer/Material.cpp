@@ -31,6 +31,26 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Material::Material(Material&& rhs) noexcept
+        : Asset(AssetType::Material), m_Shader(std::move(rhs.m_Shader)), m_UniformBuffersData(std::move(rhs.m_UniformBuffersData)), m_Textures(std::move(rhs.m_Textures)), m_Flags(rhs.m_Flags)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Material& Material::operator=(Material&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            m_Shader = std::move(rhs.m_Shader);
+            m_UniformBuffersData = std::move(rhs.m_UniformBuffersData);
+            m_Textures = std::move(rhs.m_Textures);
+            m_Flags = rhs.m_Flags;
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Material::SetTexture(const char* uniformName, const Ref<Texture>& texture)
     {
         const Resource* resource = FindResourceDeclaration(uniformName);

@@ -130,6 +130,38 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Texture::Texture(Texture&& rhs) noexcept
+        : m_D3DResource(rhs.m_D3DResource), m_SRVDescriptor(rhs.m_SRVDescriptor), m_SamplerDescriptor(rhs.m_SamplerDescriptor), m_Type(rhs.m_Type), m_Description(rhs.m_Description)
+    {
+        rhs.m_D3DResource = nullptr;
+        rhs.m_SRVDescriptor = { 0 };
+        rhs.m_SamplerDescriptor = { 0 };
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Texture& Texture::operator=(Texture&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, m_Type != TextureType::SwapChainBuffer);
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, m_Type != TextureType::SwapChainBuffer);
+            Device::Get().ReleaseResource(m_D3DResource.Detach(), m_Type != TextureType::SwapChainBuffer);
+
+            m_D3DResource = rhs.m_D3DResource;
+            m_SRVDescriptor = rhs.m_SRVDescriptor;
+            m_SamplerDescriptor = rhs.m_SamplerDescriptor;
+            m_Type = rhs.m_Type;
+            m_Description = rhs.m_Description;
+
+            rhs.m_D3DResource = nullptr;
+            rhs.m_SRVDescriptor = { 0 };
+            rhs.m_SamplerDescriptor = { 0 };
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Texture::SetFilter(TextureFilter filter)
     {
         m_Description.Filter = filter;
@@ -291,6 +323,64 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Texture2D::Texture2D(Texture2D&& rhs) noexcept
+        : Texture(std::move(rhs)), Asset(AssetType::Texture2D)
+    {
+        m_UAVDescriptors.resize(m_Description.MipLevels);
+
+        for (u32 i = 0; i < m_Description.MipLevels; i++)
+        {
+            m_UAVDescriptors[i] = rhs.m_UAVDescriptors[i];
+            rhs.m_UAVDescriptors[i] = { 0 };
+        }
+
+        m_PixelData.resize(m_Description.MipLevels);
+
+        for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+        {
+            m_PixelData[mip] = std::move(rhs.m_PixelData[mip]);
+        }
+
+        m_IsReadable = rhs.m_IsReadable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Texture2D& Texture2D::operator=(Texture2D&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
+            {
+                for (u32 i = 0; i < m_Description.MipLevels; i++)
+                {
+                    Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[i], true);
+                }
+            }
+
+            Texture::operator=(std::move(rhs));
+
+            m_UAVDescriptors.resize(m_Description.MipLevels);
+
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                m_UAVDescriptors[i] = rhs.m_UAVDescriptors[i];
+                rhs.m_UAVDescriptors[i] = { 0 };
+            }
+
+            m_PixelData.resize(m_Description.MipLevels);
+
+            for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+            {
+                m_PixelData[mip] = std::move(rhs.m_PixelData[mip]);
+            }
+
+            m_IsReadable = rhs.m_IsReadable;
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Texture2D::UpdateGPUData(bool makeNonReadable)
     {
         if (m_IsReadable)
@@ -392,6 +482,43 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    RenderTexture2D::RenderTexture2D(RenderTexture2D&& rhs) noexcept
+        : Texture(std::move(rhs))
+    {
+        m_RTVDescriptors.resize(m_Description.MipLevels);
+
+        for (u32 i = 0; i < m_Description.MipLevels; i++)
+        {
+            m_RTVDescriptors[i] = rhs.m_RTVDescriptors[i];
+            rhs.m_RTVDescriptors[i] = { 0 };
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    RenderTexture2D& RenderTexture2D::operator=(RenderTexture2D&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::RenderTarget)->ReleaseDescriptor(m_RTVDescriptors[i], m_Type != TextureType::SwapChainBuffer);
+            }
+
+            Texture::operator=(std::move(rhs));
+
+            m_RTVDescriptors.resize(m_Description.MipLevels);
+
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                m_RTVDescriptors[i] = rhs.m_RTVDescriptors[i];
+                rhs.m_RTVDescriptors[i] = { 0 };
+            }
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     D3D12_CPU_DESCRIPTOR_HANDLE RenderTexture2D::GetRTV(u32 mip) const
     {
         ATOM_ENGINE_ASSERT(mip < m_Description.MipLevels); 
@@ -448,6 +575,43 @@ namespace Atom
         {
             Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->ReleaseDescriptor(m_DSVDescriptors[i], true);
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    DepthBuffer::DepthBuffer(DepthBuffer&& rhs) noexcept
+        : Texture(std::move(rhs))
+    {
+        m_DSVDescriptors.resize(m_Description.MipLevels);
+
+        for (u32 i = 0; i < m_Description.MipLevels; i++)
+        {
+            m_DSVDescriptors[i] = rhs.m_DSVDescriptors[i];
+            rhs.m_DSVDescriptors[i] = { 0 };
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    DepthBuffer& DepthBuffer::operator=(DepthBuffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::DepthStencil)->ReleaseDescriptor(m_DSVDescriptors[i], true);
+            }
+
+            Texture::operator=(std::move(rhs));
+
+            m_DSVDescriptors.resize(m_Description.MipLevels);
+
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                m_DSVDescriptors[i] = rhs.m_DSVDescriptors[i];
+                rhs.m_DSVDescriptors[i] = { 0 };
+            }
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -527,6 +691,91 @@ namespace Atom
                 Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_ArrayUAVDescriptors[i], true);
             }
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube::TextureCube(TextureCube&& rhs) noexcept
+        : Texture(std::move(rhs)), Asset(AssetType::TextureCube)
+    {
+        m_UAVDescriptors.resize(m_Description.MipLevels * 6);
+
+        for (u32 i = 0; i < m_Description.MipLevels * 6; i++)
+        {
+            m_UAVDescriptors[i] = rhs.m_UAVDescriptors[i];
+            rhs.m_UAVDescriptors[i] = { 0 };
+        }
+
+        m_ArrayUAVDescriptors.resize(m_Description.MipLevels);
+
+        for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+        {
+            m_ArrayUAVDescriptors[mip] = rhs.m_ArrayUAVDescriptors[mip];
+            rhs.m_ArrayUAVDescriptors[mip] = { 0 };
+        }
+
+        for (u32 face = 0; face < 6; face++)
+        {
+            m_PixelData[face].resize(m_Description.MipLevels);
+
+            for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+            {
+                m_PixelData[face][mip] = std::move(rhs.m_PixelData[face][mip]);
+            }
+        }
+
+        m_IsReadable = rhs.m_IsReadable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube& TextureCube::operator=(TextureCube&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            if (IsSet(m_Description.UsageFlags & TextureBindFlags::UnorderedAccess))
+            {
+                for (u32 i = 0; i < m_Description.MipLevels * 6; i++)
+                {
+                    Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptors[i], true);
+                }
+
+                for (u32 i = 0; i < m_Description.MipLevels; i++)
+                {
+                    Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_ArrayUAVDescriptors[i], true);
+                }
+            }
+
+            Texture::operator=(std::move(rhs));
+
+            m_UAVDescriptors.resize(m_Description.MipLevels * 6);
+
+            for (u32 i = 0; i < m_Description.MipLevels * 6; i++)
+            {
+                m_UAVDescriptors[i] = rhs.m_UAVDescriptors[i];
+                rhs.m_UAVDescriptors[i] = { 0 };
+            }
+
+            m_ArrayUAVDescriptors.resize(m_Description.MipLevels);
+
+            for (u32 i = 0; i < m_Description.MipLevels; i++)
+            {
+                m_ArrayUAVDescriptors[i] = rhs.m_ArrayUAVDescriptors[i];
+                rhs.m_ArrayUAVDescriptors[i] = { 0 };
+            }
+
+            for (u32 face = 0; face < 6; face++)
+            {
+                m_PixelData[face].resize(m_Description.MipLevels);
+
+                for (u32 mip = 0; mip < m_Description.MipLevels; mip++)
+                {
+                    m_PixelData[face][mip] = std::move(rhs.m_PixelData[face][mip]);
+                }
+            }
+
+            m_IsReadable = rhs.m_IsReadable;
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

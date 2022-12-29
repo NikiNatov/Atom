@@ -188,6 +188,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Device::ReleaseResource(ID3D12Resource* resource, bool deferredRelease)
     {
+        if (!resource)
+            return;
+
         if (!deferredRelease)
         {
             ResourceStateTracker::RemoveGlobalResourceState(resource);

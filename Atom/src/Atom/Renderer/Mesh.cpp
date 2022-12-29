@@ -23,11 +23,11 @@ namespace Atom
     Mesh::Mesh()
         : Asset(AssetType::Mesh)
     {
-
+        m_MaterialTable = CreateRef<MaterialTable>();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Mesh::Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const MaterialTable& materialTable, bool isReadable)
+    Mesh::Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const Ref<MaterialTable>& materialTable, bool isReadable)
         : Asset(AssetType::Mesh), m_Submeshes(submeshes), m_MaterialTable(materialTable), m_IsReadable(isReadable)
     {
         if (!vertices.empty())
@@ -57,6 +57,32 @@ namespace Atom
             m_Vertices = vertices;
             m_Indices = indices;
         }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Mesh::Mesh(Mesh&& rhs) noexcept
+        : Asset(AssetType::Mesh), 
+        m_Vertices(std::move(rhs.m_Vertices)), m_Indices(std::move(rhs.m_Indices)), 
+        m_Submeshes(std::move(rhs.m_Submeshes)), m_MaterialTable(std::move(rhs.m_MaterialTable)),
+        m_VertexBuffer(std::move(rhs.m_VertexBuffer)), m_IndexBuffer(std::move(rhs.m_IndexBuffer)), m_IsReadable(rhs.m_IsReadable)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Mesh& Mesh::operator=(Mesh&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            m_Vertices = std::move(rhs.m_Vertices);
+            m_Indices = std::move(rhs.m_Indices);
+            m_Submeshes = std::move(rhs.m_Submeshes);
+            m_MaterialTable = std::move(rhs.m_MaterialTable);
+            m_VertexBuffer = std::move(rhs.m_VertexBuffer);
+            m_IndexBuffer = std::move(rhs.m_IndexBuffer);
+            m_IsReadable = rhs.m_IsReadable;
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

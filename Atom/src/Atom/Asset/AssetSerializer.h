@@ -18,7 +18,7 @@ namespace Atom
         static Ref<T> Deserialize(const std::filesystem::path& filepath);
         static bool DeserializeMetaData(const std::filesystem::path& filepath, AssetMetaData& assetMetaData);
     private:
-        static void SerializeMetaData(std::ofstream& stream, Ref<Asset> asset);
+        static void SerializeMetaData(std::ofstream& stream, const AssetMetaData& metaData);
         static void DeserializeMetaData(std::ifstream& stream, AssetMetaData& metaData);
     };
 }

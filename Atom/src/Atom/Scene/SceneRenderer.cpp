@@ -103,7 +103,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const MaterialTable& materialTable)
+    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable)
     {
         if (!mesh)
             return;
@@ -113,8 +113,8 @@ namespace Atom
         for (u32 submeshIdx = 0 ; submeshIdx < submeshes.size(); submeshIdx++)
         {
             const Submesh& submesh = submeshes[submeshIdx];
-            const MaterialTable& meshMaterialTable = mesh->GetMaterialTable();
-            Ref<Material> material = materialTable.HasMaterial(submeshIdx) ? materialTable.GetMaterial(submeshIdx) : meshMaterialTable.GetMaterial(submeshIdx);
+            const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
+            Ref<Material> material = materialTable && materialTable->HasMaterial(submeshIdx) ? materialTable->GetMaterial(submeshIdx) : meshMaterialTable->GetMaterial(submeshIdx);
 
             DrawCommand& drawCommand = m_DrawList.emplace_back();
             drawCommand.Mesh = mesh;

@@ -55,6 +55,31 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Buffer::Buffer(Buffer&& rhs) noexcept
+        : m_D3DResource(rhs.m_D3DResource), m_Description(rhs.m_Description), m_Type(rhs.m_Type), m_MapRange(rhs.m_MapRange)
+    {
+        rhs.m_D3DResource = nullptr;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Buffer& Buffer::operator=(Buffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Device::Get().ReleaseResource(m_D3DResource.Detach(), true);
+
+            m_D3DResource = rhs.m_D3DResource;
+            m_Description = rhs.m_Description;
+            m_Type = rhs.m_Type;
+            m_MapRange = rhs.m_MapRange;
+
+            rhs.m_D3DResource = nullptr;
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void* Buffer::Map(u32 rangeBegin, u32 rangeEnd)
     {
         ATOM_ENGINE_ASSERT(m_Description.IsDynamic, "Buffer is not dynamic!");
@@ -109,6 +134,27 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    VertexBuffer::VertexBuffer(VertexBuffer&& rhs) noexcept
+        : Buffer(std::move(rhs)), m_View(rhs.m_View)
+    {
+        rhs.m_View = {};
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    VertexBuffer& VertexBuffer::operator=(VertexBuffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Buffer::operator=(std::move(rhs));
+
+            m_View = rhs.m_View;
+            rhs.m_View = {};
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void VertexBuffer::CreateViews()
     {
         m_View.BufferLocation = m_D3DResource->GetGPUVirtualAddress();
@@ -126,6 +172,29 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     IndexBuffer::~IndexBuffer()
     {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    IndexBuffer::IndexBuffer(IndexBuffer&& rhs) noexcept
+        : Buffer(std::move(rhs)), m_View(rhs.m_View), m_Format(rhs.m_Format)
+    {
+        rhs.m_View = {};
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    IndexBuffer& IndexBuffer::operator=(IndexBuffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Buffer::operator=(std::move(rhs));
+
+            m_View = rhs.m_View;
+            m_Format = rhs.m_Format;
+
+            rhs.m_View = {};
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -156,6 +225,29 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    ConstantBuffer::ConstantBuffer(ConstantBuffer&& rhs) noexcept
+        : Buffer(std::move(rhs)), m_CBVDescriptor(rhs.m_CBVDescriptor)
+    {
+        rhs.m_CBVDescriptor = { 0 };
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ConstantBuffer& ConstantBuffer::operator=(ConstantBuffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_CBVDescriptor, true);
+
+            Buffer::operator=(std::move(rhs));
+
+            m_CBVDescriptor = rhs.m_CBVDescriptor;
+            rhs.m_CBVDescriptor = { 0 };
+        }
+
+        return *this;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void ConstantBuffer::CreateViews()
     {
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
@@ -177,6 +269,29 @@ namespace Atom
     StructuredBuffer::~StructuredBuffer()
     {
         Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    StructuredBuffer::StructuredBuffer(StructuredBuffer&& rhs) noexcept
+        : Buffer(std::move(rhs)), m_SRVDescriptor(rhs.m_SRVDescriptor)
+    {
+        rhs.m_SRVDescriptor = { 0 };
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    StructuredBuffer& StructuredBuffer::operator=(StructuredBuffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, true);
+
+            Buffer::operator=(std::move(rhs));
+
+            m_SRVDescriptor = rhs.m_SRVDescriptor;
+            rhs.m_SRVDescriptor = { 0 };
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -346,10 +346,10 @@ namespace Atom
                                 accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                             }
 
-                            renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
+                            renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), nullptr);
                         }
                         else
-                            renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
+                            renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), nullptr);
                     }
                 }
             }

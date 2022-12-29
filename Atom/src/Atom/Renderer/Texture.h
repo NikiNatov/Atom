@@ -96,6 +96,12 @@ namespace Atom
         Texture(TextureType type, const TextureDescription& description, const char* debugName);
         Texture(TextureType type, ID3D12Resource* textureHandle, const char* debugName);
         virtual ~Texture();
+        
+        Texture(const Texture& rhs) = delete;
+        Texture& operator=(const Texture& rhs) = delete;
+
+        Texture(Texture&& rhs) noexcept;
+        Texture& operator=(Texture&& rhs) noexcept;
 
         void SetFilter(TextureFilter filter);
         void SetWrap(TextureWrap wrap);
@@ -133,6 +139,12 @@ namespace Atom
         Texture2D(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Texture2D");
         ~Texture2D();
 
+        Texture2D(const Texture2D& rhs) = delete;
+        Texture2D& operator=(const Texture2D& rhs) = delete;
+
+        Texture2D(Texture2D&& rhs) noexcept;
+        Texture2D& operator=(Texture2D&& rhs) noexcept;
+
         void UpdateGPUData(bool makeNonReadable = false);
         void SetPixels(const Vector<byte>& pixels, u32 mipLevel = 0);
         Vector<byte>* GetPixels(u32 mipLevel = 0);
@@ -154,6 +166,12 @@ namespace Atom
         RenderTexture2D(ID3D12Resource* textureHandle, bool swapChainBuffer, const char* debugName = "Unnamed Render Texture");
         ~RenderTexture2D();
 
+        RenderTexture2D(const RenderTexture2D& rhs) = delete;
+        RenderTexture2D& operator=(const RenderTexture2D& rhs) = delete;
+
+        RenderTexture2D(RenderTexture2D&& rhs) noexcept;
+        RenderTexture2D& operator=(RenderTexture2D&& rhs) noexcept;
+
         inline bool IsSwapChainBuffer() const { return m_Type == TextureType::SwapChainBuffer; }
         D3D12_CPU_DESCRIPTOR_HANDLE GetRTV(u32 mip = 0) const;
     private:
@@ -168,6 +186,12 @@ namespace Atom
         DepthBuffer(const TextureDescription& description, const char* debugName = "Unnamed Depth Buffer");
         DepthBuffer(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Depth Buffer");
         ~DepthBuffer();
+
+        DepthBuffer(const DepthBuffer& rhs) = delete;
+        DepthBuffer& operator=(const DepthBuffer& rhs) = delete;
+
+        DepthBuffer(DepthBuffer&& rhs) noexcept;
+        DepthBuffer& operator=(DepthBuffer&& rhs) noexcept;
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetDSV(u32 mip = 0) const;
     private:
@@ -184,6 +208,12 @@ namespace Atom
         TextureCube(const TextureDescription& description, Vector<Vector<byte>> pixelData[6], bool isReadable, const char* debugName = "Unnamed TextureCube");
         TextureCube(ID3D12Resource* textureHandle, const char* debugName = "Unnamed TextureCube");
         ~TextureCube();
+
+        TextureCube(const TextureCube& rhs) = delete;
+        TextureCube& operator=(const TextureCube& rhs) = delete;
+
+        TextureCube(TextureCube&& rhs) noexcept;
+        TextureCube& operator=(TextureCube&& rhs) noexcept;
 
         void UpdateGPUData(bool makeNonReadable = false);
         void SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel = 0);

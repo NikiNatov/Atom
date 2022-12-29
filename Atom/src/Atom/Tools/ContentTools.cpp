@@ -124,8 +124,8 @@ namespace Atom
         {
             Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
             Renderer::GenerateMips(asset);
-            asset->m_AssetFilepath = assetFullPath;
-            asset->m_SourceFilepath = sourcePath;
+            asset->m_MetaData.AssetFilepath = assetFullPath;
+            asset->m_MetaData.SourceFilepath = sourcePath;
 
             if (!AssetSerializer::Serialize(asset))
             {
@@ -133,22 +133,16 @@ namespace Atom
                 return 0;
             }
 
-            AssetMetaData metaData;
-            metaData.UUID = asset->m_UUID;
-            metaData.Type = asset->m_AssetType;
-            metaData.AssetFilepath = asset->m_AssetFilepath;
-            metaData.SourceFilepath = asset->m_SourceFilepath;
-            AssetManager::RegisterAsset(metaData);
-
-            return asset->m_UUID;
+            AssetManager::RegisterAsset(asset->m_MetaData);
+            return asset->m_MetaData.UUID;
         }
         else if (importSettings.Type == TextureType::TextureCube)
         {
             Ref<Texture2D> tex2D = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
             Renderer::GenerateMips(tex2D);
             Ref<TextureCube> asset = Renderer::CreateEnvironmentMap(tex2D, importSettings.CubemapSize);
-            asset->m_AssetFilepath = assetFullPath;
-            asset->m_SourceFilepath = sourcePath;
+            asset->m_MetaData.AssetFilepath = assetFullPath;
+            asset->m_MetaData.SourceFilepath = sourcePath;
 
             if (!AssetSerializer::Serialize(asset))
             {
@@ -156,14 +150,8 @@ namespace Atom
                 return 0;
             }
 
-            AssetMetaData metaData;
-            metaData.UUID = asset->m_UUID;
-            metaData.Type = asset->m_AssetType;
-            metaData.AssetFilepath = asset->m_AssetFilepath;
-            metaData.SourceFilepath = asset->m_SourceFilepath;
-            AssetManager::RegisterAsset(metaData);
-
-            return asset->m_UUID;
+            AssetManager::RegisterAsset(asset->m_MetaData);
+            return asset->m_MetaData.UUID;
         }
 
         return 0;
@@ -209,7 +197,7 @@ namespace Atom
 
         Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, assetName.c_str());
         Renderer::GenerateMips(asset);
-        asset->m_AssetFilepath = assetFullPath;
+        asset->m_MetaData.AssetFilepath = assetFullPath;
 
         if (!AssetSerializer::Serialize(asset))
         {
@@ -217,14 +205,8 @@ namespace Atom
             return 0;
         }
 
-        AssetMetaData metaData;
-        metaData.UUID = asset->m_UUID;
-        metaData.Type = asset->m_AssetType;
-        metaData.AssetFilepath = asset->m_AssetFilepath;
-        metaData.SourceFilepath = asset->m_SourceFilepath;
-        AssetManager::RegisterAsset(metaData);
-
-        return asset->m_UUID;
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -282,7 +264,7 @@ namespace Atom
         Vector<Submesh> submeshes;
         submeshes.reserve(scene->mNumMeshes);
 
-        MaterialTable materialTable;
+        Ref<MaterialTable> materialTable = CreateRef<MaterialTable>();
 
         // Parse all submeshes
         for (u32 submeshIdx = 0; submeshIdx < scene->mNumMeshes; submeshIdx++)
@@ -428,13 +410,13 @@ namespace Atom
                 continue;
             }
 
-            materialTable.SetMaterial(materialIdx, materialAsset);
+            materialTable->SetMaterial(materialIdx, materialAsset);
         }
 
         // We have to make the mesh readable so that the data is available on the CPU during serialization
         Ref<Mesh> asset = CreateRef<Mesh>(vertices, indices, submeshes, materialTable, true);
-        asset->m_AssetFilepath = assetFullPath;
-        asset->m_SourceFilepath = sourcePath;
+        asset->m_MetaData.AssetFilepath = assetFullPath;
+        asset->m_MetaData.SourceFilepath = sourcePath;
         asset->m_IsReadable = importSettings.IsReadable;
 
         if (!AssetSerializer::Serialize(asset))
@@ -443,14 +425,8 @@ namespace Atom
             return 0;
         }
 
-        AssetMetaData metaData;
-        metaData.UUID = asset->m_UUID;
-        metaData.Type = asset->m_AssetType;
-        metaData.AssetFilepath = asset->m_AssetFilepath;
-        metaData.SourceFilepath = asset->m_SourceFilepath;
-        AssetManager::RegisterAsset(metaData);
-
-        return asset->m_UUID;
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
       
     }
 
@@ -522,7 +498,7 @@ namespace Atom
             std::filesystem::create_directory(destinationFolder);
 
         Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested);
-        asset->m_AssetFilepath = assetFullPath;
+        asset->m_MetaData.AssetFilepath = assetFullPath;
 
         if (!AssetSerializer::Serialize(asset))
         {
@@ -530,14 +506,8 @@ namespace Atom
             return 0;
         }
 
-        AssetMetaData metaData;
-        metaData.UUID = asset->m_UUID;
-        metaData.Type = asset->m_AssetType;
-        metaData.AssetFilepath = asset->m_AssetFilepath;
-        metaData.SourceFilepath = asset->m_SourceFilepath;
-        AssetManager::RegisterAsset(metaData);
-
-        return asset->m_UUID;
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -8,15 +8,6 @@
 
 namespace Atom
 {
-    struct AssetMetaData
-    {
-        UUID                  UUID;
-        AssetType             Type;
-        AssetFlags            Flags;
-        std::filesystem::path SourceFilepath;
-        std::filesystem::path AssetFilepath;
-    };
-
     class AssetManager
     {
     public:
