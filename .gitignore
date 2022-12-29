@@ -2,6 +2,8 @@
 
 **/bin/
 bin-int/
+**.atmasset
+**.pyc
 
 
 # Visual studio
