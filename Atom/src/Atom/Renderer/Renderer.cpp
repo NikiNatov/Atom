@@ -368,7 +368,7 @@ namespace Atom
         commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
-        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable().GetMaterial(submesh.MaterialIndex)->GetMaterial();
+        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable().GetMaterial(submesh.MaterialIndex);
 
         u32 currentRootParameter = 0;
 

@@ -66,6 +66,8 @@ namespace Atom
 
             m_Window->ProcessEvents();
 
+            AssetManager::UnloadUnusedAssets();
+
             Renderer::BeginFrame();
 
             if (!m_Window->IsMinimized())

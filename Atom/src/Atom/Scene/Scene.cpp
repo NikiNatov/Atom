@@ -166,9 +166,9 @@ namespace Atom
             {
                 auto& slc = view.get<SkyLightComponent>(entity);
 
-                if (Ref<TextureCube> envMap = AssetManager::GetAsset<TextureCube>(slc.EnvironmentMap, true))
+                if (slc.EnvironmentMap)
                 {
-                    m_LightEnvironment->SetEnvironmentMap(envMap);
+                    m_LightEnvironment->SetEnvironmentMap(slc.EnvironmentMap);
                     break;
                 }
             }
@@ -213,7 +213,7 @@ namespace Atom
             {
                 auto [mc, tc, shc] = view.get<MeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
 
-                if (Ref<Mesh> mesh = AssetManager::GetAsset<Mesh>(mc.Mesh, true))
+                if (mc.Mesh && !mc.Mesh->IsEmpty())
                 {
                     if (shc.Parent)
                     {
@@ -226,10 +226,10 @@ namespace Atom
                             accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                         }
 
-                        renderer->SubmitMesh(mesh, accumulatedTransform * tc.GetTransform(), {});
+                        renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
                     }
                     else
-                        renderer->SubmitMesh(mesh, tc.GetTransform(), {});
+                        renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
                 }
             }
         }
@@ -286,9 +286,9 @@ namespace Atom
                 {
                     auto& slc = view.get<SkyLightComponent>(entity);
 
-                    if (Ref<TextureCube> envMap = AssetManager::GetAsset<TextureCube>(slc.EnvironmentMap, true))
+                    if (slc.EnvironmentMap)
                     {
-                        m_LightEnvironment->SetEnvironmentMap(envMap);
+                        m_LightEnvironment->SetEnvironmentMap(slc.EnvironmentMap);
                         break;
                     }
                 }
@@ -333,7 +333,7 @@ namespace Atom
                 {
                     auto [mc, tc, shc] = view.get<MeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
 
-                    if (Ref<Mesh> mesh = AssetManager::GetAsset<Mesh>(mc.Mesh, true))
+                    if (mc.Mesh && !mc.Mesh->IsEmpty())
                     {
                         if (shc.Parent)
                         {
@@ -346,10 +346,10 @@ namespace Atom
                                 accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                             }
 
-                            renderer->SubmitMesh(mesh, accumulatedTransform * tc.GetTransform(), {});
+                            renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
                         }
                         else
-                            renderer->SubmitMesh(mesh, tc.GetTransform(), {});
+                            renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
                     }
                 }
             }

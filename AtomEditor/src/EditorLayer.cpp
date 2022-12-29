@@ -44,8 +44,10 @@ namespace Atom
         }
 
         {
+            UUID meshUUID = ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/sphere.gltf", "TestProject/Assets/Meshes/", MeshImportSettings());
+
             Entity player = m_Scene->CreateEntity("Player");
-            player.AddComponent<MeshComponent>(ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/sphere.gltf", "TestProject/Assets/Meshes/", MeshImportSettings()));
+            player.AddComponent<MeshComponent>(AssetManager::GetAsset<Mesh>(meshUUID, true));
 
             auto& sc = player.AddComponent<ScriptComponent>();
             sc.ScriptClass = "Player";
@@ -58,8 +60,10 @@ namespace Atom
         }
 
         {
+            UUID meshUUID = ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/cube.gltf", "TestProject/Assets/Meshes/", MeshImportSettings());
+
             Entity ground = m_Scene->CreateEntity("Ground");
-            ground.AddComponent<MeshComponent>(ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/cube.gltf", "TestProject/Assets/Meshes/", MeshImportSettings()));
+            ground.AddComponent<MeshComponent>(AssetManager::GetAsset<Mesh>(meshUUID, true));
 
             ground.GetComponent<TransformComponent>().Scale = { 3.0f, 1.0f, 3.0f };
             ground.GetComponent<TransformComponent>().Translation.y = -3.0f;
@@ -78,7 +82,7 @@ namespace Atom
             UUID uuid  = ContentTools::ImportTextureAsset("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr", "TestProject/Assets/Textures", importSettings);
 
             Entity skyLight = m_Scene->CreateEntity("SkyLight");
-            skyLight.AddComponent<SkyLightComponent>(uuid);
+            skyLight.AddComponent<SkyLightComponent>(AssetManager::GetAsset<TextureCube>(uuid, true));
         }
 
         {

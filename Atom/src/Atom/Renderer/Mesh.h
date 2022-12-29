@@ -34,6 +34,7 @@ namespace Atom
         friend class AssetSerializer;
         friend class ContentTools;
     public:
+        Mesh();
         Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const MaterialTable& materialTable, bool isReadable);
 
         void UpdateGPUData(bool makeNonReadable = false);
@@ -48,6 +49,7 @@ namespace Atom
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
         inline const MaterialTable& GetMaterialTable() const { return m_MaterialTable; }
         inline bool IsReadable() const { return m_IsReadable; }
+        inline bool IsEmpty() const { return !m_VertexBuffer || !m_IndexBuffer || !m_Submeshes.size(); }
         inline Ref<VertexBuffer> GetVertexBuffer() const { return m_VertexBuffer; }
         inline Ref<IndexBuffer> GetIndexBuffer() const { return m_IndexBuffer; }
     private:
@@ -55,8 +57,8 @@ namespace Atom
         Vector<u32>       m_Indices;
         Vector<Submesh>   m_Submeshes;
         MaterialTable     m_MaterialTable;
-        bool              m_IsReadable;
-        Ref<VertexBuffer> m_VertexBuffer;
-        Ref<IndexBuffer>  m_IndexBuffer;
+        bool              m_IsReadable = true;
+        Ref<VertexBuffer> m_VertexBuffer = nullptr;
+        Ref<IndexBuffer>  m_IndexBuffer = nullptr;
     };
 }

@@ -20,24 +20,37 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
+    Mesh::Mesh()
+        : Asset(AssetType::Mesh)
+    {
+
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Mesh::Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const MaterialTable& materialTable, bool isReadable)
         : Asset(AssetType::Mesh), m_Submeshes(submeshes), m_MaterialTable(materialTable), m_IsReadable(isReadable)
     {
-        BufferDescription vbDesc;
-        vbDesc.ElementCount = vertices.size();
-        vbDesc.ElementSize = sizeof(Vertex);
-        vbDesc.IsDynamic = false;
+        if (!vertices.empty())
+        {
+            BufferDescription vbDesc;
+            vbDesc.ElementCount = vertices.size();
+            vbDesc.ElementSize = sizeof(Vertex);
+            vbDesc.IsDynamic = false;
 
-        m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
-        Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+            m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
+            Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+        }
 
-        BufferDescription ibDesc;
-        ibDesc.ElementCount = indices.size();
-        ibDesc.ElementSize = sizeof(u32);
-        ibDesc.IsDynamic = false;
+        if (!indices.empty())
+        {
+            BufferDescription ibDesc;
+            ibDesc.ElementCount = indices.size();
+            ibDesc.ElementSize = sizeof(u32);
+            ibDesc.IsDynamic = false;
 
-        m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
-        Renderer::UploadBufferData(indices.data(), m_IndexBuffer.get());
+            m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
+            Renderer::UploadBufferData(indices.data(), m_IndexBuffer.get());
+        }
 
         if (m_IsReadable)
         {
@@ -53,28 +66,45 @@ namespace Atom
         {
             m_IsReadable = !makeNonReadable;
 
-            if (m_VertexBuffer->GetElementCount() != m_Vertices.size())
+            if (!m_VertexBuffer || m_VertexBuffer->GetElementCount() != m_Vertices.size())
             {
-                BufferDescription vbDesc;
-                vbDesc.ElementCount = m_Vertices.size();
-                vbDesc.ElementSize = sizeof(Vertex);
-                vbDesc.IsDynamic = false;
+                if (m_Vertices.size() != 0)
+                {
+                    BufferDescription vbDesc;
+                    vbDesc.ElementCount = m_Vertices.size();
+                    vbDesc.ElementSize = sizeof(Vertex);
+                    vbDesc.IsDynamic = false;
 
-                m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
+                    m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
+                }
+                else
+                {
+                    m_VertexBuffer = nullptr;
+                }
             }
 
-            if (m_IndexBuffer->GetElementCount() != m_Indices.size())
+            if (!m_IndexBuffer || m_IndexBuffer->GetElementCount() != m_Indices.size())
             {
-                BufferDescription ibDesc;
-                ibDesc.ElementCount = m_Indices.size();
-                ibDesc.ElementSize = sizeof(u32);
-                ibDesc.IsDynamic = false;
+                if (m_Indices.size() != 0)
+                {
+                    BufferDescription ibDesc;
+                    ibDesc.ElementCount = m_Indices.size();
+                    ibDesc.ElementSize = sizeof(u32);
+                    ibDesc.IsDynamic = false;
 
-                m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
+                    m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
+                }
+                else
+                {
+                    m_IndexBuffer = nullptr;
+                }
             }
 
-            Renderer::UploadBufferData(m_Vertices.data(), m_VertexBuffer.get());
-            Renderer::UploadBufferData(m_Indices.data(), m_VertexBuffer.get());
+            if(m_Vertices.size())
+                Renderer::UploadBufferData(m_Vertices.data(), m_VertexBuffer.get());
+
+            if(m_Indices.size())
+                Renderer::UploadBufferData(m_Indices.data(), m_IndexBuffer.get());
 
             if (makeNonReadable)
             {

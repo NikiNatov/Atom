@@ -344,7 +344,7 @@ namespace Atom
             assimpMat->Get(AI_MATKEY_NAME, materialName);
 
             UUID materialUUID = ContentTools::CreateMaterialAsset(materialName.C_Str(), "TestProject/Assets/Materials");
-            Ref<MaterialAsset> materialAsset = AssetManager::GetAsset<MaterialAsset>(materialUUID, true);
+            Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
             aiColor4D albedo;
@@ -411,7 +411,7 @@ namespace Atom
                         textureUUID = ContentTools::ImportTextureAsset(sourcePath.parent_path() / aiPath.C_Str(), "TestProject/Assets/Textures", importSettings);
                     }
 
-                    materialAsset->SetTexture(uniformName, textureUUID);
+                    materialAsset->SetTexture(uniformName, AssetManager::GetAsset<Texture2D>(textureUUID, true));
                     materialAsset->SetUniform(fmt::format("Use{}", uniformName).c_str(), 1);
                 }
             };
@@ -428,7 +428,7 @@ namespace Atom
                 continue;
             }
 
-            materialTable.SetMaterial(materialIdx, materialUUID);
+            materialTable.SetMaterial(materialIdx, materialAsset);
         }
 
         // We have to make the mesh readable so that the data is available on the CPU during serialization
@@ -521,7 +521,7 @@ namespace Atom
         if (!std::filesystem::exists(destinationFolder))
             std::filesystem::create_directory(destinationFolder);
 
-        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"));
+        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested);
         asset->m_AssetFilepath = assetFullPath;
 
         if (!AssetSerializer::Serialize(asset))

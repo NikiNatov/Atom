@@ -111,7 +111,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(Ref<MaterialAsset> asset)
+    static bool AssetSerializer::Serialize(Ref<Material> asset)
     {
         std::ofstream ofs(asset->m_AssetFilepath, std::ios::out | std::ios::binary);
 
@@ -125,10 +125,10 @@ namespace Atom
         ofs.write((char*)&flags, sizeof(MaterialFlags));
 
         // Serialize uniform buffers
-        u32 uniformBufferCount = asset->m_Material->GetUniformBuffersData().size();
+        u32 uniformBufferCount = asset->GetUniformBuffersData().size();
         ofs.write((char*)&uniformBufferCount, sizeof(u32));
 
-        for (auto& [bufferRegister, bufferData] : asset->m_Material->GetUniformBuffersData())
+        for (auto& [bufferRegister, bufferData] : asset->GetUniformBuffersData())
         {
             u32 bufferSize = bufferData.size();
             ofs.write((char*)&bufferRegister, sizeof(u32));
@@ -137,10 +137,10 @@ namespace Atom
         }
 
         // Serialize textures
-        u32 textureCount = asset->m_Material->GetTextures().size();
+        u32 textureCount = asset->GetTextures().size();
         ofs.write((char*)&textureCount, sizeof(u32));
 
-        for (auto& [textureRegister, texture] : asset->m_Material->GetTextures())
+        for (auto& [textureRegister, texture] : asset->GetTextures())
         {
             UUID textureHandle = 0;
 
@@ -150,14 +150,14 @@ namespace Atom
                 {
                     case TextureType::Texture2D:
                     {
-                        Ref<Texture2D> texture = std::dynamic_pointer_cast<Texture2D>(asset->GetTexture(textureRegister));
+                        Ref<Texture2D> texture = std::dynamic_pointer_cast<Texture2D>(asset->m_Textures[textureRegister]);
                         ATOM_ENGINE_ASSERT(texture);
                         textureHandle = texture->GetUUID();
                         break;
                     }
                     case TextureType::TextureCube:
                     {
-                        Ref<TextureCube> texture = std::dynamic_pointer_cast<TextureCube>(asset->GetTexture(textureRegister));
+                        Ref<TextureCube> texture = std::dynamic_pointer_cast<TextureCube>(asset->m_Textures[textureRegister]);
                         ATOM_ENGINE_ASSERT(texture);
                         textureHandle = texture->GetUUID();
                         break;
@@ -201,7 +201,7 @@ namespace Atom
         {
             UUID materialUUID = 0;
 
-            if (Ref<MaterialAsset> material = asset->m_MaterialTable.GetMaterial(submeshIdx))
+            if (Ref<Material> material = asset->m_MaterialTable.GetMaterial(submeshIdx))
                 materialUUID = material->m_UUID;
 
             ofs.write((char*)&materialUUID, sizeof(u64));
@@ -219,15 +219,13 @@ namespace Atom
         if (!ifs)
             return nullptr;
 
-        UUID uuid;
-        AssetType assetType;
-        std::filesystem::path sourcePath;
+        AssetMetaData metaData;
         TextureDescription textureDesc;
         bool isReadable;
         Vector<Vector<byte>> pixelData;
 
-        DeserializeMetaData(ifs, uuid, assetType, sourcePath);
-        ATOM_ENGINE_ASSERT(assetType == AssetType::Texture2D);
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Texture2D);
 
         ifs.read((char*)&textureDesc.Format, sizeof(TextureFormat));
         ifs.read((char*)&textureDesc.Width, sizeof(u32));
@@ -247,10 +245,11 @@ namespace Atom
             ifs.read((char*)pixelData[mip].data(), pixelDataSize);
         }
 
-        Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, pixelData, isReadable, sourcePath.stem().string().c_str());
-        asset->m_UUID = uuid;
-        asset->m_AssetType = assetType;
-        asset->m_SourceFilepath = sourcePath;
+        Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, pixelData, isReadable, metaData.SourceFilepath.stem().string().c_str());
+        asset->m_UUID = metaData.UUID;
+        asset->m_AssetType = metaData.Type;
+        asset->m_AssetFlags = metaData.Flags;
+        asset->m_SourceFilepath = metaData.SourceFilepath;
         asset->m_AssetFilepath = filepath;
 
         return asset;
@@ -265,15 +264,13 @@ namespace Atom
         if (!ifs)
             return nullptr;
 
-        UUID uuid;
-        AssetType assetType;
-        std::filesystem::path sourcePath;
+        AssetMetaData metaData;
         TextureDescription textureDesc;
         bool isReadable;
         Vector<Vector<byte>> pixelData[6];
 
-        DeserializeMetaData(ifs, uuid, assetType, sourcePath);
-        ATOM_ENGINE_ASSERT(assetType == AssetType::TextureCube);
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::TextureCube);
 
         ifs.read((char*)&textureDesc.Format, sizeof(TextureFormat));
         ifs.read((char*)&textureDesc.Width, sizeof(u32));
@@ -297,10 +294,11 @@ namespace Atom
             }
         }
 
-        Ref<TextureCube> asset = CreateRef<TextureCube>(textureDesc, pixelData, isReadable, sourcePath.stem().string().c_str());
-        asset->m_UUID = uuid;
-        asset->m_AssetType = assetType;
-        asset->m_SourceFilepath = sourcePath;
+        Ref<TextureCube> asset = CreateRef<TextureCube>(textureDesc, pixelData, isReadable, metaData.SourceFilepath.stem().string().c_str());
+        asset->m_UUID = metaData.UUID;
+        asset->m_AssetType = metaData.Type;
+        asset->m_AssetFlags = metaData.Flags;
+        asset->m_SourceFilepath = metaData.SourceFilepath;
         asset->m_AssetFilepath = filepath;
 
         return asset;
@@ -308,17 +306,23 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    Ref<MaterialAsset> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    Ref<Material> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
     {
         std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
 
         if (!ifs)
             return nullptr;
 
-        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"));
+        AssetMetaData metaData;
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Material);
+
+        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::None);
+        asset->m_UUID = metaData.UUID;
+        asset->m_AssetType = metaData.Type;
+        asset->m_AssetFlags = metaData.Flags;
+        asset->m_SourceFilepath = metaData.SourceFilepath;
         asset->m_AssetFilepath = filepath;
-        DeserializeMetaData(ifs, asset->m_UUID, asset->m_AssetType, asset->m_SourceFilepath);
-        ATOM_ENGINE_ASSERT(asset->m_AssetType == AssetType::Material);
 
         // Deserialize flags
         MaterialFlags flags;
@@ -340,7 +344,7 @@ namespace Atom
             Vector<byte> bufferData(bufferSize, 0);
             ifs.read((char*)bufferData.data(), bufferSize);
 
-            asset->SetUniformBufferData(bufferRegister, bufferData);
+            asset->m_UniformBuffersData[bufferRegister] = bufferData;
         }
 
         // Deserialize textures
@@ -356,7 +360,7 @@ namespace Atom
             ifs.read((char*)&textureHandle, sizeof(u64));
             
             Ref<Texture> texture = textureHandle != 0 ? AssetManager::GetAsset<Texture>(textureHandle, true) : nullptr;
-            asset->SetTexture(textureRegister, texture);
+            asset->m_Textures[textureRegister] = texture;
         }
 
         return asset;
@@ -371,12 +375,9 @@ namespace Atom
         if (!ifs)
             return nullptr;
 
-        UUID uuid;
-        AssetType assetType;
-        std::filesystem::path sourcePath;
-
-        DeserializeMetaData(ifs, uuid, assetType, sourcePath);
-        ATOM_ENGINE_ASSERT(assetType == AssetType::Mesh);
+        AssetMetaData metaData;
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Mesh);
 
         u32 vertexCount;
         ifs.read((char*)&vertexCount, sizeof(u32));
@@ -406,13 +407,14 @@ namespace Atom
             UUID materialUUID;
             ifs.read((char*)&materialUUID, sizeof(u64));
 
-            materialTable.SetMaterial(submeshIdx, materialUUID);
+            materialTable.SetMaterial(submeshIdx, AssetManager::GetAsset<Material>(materialUUID, true));
         }
 
         Ref<Mesh> asset = CreateRef<Mesh>(vertices, indices, submeshes, materialTable, isReadable);
-        asset->m_UUID = uuid;
-        asset->m_AssetType = assetType;
-        asset->m_SourceFilepath = sourcePath;
+        asset->m_UUID = metaData.UUID;
+        asset->m_AssetType = metaData.Type;
+        asset->m_AssetFlags = metaData.Flags;
+        asset->m_SourceFilepath = metaData.SourceFilepath;
         asset->m_AssetFilepath = filepath;
 
         return asset;
@@ -426,7 +428,7 @@ namespace Atom
         if (!ifs)
             return false;
 
-        DeserializeMetaData(ifs, assetMetaData.UUID, assetMetaData.Type, assetMetaData.SourceFilepath);
+        DeserializeMetaData(ifs, assetMetaData);
         assetMetaData.AssetFilepath = filepath;
 
         return true;
@@ -435,24 +437,28 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetSerializer::SerializeMetaData(std::ofstream& stream, Ref<Asset> asset)
     {
+        asset->SetAssetFlag(AssetFlags::Serialized);
+
         String sourcePathStr = asset->m_SourceFilepath.string();
         u32 sourcePathSize = sourcePathStr.size() + 1;
         stream.write((char*)&asset->m_UUID, sizeof(u64));
         stream.write((char*)&asset->m_AssetType, sizeof(AssetType));
+        stream.write((char*)&asset->m_AssetFlags, sizeof(AssetFlags));
         stream.write((char*)&sourcePathSize, sizeof(u32));
         stream.write(sourcePathStr.data(), sourcePathSize);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void AssetSerializer::DeserializeMetaData(std::ifstream& stream, UUID& uuid, AssetType& assetType, std::filesystem::path& sourcePath)
+    void AssetSerializer::DeserializeMetaData(std::ifstream& stream, AssetMetaData& metaData)
     {
         u32 sourcePathSize;
         String sourcePathStr;
-        stream.read((char*)&uuid, sizeof(u64));
-        stream.read((char*)&assetType, sizeof(AssetType));
+        stream.read((char*)&metaData.UUID, sizeof(u64));
+        stream.read((char*)&metaData.Type, sizeof(AssetType));
+        stream.read((char*)&metaData.Flags, sizeof(AssetFlags));
         stream.read((char*)&sourcePathSize, sizeof(u32));
         sourcePathStr.resize(sourcePathSize);
         stream.read(sourcePathStr.data(), sourcePathSize);
-        sourcePath = sourcePathStr;
+        metaData.SourceFilepath = sourcePathStr;
     }
 }

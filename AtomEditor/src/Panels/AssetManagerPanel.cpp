@@ -30,13 +30,23 @@ namespace Atom
             const auto& assetRegistry = AssetManager::GetRegistry();
             for (auto& [uuid, assetMetaData] : assetRegistry)
             {
-                ImGui::PushID(assetMetaData.UUID);
+                ImGui::PushID(uuid);
                 ImGui::Columns(2);
                 ImGui::SetColumnWidth(0, 60.0f);
                 ImGui::Text("UUID");
                 ImGui::NextColumn();
                 ImGui::PushItemWidth(-1);
-                ImGui::InputScalar("##UUID", ImGuiDataType_U64, (void*)&assetMetaData.UUID, 0, 0, 0, ImGuiInputTextFlags_ReadOnly);
+
+                bool isAssetLoaded = AssetManager::IsAssetLoaded(uuid);
+
+                if (isAssetLoaded)
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 0.0f, 1.0f, 0.0f, 1.0f });
+
+                ImGui::InputScalar("##UUID", ImGuiDataType_U64, (void*)&uuid, 0, 0, 0, ImGuiInputTextFlags_ReadOnly);
+
+                if (isAssetLoaded)
+                    ImGui::PopStyleColor();
+
                 ImGui::PopItemWidth();
                 ImGui::Columns(1);
 
@@ -45,8 +55,8 @@ namespace Atom
                 ImGui::Text("Path");
                 ImGui::NextColumn();
                 ImGui::PushItemWidth(-1);
-                String filepath = assetMetaData.AssetFilepath.string();
-                ImGui::InputText("##Path", filepath.data(), filepath.size(), ImGuiInputTextFlags_ReadOnly);
+                String inputText = (assetMetaData.Flags & AssetFlags::Serialized) != AssetFlags::None ? assetMetaData.AssetFilepath.string() : "<Virtual Asset>";
+                ImGui::InputText("##Path", inputText.data(), inputText.size(), ImGuiInputTextFlags_ReadOnly);
                 ImGui::PopItemWidth();
                 ImGui::Columns(1);
 

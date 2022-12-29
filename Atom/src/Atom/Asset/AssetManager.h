@@ -12,6 +12,7 @@ namespace Atom
     {
         UUID                  UUID;
         AssetType             Type;
+        AssetFlags            Flags;
         std::filesystem::path SourceFilepath;
         std::filesystem::path AssetFilepath;
     };
@@ -22,13 +23,16 @@ namespace Atom
         static void Shutdown();
         static void SetAssetFolder(const std::filesystem::path& assetFolder);
         static void RegisterAsset(const AssetMetaData& metaData);
+        static void UnregisterAsset(UUID uuid);
         static bool LoadAsset(UUID uuid);
         static bool ReloadAsset(UUID uuid);
         static void UnloadAsset(UUID uuid);
         static void UnloadAllAssets();
+        static void UnloadUnusedAssets();
         static bool IsAssetValid(UUID uuid);
         static bool IsAssetLoaded(UUID uuid);
         static const AssetMetaData* GetAssetMetaData(UUID uuid);
+        static u32 GetAssetRefCount(UUID uuid);
         static const HashMap<UUID, AssetMetaData>& GetRegistry();
         static UUID GetUUIDForAssetPath(const std::filesystem::path& assetPath);
 
@@ -43,6 +47,23 @@ namespace Atom
 
             return std::dynamic_pointer_cast<T>(ms_LoadedAssets[uuid]);
         }
+
+        template<typename T>
+        static Ref<T> CreateVirtualAsset()
+        {
+            Ref<T> asset = CreateRef<T>();
+
+            AssetMetaData metaData;
+            metaData.UUID = asset->GetUUID();
+            metaData.Type = asset->GetAssetType();
+            metaData.Flags = asset->GetAssetFlags();
+
+            ms_Registry[metaData.UUID] = metaData;
+            ms_LoadedAssets[metaData.UUID] = asset;
+
+            return asset;
+        }
+
     private:
         static void RegisterAllAssets(const std::filesystem::path& assetFolder);
         static void RegisterAsset(const std::filesystem::path& assetPath);

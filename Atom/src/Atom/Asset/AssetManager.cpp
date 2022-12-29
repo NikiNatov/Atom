@@ -72,6 +72,20 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::UnregisterAsset(UUID uuid)
+    {
+        if (!IsAssetValid(uuid))
+            return;
+        
+        ms_AssetPathUUIDs.erase(ms_Registry[uuid].AssetFilepath);
+        ms_Registry.erase(uuid);
+        ms_LoadedAssets.erase(uuid);
+        ms_PendingReloads.erase(uuid);
+
+        ATOM_INFO("Virtual asset {} unloaded", uuid);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     bool AssetManager::LoadAsset(UUID uuid)
     {
         if (!IsAssetValid(uuid))
@@ -90,7 +104,7 @@ namespace Atom
         {
             case AssetType::Texture2D: asset = AssetSerializer::Deserialize<Texture2D>(metaData.AssetFilepath); break;
             case AssetType::TextureCube: asset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); break;
-            case AssetType::Material: asset = AssetSerializer::Deserialize<MaterialAsset>(metaData.AssetFilepath); break;
+            case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
             case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
         }
 
@@ -118,7 +132,7 @@ namespace Atom
         {
             case AssetType::Texture2D: asset = AssetSerializer::Deserialize<Texture2D>(metaData.AssetFilepath); break;
             case AssetType::TextureCube: asset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); break;
-            case AssetType::Material: asset = AssetSerializer::Deserialize<MaterialAsset>(metaData.AssetFilepath); break;
+            case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
             case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
         }
 
@@ -148,6 +162,27 @@ namespace Atom
     void AssetManager::UnloadAllAssets()
     {
         ms_LoadedAssets.clear();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::UnloadUnusedAssets()
+    {
+        Vector<Ref<Asset>> assetsToUnload;
+        assetsToUnload.reserve(ms_LoadedAssets.size());
+
+        for (auto& [uuid, asset] : ms_LoadedAssets)
+        {
+            if (asset.use_count() == 1)
+                assetsToUnload.push_back(asset);
+        }
+
+        for (auto& asset : assetsToUnload)
+        {
+            if (asset->GetAssetFlag(AssetFlags::Serialized))
+                UnloadAsset(asset->GetUUID());
+            else
+                UnregisterAsset(asset->GetUUID());
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -206,6 +241,15 @@ namespace Atom
             return &it->second;
 
         return nullptr;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    u32 AssetManager::GetAssetRefCount(UUID uuid)
+    {
+        if (!IsAssetValid(uuid) || !IsAssetLoaded(uuid))
+            return 0;
+
+        return ms_LoadedAssets.at(uuid).use_count() - 1;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

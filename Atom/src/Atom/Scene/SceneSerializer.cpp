@@ -2,6 +2,7 @@
 #include "SceneSerializer.h"
 
 #include "Atom/Scene/Components.h"
+#include "Atom/Asset/AssetManager.h"
 
 #include <yaml-cpp/yaml.h>
 #include <glm/glm.hpp>
@@ -156,7 +157,7 @@ namespace Atom
 				auto& mc = entity.GetComponent<MeshComponent>();
 				out << YAML::Key << "MeshComponent";
 				out << YAML::BeginMap;
-				out << YAML::Key << "Mesh" << YAML::Value << mc.Mesh;
+				out << YAML::Key << "Mesh" << YAML::Value << mc.Mesh->GetUUID();
 				out << YAML::EndMap;
 			}
 
@@ -165,7 +166,7 @@ namespace Atom
 				auto& slc = entity.GetComponent<SkyLightComponent>();
 				out << YAML::Key << "SkyLightComponent";
 				out << YAML::BeginMap;
-				out << YAML::Key << "EnvironmentMap" << YAML::Value << slc.EnvironmentMap;
+				out << YAML::Key << "EnvironmentMap" << YAML::Value << slc.EnvironmentMap->GetUUID();
 				out << YAML::EndMap;
 			}
 
@@ -309,13 +310,13 @@ namespace Atom
 				if (YAML::Node meshComponent = entities[it]["MeshComponent"])
 				{
 					auto& mc = deserializedEntity.AddComponent<MeshComponent>();
-					mc.Mesh = meshComponent["Mesh"].as<u64>();
+					mc.Mesh = AssetManager::GetAsset<Mesh>(meshComponent["Mesh"].as<u64>(), true);
 				}
 
 				if (YAML::Node skyLightComponent = entities[it]["SkyLightComponent"])
 				{
 					auto& slc = deserializedEntity.AddComponent<SkyLightComponent>();
-					slc.EnvironmentMap = skyLightComponent["EnvironmentMap"].as<u64>();
+					slc.EnvironmentMap = AssetManager::GetAsset<TextureCube>(skyLightComponent["EnvironmentMap"].as<u64>(), true);
 				}
 
 				if (YAML::Node dirLightComponent = entities[it]["DirectionalLightComponent"])
