@@ -125,24 +125,62 @@ namespace Atom
         if (!IsAssetValid(uuid))
             return false;
 
+        if (!IsAssetLoaded(uuid))
+            return LoadAsset(uuid);
+
         AssetMetaData& metaData = ms_Registry[uuid];
-        Ref<Asset> asset = nullptr;
+        bool result = false;
 
         switch (metaData.Type)
         {
-            case AssetType::Texture2D: asset = AssetSerializer::Deserialize<Texture2D>(metaData.AssetFilepath); break;
-            case AssetType::TextureCube: asset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); break;
-            case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
-            case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
+            case AssetType::Texture2D:
+            {
+                Ref<Texture2D> textureAsset = AssetSerializer::Deserialize<Texture2D>(metaData.AssetFilepath);
+                result = textureAsset != nullptr;
+
+                if(result)
+                    *std::dynamic_pointer_cast<Texture2D>(ms_LoadedAssets[uuid]) = *textureAsset;
+
+                break;
+            }
+            case AssetType::TextureCube:
+            {
+                Ref<TextureCube> textureAsset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); 
+                result = textureAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<TextureCube>(ms_LoadedAssets[uuid]) = *textureAsset;
+
+                break;
+            }
+            case AssetType::Material:
+            {
+                Ref<Material> materialAsset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath);
+                result = materialAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<Material>(ms_LoadedAssets[uuid]) = *materialAsset;
+
+                break;
+            }
+            case AssetType::Mesh:
+            {
+                Ref<Mesh> meshAsset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath);
+                result = meshAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<Mesh>(ms_LoadedAssets[uuid]) = *meshAsset;
+
+                break;
+            }
         }
 
-        if (!asset)
+        if (!result)
         {
             ATOM_ERROR("Failed reloading asset {}({}). Asset deserialization failed.", metaData.AssetFilepath, uuid);
             return false;
         }
 
-        ms_LoadedAssets[uuid] = asset;
         ms_PendingReloads[uuid] = false;
         ATOM_INFO("Asset {}({}) reloaded", metaData.AssetFilepath, uuid);
         return true;
