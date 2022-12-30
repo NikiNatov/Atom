@@ -30,12 +30,15 @@ namespace Atom
         void SaveScene();
         void NewScene();
         void OpenScene();
+        void PlayScene();
+        void StopScene();
+        void DuplicateEntity();
     private:
-        Ref<Scene>           m_Scene = nullptr;
+        Ref<Scene>           m_ActiveScene = nullptr;
+        Ref<Scene>           m_EditorScene = nullptr;
         Ref<SceneRenderer>   m_Renderer = nullptr;
         glm::vec2            m_ViewportSize = { 0.0f, 0.0f };
         bool                 m_NeedsResize = false;
-        Entity               m_SelectedEntity = {};
         s32                  m_GuizmoOperation = -1;
         bool                 m_GuizmoSnap = false;
         SceneHierarchyPanel  m_SceneHierarchyPanel;

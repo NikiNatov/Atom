@@ -10,10 +10,59 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
+    template<typename Component>
+    static void CopyComponent(entt::registry& dstRegistry, const entt::registry& srcRegistry, const HashMap<UUID, entt::entity>& uuidToEnttIDMap)
+    {
+        for (auto srcEntity : srcRegistry.view<Component>())
+        {
+            entt::entity dstEntity = uuidToEnttIDMap.at(srcRegistry.get<IDComponent>(srcEntity).ID);
+            auto& srcComponent = srcRegistry.get<Component>(srcEntity);
+            dstRegistry.emplace_or_replace<Component>(dstEntity, srcComponent);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<typename Component>
+    static void CopyComponentIfExists(Entity dstEntity, Entity srcEntity)
+    {
+        if (srcEntity.HasComponent<Component>())
+            dstEntity.AddOrReplaceComponent<Component>(srcEntity.GetComponent<Component>());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Scene::Scene(const String& name)
         : m_Name(name)
     {
         m_LightEnvironment = CreateRef<LightEnvironment>();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Scene> Scene::Copy()
+    {
+        Ref<Scene> newScene = CreateRef<Scene>(m_Name);
+        HashMap<UUID, entt::entity> uuidToEnttIDMap;
+
+        for (auto e : m_Registry.view<IDComponent>())
+        {
+            UUID uuid = m_Registry.get<IDComponent>(e).ID;
+            const String& name = m_Registry.get<TagComponent>(e).Tag;
+
+            // Set the entt id in the new scene registry that corresponds to the UUID of the entity
+            uuidToEnttIDMap[uuid] = (entt::entity)newScene->CreateEntityFromUUID(uuid, name);
+        }
+
+        CopyComponent<TransformComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<CameraComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<MeshComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<SkyLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<DirectionalLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<PointLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<SpotLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<ScriptComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<RigidbodyComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<BoxColliderComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+
+        return newScene;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -33,6 +82,23 @@ namespace Atom
         m_EntitiesByID[uuid] = entity;
 
         return entity;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Scene::DuplicateEntity(Entity entity)
+    {
+        Entity newEntity = CreateEntity(entity.GetTag());
+
+        CopyComponentIfExists<TransformComponent>(newEntity, entity);
+        CopyComponentIfExists<CameraComponent>(newEntity, entity);
+        CopyComponentIfExists<MeshComponent>(newEntity, entity);
+        CopyComponentIfExists<SkyLightComponent>(newEntity, entity);
+        CopyComponentIfExists<DirectionalLightComponent>(newEntity, entity);
+        CopyComponentIfExists<PointLightComponent>(newEntity, entity);
+        CopyComponentIfExists<SpotLightComponent>(newEntity, entity);
+        CopyComponentIfExists<ScriptComponent>(newEntity, entity);
+        CopyComponentIfExists<RigidbodyComponent>(newEntity, entity);
+        CopyComponentIfExists<BoxColliderComponent>(newEntity, entity);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -102,13 +168,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnStart()
     {
-        // Create script instances
-        ScriptEngine::OnSceneStart(this);
-
-        for (auto entity : m_Registry.view<ScriptComponent>())
-        {
-            ScriptEngine::CreateEntityScript(Entity(entity, this));
-        }
+        m_State = SceneState::Running;
 
         // Create physics objects
         PhysicsEngine::OnSceneStart(this);
@@ -121,6 +181,14 @@ namespace Atom
         for (auto entity : m_Registry.view<BoxColliderComponent>())
         {
             PhysicsEngine::CreateBoxCollider(Entity(entity, this));
+        }
+
+        // Create script instances
+        ScriptEngine::OnSceneStart(this);
+
+        for (auto entity : m_Registry.view<ScriptComponent>())
+        {
+            ScriptEngine::CreateEntityScript(Entity(entity, this));
         }
     }
 
@@ -150,6 +218,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnStop()
     {
+        m_State = SceneState::Edit;
+
         ScriptEngine::OnSceneStop();
         PhysicsEngine::OnSceneStop();
     }

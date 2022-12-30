@@ -25,8 +25,10 @@ namespace Atom
         Scene(const String& name = "Unnamed scene");
         ~Scene() = default;
 
+        Ref<Scene> Copy();
         Entity CreateEntity(const String& name = "Unnamed Entity");
         Entity CreateEntityFromUUID(UUID uuid, const String& name = "Unnamed Entity");
+        void DuplicateEntity(Entity entity);
         void DeleteEntity(Entity entity);
         Entity FindEntityByUUID(UUID uuid);
         Entity FindEntityByName(const String& name);
@@ -38,7 +40,6 @@ namespace Atom
         void OnRuntimeRender(Ref<SceneRenderer> renderer);
         void OnViewportResize(u32 width, u32 height);
 
-        inline void SetSceneState(SceneState state) { m_State = state; }
         inline const String& GetName() { return m_Name; }
         inline EditorCamera& GetEditorCamera() { return m_EditorCamera; }
         inline SceneState GetSceneState() const { return m_State; }
