@@ -79,6 +79,49 @@ namespace Atom
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------------------
+	void Entity::RemoveParent()
+	{
+		auto& shc = GetComponent<SceneHierarchyComponent>();
+		Entity parent = m_Scene->FindEntityByUUID(shc.Parent);
+
+		auto& parentShc = parent.GetComponent<SceneHierarchyComponent>();
+
+		Entity parentFirstChild = m_Scene->FindEntityByUUID(parentShc.FirstChild);
+		Entity currentChild = parentFirstChild;
+
+		while (currentChild)
+		{
+			if (currentChild.GetUUID() == GetUUID())
+			{
+				if (currentChild == parentFirstChild)
+				{
+					Entity nextSibling = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
+					parentShc.FirstChild = nextSibling.GetUUID();
+
+					if (nextSibling)
+						nextSibling.GetComponent<SceneHierarchyComponent>().PreviousSibling = UUID(0);
+				}
+				else
+				{
+					Entity prev = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().PreviousSibling);
+					Entity next = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
+
+					if (prev)
+						prev.GetComponent<SceneHierarchyComponent>().NextSibling = next.GetUUID();
+					if (next)
+						next.GetComponent<SceneHierarchyComponent>().PreviousSibling = prev.GetUUID();
+				}
+
+				break;
+			}
+
+			currentChild = m_Scene->FindEntityByUUID(currentChild.GetComponent<SceneHierarchyComponent>().NextSibling);
+		}
+
+		shc.Parent = UUID(0);
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------------------
 	bool Entity::IsDescendantOf(Entity entity)
 	{
 		Queue<Entity> q;

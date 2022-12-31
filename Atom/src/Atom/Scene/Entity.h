@@ -18,6 +18,7 @@ namespace Atom
 
 		void AddChild(Entity entity);
 		void RemoveChild(Entity child);
+		void RemoveParent();
 		bool IsDescendantOf(Entity entity);
 
 		template<typename T, typename... Args>

@@ -9,6 +9,30 @@ namespace Atom
     {
         ImGui::Begin("Scene Hierarchy");
 
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered())
+		{
+			ImGui::OpenPopup("##SceneHierarchyPopup");
+		}
+
+		if (ImGui::BeginPopupContextItem("##SceneHierarchyPopup"))
+		{
+			if (ImGui::MenuItem("New entity"))
+				m_Scene->CreateEntity();
+
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
+			{
+				Entity srcEntity = *(Entity*)payload->Data;
+				srcEntity.RemoveParent();
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
         m_Scene->m_Registry.each([&](auto entityID)
         {
             Entity entity(entityID, m_Scene.get());
@@ -46,7 +70,13 @@ namespace Atom
 		ImGui::PushID((void*)(u64)(u32)entity);
 
 		bool removeEntity = false;
-		if (ImGui::BeginPopupContextItem())
+
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		{
+			ImGui::OpenPopup("##EntityPopup");
+		}
+
+		if (ImGui::BeginPopupContextItem("##EntityPopup"))
 		{
 			m_SelectedEntity = entity;
 
