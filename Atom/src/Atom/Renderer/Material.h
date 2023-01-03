@@ -34,7 +34,7 @@ namespace Atom
 
         void SetTexture(const char* uniformName, const Ref<Texture>& texture);
         Ref<Texture> GetTexture(const char* uniformName);
-        bool HasTexture(const char* name);
+        bool HasResource(const char* name, ShaderResourceType type);
 
         template<typename T>
         void SetUniform(const char* uniformName, const T& value)
@@ -58,7 +58,7 @@ namespace Atom
             return *(T*)(&bufferData[uniform->Offset]);
         }
 
-        bool HasUniform(const char* name);
+        bool HasUniform(const char* name, ShaderDataType type);
 
         void SetFlag(MaterialFlags flag, bool state);
         inline void SetFlags(MaterialFlags flags) { m_Flags = flags; }

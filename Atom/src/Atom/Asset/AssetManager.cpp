@@ -58,11 +58,52 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const AssetMetaData& metaData)
     {
-        ATOM_ENGINE_ASSERT(metaData.AssetFilepath.extension() == Asset::AssetTypeExtension);
+        ATOM_ENGINE_ASSERT(metaData.AssetFilepath.extension() == Asset::AssetTypeExtension && (metaData.Flags & AssetFlags::Serialized) != AssetFlags::None);
 
         if (!std::filesystem::exists(metaData.AssetFilepath))
         {
             ATOM_ERROR("Failed registering asset {}. Asset file not found.", metaData.AssetFilepath);
+            return;
+        }
+
+        ms_Registry[metaData.UUID] = metaData;
+        ms_AssetPathUUIDs[metaData.AssetFilepath] = metaData.UUID;
+        ms_PendingReloads[metaData.UUID] = false;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::RegisterAsset(const Ref<Asset>& asset)
+    {
+        const AssetMetaData& metaData = asset->GetMetaData();
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized))
+        {
+            if (!std::filesystem::exists(metaData.AssetFilepath))
+            {
+                ATOM_ERROR("Failed registering asset {}. Asset file not found.", metaData.AssetFilepath);
+                return;
+            }
+
+            ms_AssetPathUUIDs[metaData.AssetFilepath] = metaData.UUID;
+            ms_PendingReloads[metaData.UUID] = false;
+        }
+
+        ms_Registry[metaData.UUID] = metaData;
+        ms_LoadedAssets[metaData.UUID] = asset;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::RegisterAsset(const std::filesystem::path& assetPath)
+    {
+        if (std::filesystem::is_directory(assetPath))
+            return;
+
+        ATOM_ENGINE_ASSERT(assetPath.extension() == Asset::AssetTypeExtension);
+
+        AssetMetaData metaData;
+        if (!AssetSerializer::DeserializeMetaData(assetPath, metaData))
+        {
+            ATOM_ERROR("Failed registering asset {}. Reading asset meta data failed.", assetPath);
             return;
         }
 
@@ -82,7 +123,24 @@ namespace Atom
         ms_LoadedAssets.erase(uuid);
         ms_PendingReloads.erase(uuid);
 
-        ATOM_INFO("Virtual asset {} unloaded", uuid);
+        ATOM_INFO("Asset {} unregistered", uuid);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::UnregisterAsset(const std::filesystem::path& assetPath)
+    {
+        auto it = ms_AssetPathUUIDs.find(assetPath);
+
+        if (it == ms_AssetPathUUIDs.end())
+            return;
+
+        UUID uuid = it->second;
+        ms_Registry.erase(uuid);
+        ms_LoadedAssets.erase(uuid);
+        ms_PendingReloads.erase(uuid);
+        ms_AssetPathUUIDs.erase(it);
+
+        ATOM_INFO("Asset {} unregistered", uuid);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -288,39 +346,5 @@ namespace Atom
             return 0;
 
         return ms_LoadedAssets.at(uuid).use_count() - 1;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void AssetManager::RegisterAsset(const std::filesystem::path& assetPath)
-    {
-        if (std::filesystem::is_directory(assetPath))
-            return;
-
-        ATOM_ENGINE_ASSERT(assetPath.extension() == Asset::AssetTypeExtension);
-
-        AssetMetaData metaData;
-        if (!AssetSerializer::DeserializeMetaData(assetPath, metaData))
-        {
-            ATOM_ERROR("Failed registering asset {}. Reading asset meta data failed.", assetPath);
-            return;
-        }
-
-        ms_Registry[metaData.UUID] = metaData;
-        ms_AssetPathUUIDs[metaData.AssetFilepath] = metaData.UUID;
-        ms_PendingReloads[metaData.UUID] = false;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void AssetManager::UnregisterAsset(const std::filesystem::path& assetPath)
-    {
-        auto it = ms_AssetPathUUIDs.find(assetPath);
-
-        if (it == ms_AssetPathUUIDs.end())
-            return;
-
-        ms_Registry.erase(it->second);
-        ms_LoadedAssets.erase(it->second);
-        ms_PendingReloads.erase(it->second);
-        ms_AssetPathUUIDs.erase(it);
     }
 }

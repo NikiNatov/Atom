@@ -75,11 +75,6 @@ namespace Atom
 
             return 0;
         }
-
-        static u32 GetMaxMipCount(u32 width, u32 height)
-        {
-            return (u32)glm::log2((f32)glm::max(width, height)) + 1;
-        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -111,7 +106,7 @@ namespace Atom
         textureDesc.Format = format;
         textureDesc.Width = width;
         textureDesc.Height = height;
-        textureDesc.MipLevels = Utils::GetMaxMipCount(width, height);
+        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
         textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
@@ -186,7 +181,7 @@ namespace Atom
         textureDesc.Format = format;
         textureDesc.Width = width;
         textureDesc.Height = height;
-        textureDesc.MipLevels = Utils::GetMaxMipCount(width, height);
+        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
         textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
@@ -444,7 +439,7 @@ namespace Atom
         textureDesc.Format = format;
         textureDesc.Width = width;
         textureDesc.Height = height;
-        textureDesc.MipLevels = Utils::GetMaxMipCount(width, height);
+        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
         textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
@@ -470,7 +465,7 @@ namespace Atom
         textureDesc.Format = format;
         textureDesc.Width = width;
         textureDesc.Height = height;
-        textureDesc.MipLevels = Utils::GetMaxMipCount(width, height);
+        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
         textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;

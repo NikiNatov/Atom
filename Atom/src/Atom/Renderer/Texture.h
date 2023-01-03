@@ -119,6 +119,8 @@ namespace Atom
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSampler() const { return m_SamplerDescriptor; }
 
+    public:
+        inline static u32 CalculateMaxMipCount(u32 width, u32 height) { return (u32)glm::log2((f32)glm::max(width, height)) + 1; }
     protected:
         void CreateSRV();
         void CreateSampler();
@@ -147,7 +149,7 @@ namespace Atom
 
         void UpdateGPUData(bool makeNonReadable = false);
         void SetPixels(const Vector<byte>& pixels, u32 mipLevel = 0);
-        Vector<byte>* GetPixels(u32 mipLevel = 0);
+        const Vector<byte>& GetPixels(u32 mipLevel = 0);
         bool IsReadable() const;
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 mip = 0) const;
@@ -217,7 +219,7 @@ namespace Atom
 
         void UpdateGPUData(bool makeNonReadable = false);
         void SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel = 0);
-        Vector<byte>* GetPixels(u32 cubeFace, u32 mipLevel = 0);
+        const Vector<byte>& GetPixels(u32 cubeFace, u32 mipLevel = 0);
         bool IsReadable() const;
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 slice = 0, u32 mip = 0) const;

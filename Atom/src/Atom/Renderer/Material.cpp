@@ -69,18 +69,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool Material::HasTexture(const char* name)
+    bool Material::HasResource(const char* name, ShaderResourceType type)
     {
         if (const Resource* resource = FindResourceDeclaration(name))
-            return resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube;
+            return resource->Type == type;
 
         return false;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool Material::HasUniform(const char* name)
+    bool Material::HasUniform(const char* name, ShaderDataType type)
     {
-        return FindUniformDeclaration(name) != nullptr;
+        if (const Uniform* uniform = FindUniformDeclaration(name))
+            return uniform->Type == type;
+
+        return false;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

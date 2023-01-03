@@ -48,11 +48,13 @@ namespace Atom
         inline void SetVertices(const Vector<Vertex>& vertices) { m_Vertices = vertices; }
         inline void SetIndices(const Vector<u32>& indices) { m_Indices = indices; }
         inline void SetSubmeshes(const Vector<Submesh>& submeshes) { m_Submeshes = submeshes; }
+        inline void SetMaterial(u32 submeshIdx, Ref<Material> material) { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); m_MaterialTable->SetMaterial(submeshIdx, material); }
         inline void SetMaterialTable(const Ref<MaterialTable>& materialTable) { m_MaterialTable = materialTable; }
 
         inline const Vector<Vertex>& GetVertices() const { return m_Vertices; }
         inline const Vector<u32>& GetIndices() const { return m_Indices; }
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
+        inline const Ref<Material> GetMaterial(u32 submeshIdx) const { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); return m_MaterialTable->GetMaterial(submeshIdx); }
         inline const Ref<MaterialTable>& GetMaterialTable() const { return m_MaterialTable; }
         inline bool IsReadable() const { return m_IsReadable; }
         inline bool IsEmpty() const { return !m_VertexBuffer || !m_IndexBuffer || !m_Submeshes.size(); }

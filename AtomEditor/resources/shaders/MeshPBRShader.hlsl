@@ -66,15 +66,15 @@ struct Light
 cbuffer MaterialCB : register(b2)
 {
     float4 AlbedoColor;
-    bool UseAlbedoMap;
+    int UseAlbedoMap;
 
-    bool UseNormalMap;
+    int UseNormalMap;
 
     float Metalness;
-    bool UseMetalnessMap;
+    int UseMetalnessMap;
 
     float Roughness;
-    bool UseRoughnessMap;
+    int UseRoughnessMap;
 }
 
 cbuffer LightPropertiesCB : register(b3)

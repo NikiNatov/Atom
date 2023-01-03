@@ -8,10 +8,25 @@
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/ComponentWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Math/MathWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
 
 #include <glm/glm.hpp>
 #include <pybind11/embed.h>
 #include <pybind11/operators.h>
+#include <pybind11/stl_bind.h>
+#include <pybind11/stl/filesystem.h>
+
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::byte>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::s32>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::s64>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::u32>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::u64>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::f32>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::f64>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::Vertex>);
+PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::Submesh>);
 
 namespace Atom
 {
@@ -20,6 +35,17 @@ namespace Atom
 
     PYBIND11_EMBEDDED_MODULE(Atom, m)
     {
+        // ---------------------------------------------------- STL ------------------------------------------------------------
+        py::bind_vector<Atom::Vector<Atom::byte>>(m, "ByteList");
+        py::bind_vector<Atom::Vector<Atom::s32>>(m, "Int32List");
+        py::bind_vector<Atom::Vector<Atom::s64>>(m, "Int64List");
+        py::bind_vector<Atom::Vector<Atom::u32>>(m, "Uint32List");
+        py::bind_vector<Atom::Vector<Atom::u64>>(m, "Uint64List");
+        py::bind_vector<Atom::Vector<Atom::f32>>(m, "Float32List");
+        py::bind_vector<Atom::Vector<Atom::f64>>(m, "Float64List");
+        py::bind_vector<Atom::Vector<Atom::Vertex>>(m, "VertexList");
+        py::bind_vector<Atom::Vector<Atom::Submesh>>(m, "SubmeshList");
+
         // --------------------------------------------------- Math ------------------------------------------------------------
         py::class_<glm::vec2>(m, "Vec2")
             .def(py::init<>())
@@ -399,6 +425,20 @@ namespace Atom
             .def_property("fixed_aspect_ratio", &wrappers::CameraComponent::GetFixedAspectRatio, &wrappers::CameraComponent::SetFixedAspectRatio)
             .def_property("is_primary_camera", &wrappers::CameraComponent::GetIsPrimaryCamera, &wrappers::CameraComponent::SetIsPrimaryCamera);
 
+        py::class_<wrappers::MeshComponent>(m, "MeshComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::Component::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property("mesh", &wrappers::MeshComponent::GetMesh, &wrappers::MeshComponent::SetMesh);
+
+        py::class_<wrappers::SkyLightComponent>(m, "SkyLightComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::Component::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property("environment_map", &wrappers::SkyLightComponent::GetEnvironmentMap, &wrappers::SkyLightComponent::SetEnvironmentMap);
+
         py::class_<wrappers::DirectionalLightComponent>(m, "DirectionalLightComponent")
             .def(py::init<>())
             .def(py::init<wrappers::Entity>())
@@ -454,18 +494,24 @@ namespace Atom
             .def(py::init<>())
             .def(py::init<u64>())
             .def("add_camera_component", &wrappers::Entity::AddComponent<wrappers::CameraComponent>)
+            .def("add_mesh_component", &wrappers::Entity::AddComponent<wrappers::MeshComponent>)
+            .def("add_sky_light_component", &wrappers::Entity::AddComponent<wrappers::SkyLightComponent>)
             .def("add_dir_light_component", &wrappers::Entity::AddComponent<wrappers::DirectionalLightComponent>)
             .def("add_point_light_component", &wrappers::Entity::AddComponent<wrappers::PointLightComponent>)
             .def("add_spot_light_component", &wrappers::Entity::AddComponent<wrappers::SpotLightComponent>)
             .def("add_rigidbody_component", &wrappers::Entity::AddComponent<wrappers::RigidbodyComponent>)
             .def("add_box_collider_component", &wrappers::Entity::AddComponent<wrappers::BoxColliderComponent>)
             .def("has_camera_component", &wrappers::Entity::HasComponent<wrappers::CameraComponent>)
+            .def("has_mesh_component", &wrappers::Entity::HasComponent<wrappers::MeshComponent>)
+            .def("has_sky_light_component", &wrappers::Entity::HasComponent<wrappers::SkyLightComponent>)
             .def("has_dir_light_component", &wrappers::Entity::HasComponent<wrappers::DirectionalLightComponent>)
             .def("has_point_light_component", &wrappers::Entity::HasComponent<wrappers::PointLightComponent>)
             .def("has_spot_light_component", &wrappers::Entity::HasComponent<wrappers::SpotLightComponent>)
             .def("has_rigid_body_component", &wrappers::Entity::HasComponent<wrappers::RigidbodyComponent>)
             .def("has_box_collider_component", &wrappers::Entity::HasComponent<wrappers::BoxColliderComponent>)
             .def("get_camera_component", &wrappers::Entity::GetComponent<wrappers::CameraComponent>)
+            .def("get_mesh_component", &wrappers::Entity::GetComponent<wrappers::MeshComponent>)
+            .def("get_sky_light_component", &wrappers::Entity::GetComponent<wrappers::SkyLightComponent>)
             .def("get_dir_light_component", &wrappers::Entity::GetComponent<wrappers::DirectionalLightComponent>)
             .def("get_point_light_component", &wrappers::Entity::GetComponent<wrappers::PointLightComponent>)
             .def("get_spot_light_component", &wrappers::Entity::GetComponent<wrappers::SpotLightComponent>)
@@ -480,5 +526,112 @@ namespace Atom
             .def_property("translation", &wrappers::Entity::GetTranslation, &wrappers::Entity::SetTranslation)
             .def_property("euler_angles", &wrappers::Entity::GetRotation, &wrappers::Entity::SetRotation)
             .def_property("scale", &wrappers::Entity::GetScale, &wrappers::Entity::SetScale);
+
+        // --------------------------------------------------- Renderer ------------------------------------------------------------
+        py::enum_<Atom::TextureType>(m, "TextureType")
+            .value("Texture2D", Atom::TextureType::Texture2D)
+            .value("TextureCube", Atom::TextureType::TextureCube);
+
+        py::enum_<Atom::TextureFormat>(m, "TextureFormat")
+            .value("R8", Atom::TextureFormat::R8)
+            .value("RGBA8", Atom::TextureFormat::RGBA8)
+            .value("RG16F", Atom::TextureFormat::RG16F)
+            .value("RG32F", Atom::TextureFormat::RG32F)
+            .value("RGBA16F", Atom::TextureFormat::RGBA16F)
+            .value("RGBA32F", Atom::TextureFormat::RGBA32F);
+
+        py::enum_<Atom::TextureFilter>(m, "TextureFilter")
+            .value("Linear", Atom::TextureFilter::Linear)
+            .value("Nearest", Atom::TextureFilter::Nearest)
+            .value("Anisotropic", Atom::TextureFilter::Anisotropic);
+
+        py::enum_<Atom::TextureWrap>(m, "TextureWrap")
+            .value("Clamp", Atom::TextureWrap::Clamp)
+            .value("Repeat", Atom::TextureWrap::Repeat);
+
+        py::class_<wrappers::Texture>(m, "Texture")
+            .def_property_readonly("width", &wrappers::Texture::GetWidth)
+            .def_property_readonly("height", &wrappers::Texture::GetHeight)
+            .def_property_readonly("format", &wrappers::Texture::GetFormat)
+            .def_property_readonly("mip_levels", &wrappers::Texture::GetMipLevels)
+            .def_property("filter", &wrappers::Texture::GetFilter, &wrappers::Texture::SetFilter)
+            .def_property("wrap", &wrappers::Texture::GetWrap, &wrappers::Texture::SetWrap);
+
+        py::class_<wrappers::Texture2D>(m, "Texture2D")
+            .def(py::init<u32, u32, Atom::TextureFormat, s32>())
+            .def("update_gpu_data", &wrappers::Texture2D::UpdateGPUData)
+            .def("set_pixels", &wrappers::Texture2D::SetPixels)
+            .def("get_pixels", &wrappers::Texture2D::GetPixels)
+            .def_static("find", &wrappers::Texture2D::Find)
+            .def_property_readonly("is_readable", &wrappers::Texture2D::IsReadable);
+
+        py::class_<wrappers::TextureCube>(m, "TextureCube")
+            .def(py::init<u32, Atom::TextureFormat, s32>())
+            .def("update_gpu_data", &wrappers::TextureCube::UpdateGPUData)
+            .def("set_pixels", &wrappers::TextureCube::SetPixels)
+            .def("get_pixels", &wrappers::TextureCube::GetPixels)
+            .def_static("find", &wrappers::TextureCube::Find)
+            .def_property_readonly("is_readable", &wrappers::TextureCube::IsReadable);
+
+        py::enum_<Atom::MaterialFlags>(m, "MaterialFlags")
+            .value("DepthTested", Atom::MaterialFlags::DepthTested)
+            .value("Wireframe", Atom::MaterialFlags::Wireframe)
+            .value("TwoSided", Atom::MaterialFlags::TwoSided)
+            .value("Transparent", Atom::MaterialFlags::Transparent);
+
+        py::class_<wrappers::Material>(m, "Material")
+            .def(py::init<>())
+            .def("set_int", &wrappers::Material::SetInt)
+            .def("set_float", &wrappers::Material::SetFloat)
+            .def("set_vec2", &wrappers::Material::SetVec2)
+            .def("set_vec3", &wrappers::Material::SetVec3)
+            .def("set_vec4", &wrappers::Material::SetVec4)
+            .def("set_texture2d", &wrappers::Material::SetTexture2D)
+            .def("set_texture_cube", &wrappers::Material::SetTextureCube)
+            .def("set_flag", &wrappers::Material::SetFlag)
+            .def("get_int", &wrappers::Material::GetInt)
+            .def("get_float", &wrappers::Material::GetFloat)
+            .def("get_vec2", &wrappers::Material::GetVec2)
+            .def("get_vec3", &wrappers::Material::GetVec3)
+            .def("get_vec4", &wrappers::Material::GetVec4)
+            .def("get_texture2d", &wrappers::Material::GetTexture2D)
+            .def("get_texture_cube", &wrappers::Material::GetTextureCube)
+            .def("has_int", &wrappers::Material::HasInt)
+            .def("has_float", &wrappers::Material::HasFloat)
+            .def("has_vec2", &wrappers::Material::HasVec2)
+            .def("has_vec3", &wrappers::Material::HasVec3)
+            .def("has_vec4", &wrappers::Material::HasVec4)
+            .def("has_texture2d", &wrappers::Material::HasTexture2D)
+            .def("has_texture_cube", &wrappers::Material::HasTextureCube)
+            .def("has_flag", &wrappers::Material::HasFlag)
+            .def_static("find", &wrappers::Material::Find);
+
+        py::class_<Atom::Vertex>(m, "Vertex")
+            .def(py::init<>())
+            .def_readwrite("position", &Atom::Vertex::Position)
+            .def_readwrite("uv", &Atom::Vertex::TexCoord)
+            .def_readwrite("normal", &Atom::Vertex::Normal)
+            .def_readwrite("tangent", &Atom::Vertex::Tangent)
+            .def_readwrite("bitangent", &Atom::Vertex::Bitangent);
+
+        py::class_<Atom::Submesh>(m, "Submesh")
+            .def(py::init<>())
+            .def_readwrite("start_vertex", &Atom::Submesh::StartVertex)
+            .def_readwrite("vertex_count", &Atom::Submesh::VertexCount)
+            .def_readwrite("start_index", &Atom::Submesh::StartIndex)
+            .def_readwrite("index_count", &Atom::Submesh::IndexCount)
+            .def_readwrite("material_index", &Atom::Submesh::MaterialIndex);
+
+        py::class_<wrappers::Mesh>(m, "Mesh")
+            .def(py::init<>())
+            .def("update_gpu_data", &wrappers::Mesh::UpdateGPUData)
+            .def("set_material", &wrappers::Mesh::SetMaterial)
+            .def("get_material", &wrappers::Mesh::GetMaterial)
+            .def_static("find", &wrappers::Mesh::Find)
+            .def_property_readonly("is_readable", &wrappers::Mesh::IsReadable)
+            .def_property_readonly("is_empty", &wrappers::Mesh::IsEmpty)
+            .def_property("vertices", &wrappers::Mesh::GetVertices, &wrappers::Mesh::SetVertices)
+            .def_property("indices", &wrappers::Mesh::GetIndices, &wrappers::Mesh::SetIndices)
+            .def_property("submeshes", &wrappers::Mesh::GetSubmeshes, &wrappers::Mesh::SetSubmeshes);
     }
 }

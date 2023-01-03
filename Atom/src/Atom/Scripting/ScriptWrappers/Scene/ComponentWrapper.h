@@ -6,6 +6,8 @@
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
 
 namespace Atom
 {
@@ -50,6 +52,26 @@ namespace Atom
             SceneCamera& GetCamera();
             bool GetFixedAspectRatio();
             bool GetIsPrimaryCamera();
+        };
+
+        class MeshComponent : public Component
+        {
+        public:
+            MeshComponent() = default;
+            MeshComponent(Entity entity);
+
+            void SetMesh(Mesh mesh);
+            Mesh GetMesh();
+        };
+
+        class SkyLightComponent : public Component
+        {
+        public:
+            SkyLightComponent() = default;
+            SkyLightComponent(Entity entity);
+
+            void SetEnvironmentMap(TextureCube environmentMap);
+            TextureCube GetEnvironmentMap();
         };
 
         class DirectionalLightComponent : public Component

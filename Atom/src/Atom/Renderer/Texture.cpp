@@ -408,12 +408,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Vector<byte>* Texture2D::GetPixels(u32 mipLevel)
+    const Vector<byte>& Texture2D::GetPixels(u32 mipLevel)
     {
         if (m_IsReadable)
-            return &m_PixelData[mipLevel];
+            return m_PixelData[mipLevel];
 
-        return nullptr;
+        return {};
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -811,14 +811,14 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Vector<byte>* TextureCube::GetPixels(u32 cubeFace, u32 mipLevel)
+    const Vector<byte>& TextureCube::GetPixels(u32 cubeFace, u32 mipLevel)
     {
         ATOM_ENGINE_ASSERT(cubeFace < 6);
 
         if (m_IsReadable)
-            return &m_PixelData[cubeFace][mipLevel];
+            return m_PixelData[cubeFace][mipLevel];
 
-        return nullptr;
+        return {};
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

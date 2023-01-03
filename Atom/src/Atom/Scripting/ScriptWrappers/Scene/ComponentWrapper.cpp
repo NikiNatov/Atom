@@ -3,6 +3,7 @@
 
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
+#include "Atom/Asset/AssetManager.h"
 
 #include <PxPhysics.h>
 #include <PxPhysicsAPI.h>
@@ -224,6 +225,50 @@ namespace Atom::ScriptWrappers
         Scene* scene = ScriptEngine::GetRunningScene();
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         return entity.GetComponent<Atom::CameraComponent>().Primary;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    MeshComponent::MeshComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void MeshComponent::SetMesh(Mesh mesh)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::MeshComponent>().Mesh = mesh.GetMesh();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Mesh MeshComponent::GetMesh()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return Mesh(entity.GetComponent<Atom::MeshComponent>().Mesh);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    SkyLightComponent::SkyLightComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SkyLightComponent::SetEnvironmentMap(TextureCube environmentMap)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SkyLightComponent>().EnvironmentMap = environmentMap.GetTexture();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    TextureCube SkyLightComponent::GetEnvironmentMap()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return TextureCube(entity.GetComponent<Atom::SkyLightComponent>().EnvironmentMap);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
