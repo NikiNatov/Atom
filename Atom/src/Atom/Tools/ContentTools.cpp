@@ -320,7 +320,7 @@ namespace Atom
             aiString materialName;
             assimpMat->Get(AI_MATKEY_NAME, materialName);
 
-            UUID materialUUID = ContentTools::CreateMaterialAsset(materialName.C_Str(), "TestProject/Assets/Materials");
+            UUID materialUUID = ContentTools::CreateMaterialAsset(materialName.C_Str(), AssetManager::GetAssetsFolder() / "Materials");
             Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
@@ -380,12 +380,12 @@ namespace Atom
                     {
                         // Texture is embedded. Decode the data buffer.
                         std::filesystem::path textureName = std::filesystem::path(aiTexture->mFilename.C_Str()).stem();
-                        textureUUID = ContentTools::ImportTextureAsset((byte*)aiTexture->pcData, aiTexture->mWidth, textureName.string(), "TestProject/Assets/Textures", importSettings);
+                        textureUUID = ContentTools::ImportTextureAsset((byte*)aiTexture->pcData, aiTexture->mWidth, textureName.string(), AssetManager::GetAssetsFolder() / "Textures", importSettings);
                     }
                     else
                     {
                         // Load the texture from filepath
-                        textureUUID = ContentTools::ImportTextureAsset(sourcePath.parent_path() / aiPath.C_Str(), "TestProject/Assets/Textures", importSettings);
+                        textureUUID = ContentTools::ImportTextureAsset(sourcePath.parent_path() / aiPath.C_Str(), AssetManager::GetAssetsFolder() / "Textures", importSettings);
                     }
 
                     materialAsset->SetTexture(uniformName, AssetManager::GetAsset<Texture2D>(textureUUID, true));

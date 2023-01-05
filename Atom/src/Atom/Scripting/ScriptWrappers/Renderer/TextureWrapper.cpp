@@ -192,7 +192,7 @@ namespace Atom
         // -----------------------------------------------------------------------------------------------------------------------------
         Texture2D Texture2D::Find(const std::filesystem::path& assetPath)
         {
-            UUID uuid = AssetManager::GetUUIDForAssetPath("TestProject/Assets" / assetPath);
+            UUID uuid = AssetManager::GetUUIDForAssetPath(AssetManager::GetAssetsFolder() / assetPath);
 
             if (uuid == 0)
                 return Texture2D(nullptr);
@@ -262,7 +262,7 @@ namespace Atom
         // -----------------------------------------------------------------------------------------------------------------------------
         TextureCube TextureCube::Find(const std::filesystem::path& assetPath)
         {
-            UUID uuid = AssetManager::GetUUIDForAssetPath("TestProject/Assets" / assetPath);
+            UUID uuid = AssetManager::GetUUIDForAssetPath(AssetManager::GetAssetsFolder() / assetPath);
 
             if (uuid == 0)
                 return TextureCube(nullptr);

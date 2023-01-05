@@ -29,6 +29,7 @@ namespace Atom
         static u32 GetAssetRefCount(UUID uuid);
         static const HashMap<UUID, AssetMetaData>& GetRegistry();
         static UUID GetUUIDForAssetPath(const std::filesystem::path& assetPath);
+        static const std::filesystem::path& GetAssetsFolder();
 
         template<typename T>
         static Ref<T> GetAsset(UUID uuid, bool load = false)

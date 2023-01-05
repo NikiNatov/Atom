@@ -147,7 +147,7 @@ namespace Atom
         // -----------------------------------------------------------------------------------------------------------------------------
         Mesh Mesh::Find(const std::filesystem::path& assetPath)
         {
-            UUID uuid = AssetManager::GetUUIDForAssetPath("TestProject/Assets" / assetPath);
+            UUID uuid = AssetManager::GetUUIDForAssetPath(AssetManager::GetAssetsFolder() / assetPath);
 
             if (uuid == 0)
                 return Mesh(nullptr);

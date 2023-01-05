@@ -299,6 +299,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    const std::filesystem::path& AssetManager::GetAssetsFolder()
+    {
+        return ms_AssetsFolder;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAllAssets(const std::filesystem::path& assetFolder)
     {
         ATOM_ENGINE_ASSERT(std::filesystem::exists(assetFolder));

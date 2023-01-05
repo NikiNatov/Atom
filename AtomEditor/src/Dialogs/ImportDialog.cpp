@@ -1,12 +1,15 @@
 #include "atompch.h"
 #include "ImportDialog.h"
 
+#include "Atom/Asset/AssetManager.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     void TextureImportDialog::OnImGuiRender()
     {
-        DrawUI("Texture Import Settings", "Texture Files (*.png, *.hdr)\0*.png;*.hdr\0", [this](auto path) { ContentTools::ImportTextureAsset(path, "TestProject/Assets/Textures", m_ImportSettings); }, [this]()
+        DrawUI("Texture Import Settings", "Texture Files (*.png, *.hdr)\0*.png;*.hdr\0", 
+            [this](auto path) { ContentTools::ImportTextureAsset(path, AssetManager::GetAssetsFolder() / "Textures", m_ImportSettings); }, [this]()
         {
             // Texture type 
             {
@@ -189,7 +192,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void MeshImportDialog::OnImGuiRender()
     {
-        DrawUI("Mesh Import Settings", "FBX Files (*.fbx, *.FBX)\0*.fbx;*.FBX\0", [this](auto path) { ContentTools::ImportMeshAsset(path, "TestProject/Assets/Meshes", m_ImportSettings); }, [this]()
+        DrawUI("Mesh Import Settings", "FBX Files (*.fbx, *.FBX)\0*.fbx;*.FBX\0", 
+            [this](auto path) { ContentTools::ImportMeshAsset(path, AssetManager::GetAssetsFolder() / "Meshes", m_ImportSettings); }, [this]()
         {
             // IsReadable 
             {
