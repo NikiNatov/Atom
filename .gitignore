@@ -2,7 +2,10 @@
 
 **/bin/
 bin-int/
-**.atmasset
+**.atmtex2d
+**.atmtexcube
+**.atmmesh
+**.atmmat
 **.pyc
 
 

@@ -397,7 +397,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::SaveScene()
     {
-        const std::filesystem::path& path = FileDialog::SaveFile("Atom Asset (*.atmasset)\0*.atmasset\0");
+        const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.atmscene)\0*.atmscene\0");
         if (!path.empty())
         {
             if (!AssetSerializer::Serialize(path, m_EditorScene))
@@ -425,7 +425,7 @@ namespace Atom
         if (m_ActiveScene->GetSceneState() != SceneState::Edit)
             StopScene();
 
-        const std::filesystem::path& path = FileDialog::OpenFile("Atom Asset (*.atmasset)\0*.atmasset\0");
+        const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.atmscene)\0*.atmscene\0");
 
         if (!path.empty())
         {

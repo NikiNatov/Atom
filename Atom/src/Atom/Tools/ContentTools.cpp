@@ -81,7 +81,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::ImportTextureAsset(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationFolder, const TextureImportSettings& importSettings)
     {
-        String assetFilename = sourcePath.stem().string() + Asset::AssetTypeExtension;
+        const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
+        String assetFilename = sourcePath.stem().string() + extension;
         std::filesystem::path assetFullPath = destinationFolder / assetFilename;
 
         if (std::filesystem::exists(assetFullPath))
@@ -154,7 +155,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::ImportTextureAsset(const byte* compressedData, u32 dataSize, const String& assetName, const std::filesystem::path& destinationFolder, const TextureImportSettings& importSettings)
     {
-        String assetFilename = assetName + Asset::AssetTypeExtension;
+        const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
+        String assetFilename = assetName + extension;
         std::filesystem::path assetFullPath = destinationFolder / assetFilename;
 
         if (std::filesystem::exists(assetFullPath))
@@ -205,7 +207,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::ImportMeshAsset(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationFolder, const MeshImportSettings& importSettings)
     {
-        String assetFilename = sourcePath.stem().string() + Asset::AssetTypeExtension;
+        String assetFilename = sourcePath.stem().string() + Asset::AssetFileExtensions[(u32)AssetType::Mesh];
         std::filesystem::path assetFullPath = destinationFolder / assetFilename;
 
         if (std::filesystem::exists(assetFullPath))
@@ -317,7 +319,7 @@ namespace Atom
             // Set the name
             aiString materialName;
             assimpMat->Get(AI_MATKEY_NAME, materialName);
-            materialName.Append(Asset::AssetTypeExtension);
+            materialName.Append(Asset::AssetFileExtensions[(u32)AssetType::Material]);
 
             UUID materialUUID = ContentTools::CreateMaterialAsset(AssetManager::GetAssetsFolder() / "Materials" / materialName.C_Str());
             Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);

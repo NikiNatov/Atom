@@ -7,12 +7,12 @@ namespace Atom
 {
     enum class AssetType
     {
-        None = 0,
         Texture2D,
         TextureCube,
         Mesh,
         Material,
-        Scene
+        Scene,
+        NumTypes
     };
 
     enum class AssetFlags
@@ -37,7 +37,14 @@ namespace Atom
         friend class AssetSerializer;
         friend class ContentTools;
     public:
-        inline static const char* AssetTypeExtension = ".atmasset";
+        inline static const char* AssetFileExtensions[(u32)AssetType::NumTypes] =
+        {
+            ".atmtex2d",
+            ".atmtexcube",
+            ".atmmesh",
+            ".atmmat",
+            ".atmscene"
+        };
     public:
         virtual ~Asset() = default;
 

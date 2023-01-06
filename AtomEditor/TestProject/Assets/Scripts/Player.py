@@ -57,7 +57,7 @@ class Player(Atom.Entity):
         mesh.vertices = vertices
         mesh.indices = indices
         mesh.submeshes = submeshes
-        mesh.set_material(0, Atom.Material.find("Materials/08 - Default.atmasset"))
+        mesh.set_material(0, Atom.Material.find("Materials/08 - Default.atmmat"))
         mesh.update_gpu_data(True)
 
         self._RigidBody = self.get_rigidbody_component()

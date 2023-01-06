@@ -59,7 +59,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const AssetMetaData& metaData)
     {
-        if (metaData.AssetFilepath.extension() != Asset::AssetTypeExtension)
+        if (!IsAssetFile(metaData.AssetFilepath))
             return;
 
         ATOM_ENGINE_ASSERT((metaData.Flags & AssetFlags::Serialized) != AssetFlags::None);
@@ -99,7 +99,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const std::filesystem::path& assetPath)
     {
-        if (assetPath.extension() != Asset::AssetTypeExtension)
+        if (!IsAssetFile(assetPath))
             return;
 
         AssetMetaData metaData;
@@ -318,6 +318,16 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    bool AssetManager::IsAssetFile(const std::filesystem::path& filepath)
+    {
+        for (u32 i = 0; i < (u32)AssetType::NumTypes; i++)
+            if (filepath.extension() == Asset::AssetFileExtensions[i])
+                return true;
+
+        return false;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAllAssets(const std::filesystem::path& assetFolder)
     {
         ATOM_ENGINE_ASSERT(std::filesystem::exists(assetFolder));
@@ -328,7 +338,7 @@ namespace Atom
             {
                 RegisterAllAssets(entry);
             }
-            else if(entry.path().extension() == Asset::AssetTypeExtension)
+            else if(IsAssetFile(entry.path()))
             {
                 RegisterAsset(entry);
             }
