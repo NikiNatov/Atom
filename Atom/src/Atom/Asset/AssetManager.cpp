@@ -5,6 +5,7 @@
 #include "Atom/Core/Application.h"
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
+#include "Atom/Scene/Scene.h"
 
 namespace Atom
 {
@@ -58,7 +59,10 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const AssetMetaData& metaData)
     {
-        ATOM_ENGINE_ASSERT(metaData.AssetFilepath.extension() == Asset::AssetTypeExtension && (metaData.Flags & AssetFlags::Serialized) != AssetFlags::None);
+        if (metaData.AssetFilepath.extension() != Asset::AssetTypeExtension)
+            return;
+
+        ATOM_ENGINE_ASSERT((metaData.Flags & AssetFlags::Serialized) != AssetFlags::None);
 
         if (!std::filesystem::exists(metaData.AssetFilepath))
         {
@@ -95,10 +99,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void AssetManager::RegisterAsset(const std::filesystem::path& assetPath)
     {
-        if (std::filesystem::is_directory(assetPath))
+        if (assetPath.extension() != Asset::AssetTypeExtension)
             return;
-
-        ATOM_ENGINE_ASSERT(assetPath.extension() == Asset::AssetTypeExtension);
 
         AssetMetaData metaData;
         if (!AssetSerializer::DeserializeMetaData(assetPath, metaData))
@@ -164,6 +166,7 @@ namespace Atom
             case AssetType::TextureCube: asset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); break;
             case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
             case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
+            case AssetType::Scene: asset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath); break;
         }
 
         if (!asset)
@@ -228,6 +231,16 @@ namespace Atom
 
                 if (result)
                     *std::dynamic_pointer_cast<Mesh>(ms_LoadedAssets[uuid]) = std::move(*meshAsset);
+
+                break;
+            }
+            case AssetType::Scene:
+            {
+                Ref<Scene> sceneAsset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath);
+                result = sceneAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<Scene>(ms_LoadedAssets[uuid]) = std::move(*sceneAsset);
 
                 break;
             }

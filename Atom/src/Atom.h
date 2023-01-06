@@ -3,6 +3,7 @@
 // Asset
 #include "Atom/Asset/Asset.h"
 #include "Atom/Asset/AssetManager.h"
+#include "Atom/Asset/AssetSerializer.h"
 
 // Core
 #include "Atom/Core/Application.h"

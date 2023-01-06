@@ -5,6 +5,7 @@
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Scene/Scene.h"
 
 #include "stb_image.h"
 #include <assimp/Importer.hpp>
@@ -119,10 +120,9 @@ namespace Atom
         {
             Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
             Renderer::GenerateMips(asset);
-            asset->m_MetaData.AssetFilepath = assetFullPath;
             asset->m_MetaData.SourceFilepath = sourcePath;
 
-            if (!AssetSerializer::Serialize(asset))
+            if (!AssetSerializer::Serialize(assetFullPath, asset))
             {
                 ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
                 return 0;
@@ -136,10 +136,9 @@ namespace Atom
             Ref<Texture2D> tex2D = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
             Renderer::GenerateMips(tex2D);
             Ref<TextureCube> asset = Renderer::CreateEnvironmentMap(tex2D, importSettings.CubemapSize);
-            asset->m_MetaData.AssetFilepath = assetFullPath;
             asset->m_MetaData.SourceFilepath = sourcePath;
 
-            if (!AssetSerializer::Serialize(asset))
+            if (!AssetSerializer::Serialize(assetFullPath, asset))
             {
                 ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
                 return 0;
@@ -192,9 +191,8 @@ namespace Atom
 
         Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, assetName.c_str());
         Renderer::GenerateMips(asset);
-        asset->m_MetaData.AssetFilepath = assetFullPath;
 
-        if (!AssetSerializer::Serialize(asset))
+        if (!AssetSerializer::Serialize(assetFullPath, asset))
         {
             ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
             return 0;
@@ -319,8 +317,9 @@ namespace Atom
             // Set the name
             aiString materialName;
             assimpMat->Get(AI_MATKEY_NAME, materialName);
+            materialName.Append(Asset::AssetTypeExtension);
 
-            UUID materialUUID = ContentTools::CreateMaterialAsset(materialName.C_Str(), AssetManager::GetAssetsFolder() / "Materials");
+            UUID materialUUID = ContentTools::CreateMaterialAsset(AssetManager::GetAssetsFolder() / "Materials" / materialName.C_Str());
             Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
@@ -399,7 +398,7 @@ namespace Atom
             SetMaterialTexture(aiTextureType_SHININESS, "RoughnessMap");
 
             // Save the material
-            if (!AssetSerializer::Serialize(materialAsset))
+            if (!AssetSerializer::Serialize(materialAsset->GetAssetFilepath(), materialAsset))
             {
                 ATOM_ERROR("Failed serializing material {}", materialAsset->GetAssetFilepath().string());
                 continue;
@@ -410,11 +409,10 @@ namespace Atom
 
         // We have to make the mesh readable so that the data is available on the CPU during serialization
         Ref<Mesh> asset = CreateRef<Mesh>(vertices, indices, submeshes, materialTable, true);
-        asset->m_MetaData.AssetFilepath = assetFullPath;
         asset->m_MetaData.SourceFilepath = sourcePath;
         asset->m_IsReadable = importSettings.IsReadable;
 
-        if (!AssetSerializer::Serialize(asset))
+        if (!AssetSerializer::Serialize(assetFullPath, asset))
         {
             ATOM_ERROR("Failed serializing mesh asset {}", assetFullPath);
             return 0;
@@ -478,30 +476,66 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    UUID ContentTools::CreateMaterialAsset(const String& assetName, const std::filesystem::path& destinationFolder)
+    UUID ContentTools::CreateMaterialAsset(const std::filesystem::path& filepath)
     {
-        String assetFilename = assetName + Asset::AssetTypeExtension;
-        std::filesystem::path assetFullPath = destinationFolder / assetFilename;
-
-        if (std::filesystem::exists(assetFullPath))
-        {
-            ATOM_WARNING("Material {} already exists", assetFullPath.string());
-            return AssetManager::GetUUIDForAssetPath(assetFullPath);
-        }
-
-        if (!std::filesystem::exists(destinationFolder))
-            std::filesystem::create_directory(destinationFolder);
-
         Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested);
-        asset->m_MetaData.AssetFilepath = assetFullPath;
 
-        if (!AssetSerializer::Serialize(asset))
+        if (!filepath.empty())
         {
-            ATOM_ERROR("Failed serializing material asset {}", assetFullPath);
-            return 0;
+            if (std::filesystem::exists(filepath))
+            {
+                ATOM_WARNING("Material {} already exists", filepath.string());
+                return AssetManager::GetUUIDForAssetPath(filepath);
+            }
+
+            if (!std::filesystem::exists(filepath.parent_path()))
+                std::filesystem::create_directory(filepath.parent_path());
+
+            if (!AssetSerializer::Serialize(filepath, asset))
+            {
+                ATOM_ERROR("Failed serializing material asset {}", filepath);
+                return 0;
+            }
+
+            AssetManager::RegisterAsset(asset->m_MetaData);
+        }
+        else
+        {
+            AssetManager::RegisterAsset(asset);
         }
 
-        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    UUID ContentTools::CreateSceneAsset(const String& sceneName, const std::filesystem::path& filepath)
+    {
+        Ref<Scene> asset = CreateRef<Scene>(sceneName);
+
+        if (!filepath.empty())
+        {
+            if (std::filesystem::exists(filepath))
+            {
+                ATOM_WARNING("Scene {} already exists", filepath.string());
+                return AssetManager::GetUUIDForAssetPath(filepath);
+            }
+
+            if (!std::filesystem::exists(filepath.parent_path()))
+                std::filesystem::create_directory(filepath.parent_path());
+
+            if (!AssetSerializer::Serialize(filepath, asset))
+            {
+                ATOM_ERROR("Failed serializing scene asset {}", filepath);
+                return 0;
+            }
+
+            AssetManager::RegisterAsset(asset->m_MetaData);
+        }
+        else
+        {
+            AssetManager::RegisterAsset(asset);
+        }
+
         return asset->m_MetaData.UUID;
     }
 

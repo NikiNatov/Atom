@@ -30,7 +30,7 @@ namespace Atom
         EditorResources::Initialize();
         AssetManager::SetAssetFolder("TestProject/Assets");
 
-        m_EditorScene = CreateRef<Scene>("TestScene");
+        m_EditorScene = AssetManager::GetAsset<Scene>(ContentTools::CreateSceneAsset("TestScene"), true);
 
         {
             Entity camera = m_EditorScene->CreateEntity("Camera");
@@ -397,11 +397,13 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::SaveScene()
     {
-        const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.atmscene)\0*.atmscene\0");
+        const std::filesystem::path& path = FileDialog::SaveFile("Atom Asset (*.atmasset)\0*.atmasset\0");
         if (!path.empty())
         {
-            SceneSerializer serializer(m_EditorScene);
-            serializer.Serialize(path);
+            if (!AssetSerializer::Serialize(path, m_EditorScene))
+            {
+                ATOM_ERROR("Failed serializing scene asset {}", path);
+            }
         }
     }
 
@@ -410,7 +412,7 @@ namespace Atom
     {
         AssetManager::UnloadAllAssets();
 
-        m_EditorScene = CreateRef<Scene>();
+        m_EditorScene = AssetManager::GetAsset<Scene>(ContentTools::CreateSceneAsset(), true);
         m_EditorScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
         m_ActiveScene = m_EditorScene;
 
@@ -423,18 +425,16 @@ namespace Atom
         if (m_ActiveScene->GetSceneState() != SceneState::Edit)
             StopScene();
 
-        const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.atmscene)\0*.atmscene\0");
+        const std::filesystem::path& path = FileDialog::OpenFile("Atom Asset (*.atmasset)\0*.atmasset\0");
 
         if (!path.empty())
         {
-            AssetManager::UnloadAllAssets();
-
-            Ref<Scene> newScene = CreateRef<Scene>();
-            SceneSerializer serializer(newScene);
-
-            if (serializer.Deserialize(path))
+            UUID sceneUUID = AssetManager::GetUUIDForAssetPath(std::filesystem::relative(path));
+            if (sceneUUID != 0)
             {
-                m_EditorScene = newScene;
+                AssetManager::UnloadAllAssets();
+
+                m_EditorScene = AssetManager::GetAsset<Scene>(sceneUUID, true);
                 m_EditorScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
                 m_ActiveScene = m_EditorScene;
 

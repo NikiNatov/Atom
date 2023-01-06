@@ -13,6 +13,7 @@ namespace Atom
             case AssetType::TextureCube:    return "TextureCube";
             case AssetType::Mesh:           return "Mesh";
             case AssetType::Material:       return "Material";
+            case AssetType::Scene:          return "Scene";
         }
 
         ATOM_ENGINE_ASSERT(false, "Unknown asset type");

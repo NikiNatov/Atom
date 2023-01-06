@@ -31,9 +31,33 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Scene::Scene(const String& name)
-        : m_Name(name)
+        : Asset(AssetType::Scene), m_Name(name)
     {
         m_LightEnvironment = CreateRef<LightEnvironment>();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Scene::Scene(Scene&& rhs) noexcept
+        : Asset(AssetType::Scene),
+        m_Name(std::move(rhs.m_Name)), m_Registry(std::move(rhs.m_Registry)), m_EditorCamera(std::move(rhs.m_EditorCamera)), m_State(rhs.m_State),
+        m_EntitiesByID(std::move(rhs.m_EntitiesByID)), m_LightEnvironment(std::move(rhs.m_LightEnvironment))
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Scene& Scene::operator=(Scene&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            m_Name = std::move(rhs.m_Name);
+            m_Registry = std::move(rhs.m_Registry);
+            m_EditorCamera = std::move(rhs.m_EditorCamera);
+            m_State = rhs.m_State;
+            m_EntitiesByID = std::move(rhs.m_EntitiesByID);
+            m_LightEnvironment = std::move(rhs.m_LightEnvironment);
+        }
+
+        return *this;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

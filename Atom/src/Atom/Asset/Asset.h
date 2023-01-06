@@ -12,6 +12,7 @@ namespace Atom
         TextureCube,
         Mesh,
         Material,
+        Scene
     };
 
     enum class AssetFlags

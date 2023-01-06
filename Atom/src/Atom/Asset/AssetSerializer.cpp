@@ -5,20 +5,34 @@
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Scene/Scene.h"
+#include "Atom/Scene/Components.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(Ref<Texture2D> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Texture2D> asset)
     {
-        std::ofstream ofs(asset->m_MetaData.AssetFilepath, std::ios::out | std::ios::binary);
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
         if (!ofs)
             return false;
 
-        asset->SetAssetFlag(AssetFlags::Serialized);
-        SerializeMetaData(ofs, asset->m_MetaData);
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = filepath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = filepath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
 
         u32 pixelDataSize = asset->m_PixelData.size();
         ofs.write((char*)&asset->m_Description.Format, sizeof(TextureFormat));
@@ -59,15 +73,27 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(Ref<TextureCube> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<TextureCube> asset)
     {
-        std::ofstream ofs(asset->m_MetaData.AssetFilepath, std::ios::out | std::ios::binary);
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
         if (!ofs)
             return false;
 
-        asset->SetAssetFlag(AssetFlags::Serialized);
-        SerializeMetaData(ofs, asset->m_MetaData);
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = filepath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = filepath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
 
         ofs.write((char*)&asset->m_Description.Format, sizeof(TextureFormat));
         ofs.write((char*)&asset->m_Description.Width, sizeof(u32));
@@ -113,15 +139,27 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(Ref<Material> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Material> asset)
     {
-        std::ofstream ofs(asset->m_MetaData.AssetFilepath, std::ios::out | std::ios::binary);
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
         if (!ofs)
             return false;
 
-        asset->SetAssetFlag(AssetFlags::Serialized);
-        SerializeMetaData(ofs, asset->m_MetaData);
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = filepath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = filepath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
 
         // Serialize flags
         MaterialFlags flags = asset->GetFlags();
@@ -177,15 +215,27 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(Ref<Mesh> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Mesh> asset)
     {
-        std::ofstream ofs(asset->m_MetaData.AssetFilepath, std::ios::out | std::ios::binary);
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
         if (!ofs)
             return false;
 
-        asset->SetAssetFlag(AssetFlags::Serialized);
-        SerializeMetaData(ofs, asset->m_MetaData);
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = filepath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = filepath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
 
         u32 vertexCount = asset->m_Vertices.size();
         ofs.write((char*)&vertexCount, sizeof(u32));
@@ -210,6 +260,170 @@ namespace Atom
 
             ofs.write((char*)&materialUUID, sizeof(u64));
         }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Scene> asset)
+    {
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
+
+        if (!ofs)
+            return false;
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = filepath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = filepath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
+        
+        u32 nameSize = asset->m_Name.size();
+        ofs.write((char*)&nameSize, sizeof(u32));
+        ofs.write((char*)asset->m_Name.data(), nameSize);
+
+        u32 entityCount = asset->m_Registry.alive();
+        ofs.write((char*)&entityCount, sizeof(u32));
+
+        asset->m_Registry.each([&](auto entityID)
+        {
+            Entity entity = { entityID, asset.get() };
+
+            bool isValid = (bool)entity;
+            ofs.write((char*)&isValid, sizeof(bool));
+
+            if (!isValid)
+                return;
+
+            UUID uuid = entity.GetUUID();
+            ofs.write((char*)&uuid, sizeof(UUID));
+
+            bool hasTagComponent = entity.HasComponent<TagComponent>();
+            ofs.write((char*)&hasTagComponent, sizeof(bool));
+
+            if (hasTagComponent)
+            {
+                auto& tc = entity.GetComponent<TagComponent>();
+                u32 tagSize = tc.Tag.size();
+                ofs.write((char*)&tagSize, sizeof(u32));
+                ofs.write((char*)tc.Tag.data(), tagSize);
+            }
+
+            bool hasSceneHierarchyComponent = entity.HasComponent<SceneHierarchyComponent>();
+            ofs.write((char*)&hasSceneHierarchyComponent, sizeof(bool));
+
+            if (hasSceneHierarchyComponent)
+            {
+                auto& shc = entity.GetComponent<SceneHierarchyComponent>();
+                ofs.write((char*)&shc, sizeof(SceneHierarchyComponent));
+            }
+
+            bool hasTransformComponent = entity.HasComponent<TransformComponent>();
+            ofs.write((char*)&hasTransformComponent, sizeof(bool));
+
+            if (hasTransformComponent)
+            {
+                auto& tc = entity.GetComponent<TransformComponent>();
+                ofs.write((char*)&tc, sizeof(TransformComponent));
+            }
+
+            bool hasCameraComponent = entity.HasComponent<CameraComponent>();
+            ofs.write((char*)&hasCameraComponent, sizeof(bool));
+
+            if (hasCameraComponent)
+            {
+                auto& cc = entity.GetComponent<CameraComponent>();
+                ofs.write((char*)&cc, sizeof(CameraComponent));
+            }
+
+            bool hasMeshComponent = entity.HasComponent<MeshComponent>();
+            ofs.write((char*)&hasMeshComponent, sizeof(bool));
+
+            if (hasMeshComponent)
+            {
+                auto& mc = entity.GetComponent<MeshComponent>();
+
+                UUID uuid = mc.Mesh->GetUUID();
+                ofs.write((char*)&uuid, sizeof(UUID));
+            }
+
+            bool hasSkyLightComponent = entity.HasComponent<SkyLightComponent>();
+            ofs.write((char*)&hasSkyLightComponent, sizeof(bool));
+
+            if (hasSkyLightComponent)
+            {
+                auto& slc = entity.GetComponent<SkyLightComponent>();
+
+                UUID uuid = slc.EnvironmentMap->GetUUID();
+                ofs.write((char*)&uuid, sizeof(UUID));
+            }
+
+            bool hasDirectionalLightComponent = entity.HasComponent<DirectionalLightComponent>();
+            ofs.write((char*)&hasDirectionalLightComponent, sizeof(bool));
+
+            if (hasDirectionalLightComponent)
+            {
+                auto& dlc = entity.GetComponent<DirectionalLightComponent>();
+                ofs.write((char*)&dlc, sizeof(DirectionalLightComponent));
+            }
+
+            bool hasPointLightComponent = entity.HasComponent<PointLightComponent>();
+            ofs.write((char*)&hasPointLightComponent, sizeof(bool));
+
+            if (hasPointLightComponent)
+            {
+                auto& plc = entity.GetComponent<PointLightComponent>();
+                ofs.write((char*)&plc, sizeof(PointLightComponent));
+            }
+
+            bool hasSpotLightComponent = entity.HasComponent<SpotLightComponent>();
+            ofs.write((char*)&hasSpotLightComponent, sizeof(bool));
+
+            if (hasSpotLightComponent)
+            {
+                auto& slc = entity.GetComponent<SpotLightComponent>();
+                ofs.write((char*)&slc, sizeof(SpotLightComponent));
+            }
+
+            bool hasScriptComponent = entity.HasComponent<ScriptComponent>();
+            ofs.write((char*)&hasScriptComponent, sizeof(bool));
+
+            if (hasScriptComponent)
+            {
+                auto& sc = entity.GetComponent<ScriptComponent>();
+                u32 scriptClassSize = sc.ScriptClass.size();
+                ofs.write((char*)&scriptClassSize, sizeof(u32));
+                ofs.write((char*)sc.ScriptClass.data(), scriptClassSize);
+            }
+
+            bool hasRigidbodyComponent = entity.HasComponent<RigidbodyComponent>();
+            ofs.write((char*)&hasRigidbodyComponent, sizeof(bool));
+
+            if (hasRigidbodyComponent)
+            {
+                auto& rbc = entity.GetComponent<RigidbodyComponent>();
+                ofs.write((char*)&rbc, sizeof(RigidbodyComponent));
+            }
+
+            bool hasBoxColliderComponent = entity.HasComponent<BoxColliderComponent>();
+            ofs.write((char*)&hasBoxColliderComponent, sizeof(bool));
+
+            if (hasBoxColliderComponent)
+            {
+                auto& bcc = entity.GetComponent<BoxColliderComponent>();
+                ofs.write((char*)&bcc, sizeof(BoxColliderComponent));
+            }
+        });
 
         return true;
     }
@@ -413,6 +627,175 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    Ref<Scene> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    {
+        std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
+
+        if (!ifs)
+            return nullptr;
+
+        AssetMetaData metaData;
+        metaData.AssetFilepath = filepath;
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Scene);
+
+        Ref<Scene> asset = CreateRef<Scene>();
+        asset->m_MetaData = metaData;
+
+        u32 nameSize;
+        ifs.read((char*)&nameSize, sizeof(u32));
+
+        asset->m_Name.resize(nameSize);
+        ifs.read((char*)asset->m_Name.data(), nameSize);
+
+        u32 entityCount;
+        ifs.read((char*)&entityCount, sizeof(u32));
+
+        for (u32 i = 0; i < entityCount; i++)
+        {
+            bool isValid;
+            ifs.read((char*)&isValid, sizeof(bool));
+
+            if (!isValid)
+                continue;
+
+            UUID uuid;
+            ifs.read((char*)&uuid, sizeof(UUID));
+
+            Entity entity = asset->CreateEntityFromUUID(uuid);
+
+            bool hasTagComponent;
+            ifs.read((char*)&hasTagComponent, sizeof(bool));
+
+            if (hasTagComponent)
+            {
+                auto& tc = entity.AddOrReplaceComponent<TagComponent>();
+
+                u32 tagSize;
+                ifs.read((char*)&tagSize, sizeof(u32));
+
+                tc.Tag.resize(tagSize);
+                ifs.read((char*)tc.Tag.data(), tagSize);
+            }
+
+            bool hasSceneHierarchyComponent;
+            ifs.read((char*)&hasSceneHierarchyComponent, sizeof(bool));
+
+            if (hasSceneHierarchyComponent)
+            {
+                auto& shc = entity.AddOrReplaceComponent<SceneHierarchyComponent>();
+                ifs.read((char*)&shc, sizeof(SceneHierarchyComponent));
+            }
+
+            bool hasTransformComponent;
+            ifs.read((char*)&hasTransformComponent, sizeof(bool));
+
+            if (hasTransformComponent)
+            {
+                auto& tc = entity.AddOrReplaceComponent<TransformComponent>();
+                ifs.read((char*)&tc, sizeof(TransformComponent));
+            }
+
+            bool hasCameraComponent;
+            ifs.read((char*)&hasCameraComponent, sizeof(bool));
+
+            if (hasCameraComponent)
+            {
+                auto& cc = entity.AddOrReplaceComponent<CameraComponent>();
+                ifs.read((char*)&cc, sizeof(CameraComponent));
+            }
+
+            bool hasMeshComponent;
+            ifs.read((char*)&hasMeshComponent, sizeof(bool));
+
+            if (hasMeshComponent)
+            {
+                auto& mc = entity.AddOrReplaceComponent<MeshComponent>();
+
+                UUID uuid;
+                ifs.read((char*)&uuid, sizeof(UUID));
+
+                mc.Mesh = AssetManager::GetAsset<Mesh>(uuid, true);
+            }
+
+            bool hasSkyLightComponent;
+            ifs.read((char*)&hasSkyLightComponent, sizeof(bool));
+
+            if (hasSkyLightComponent)
+            {
+                auto& slc = entity.AddOrReplaceComponent<SkyLightComponent>();
+
+                UUID uuid;
+                ifs.read((char*)&uuid, sizeof(UUID));
+
+                slc.EnvironmentMap = AssetManager::GetAsset<TextureCube>(uuid, true);
+            }
+
+            bool hasDirectionalLightComponent;
+            ifs.read((char*)&hasDirectionalLightComponent, sizeof(bool));
+
+            if (hasDirectionalLightComponent)
+            {
+                auto& dlc = entity.AddOrReplaceComponent<DirectionalLightComponent>();
+                ifs.read((char*)&dlc, sizeof(DirectionalLightComponent));
+            }
+
+            bool hasPointLightComponent;
+            ifs.read((char*)&hasPointLightComponent, sizeof(bool));
+
+            if (hasPointLightComponent)
+            {
+                auto& plc = entity.AddOrReplaceComponent<PointLightComponent>();
+                ifs.read((char*)&plc, sizeof(PointLightComponent));
+            }
+
+            bool hasSpotLightComponent;
+            ifs.read((char*)&hasSpotLightComponent, sizeof(bool));
+
+            if (hasSpotLightComponent)
+            {
+                auto& slc = entity.AddOrReplaceComponent<SpotLightComponent>();
+                ifs.read((char*)&slc, sizeof(SpotLightComponent));
+            }
+
+            bool hasScriptComponent;
+            ifs.read((char*)&hasScriptComponent, sizeof(bool));
+
+            if (hasScriptComponent)
+            {
+                auto& sc = entity.AddOrReplaceComponent<ScriptComponent>();
+
+                u32 scriptClassSize;
+                ifs.read((char*)&scriptClassSize, sizeof(u32));
+
+                sc.ScriptClass.resize(scriptClassSize);
+                ifs.read((char*)sc.ScriptClass.data(), scriptClassSize);
+            }
+
+            bool hasRigidbodyComponent;
+            ifs.read((char*)&hasRigidbodyComponent, sizeof(bool));
+
+            if (hasRigidbodyComponent)
+            {
+                auto& rbc = entity.AddOrReplaceComponent<RigidbodyComponent>();
+                ifs.read((char*)&rbc, sizeof(RigidbodyComponent));
+            }
+
+            bool hasBoxColliderComponent;
+            ifs.read((char*)&hasBoxColliderComponent, sizeof(bool));
+
+            if (hasBoxColliderComponent)
+            {
+                auto& bcc = entity.AddOrReplaceComponent<BoxColliderComponent>();
+                ifs.read((char*)&bcc, sizeof(BoxColliderComponent));
+            }
+        }
+
+        return asset;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     bool AssetSerializer::DeserializeMetaData(const std::filesystem::path& filepath, AssetMetaData& assetMetaData)
     {
         std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
@@ -431,7 +814,7 @@ namespace Atom
     {
 
         String sourcePathStr = metaData.SourceFilepath.string();
-        u32 sourcePathSize = sourcePathStr.size() + 1;
+        u32 sourcePathSize = sourcePathStr.size();
         stream.write((char*)&metaData.UUID, sizeof(u64));
         stream.write((char*)&metaData.Type, sizeof(AssetType));
         stream.write((char*)&metaData.Flags, sizeof(AssetFlags));

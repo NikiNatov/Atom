@@ -4,6 +4,7 @@
 #include "Atom/Renderer/EditorCamera.h"
 #include "Atom/Scene/Entity.h"
 #include "Atom/Scene/SceneRenderer.h"
+#include "Atom/Asset/Asset.h"
 
 #include <entt/entt.hpp>
 
@@ -16,14 +17,21 @@ namespace Atom
         Running
     };
 
-    class Scene
+    class Scene : public Asset
     {
+        friend class AssetSerializer;
         friend class SceneSerializer;
         friend class SceneHierarchyPanel;
         friend class Entity;
     public:
         Scene(const String& name = "Unnamed scene");
         ~Scene() = default;
+
+        Scene(const Scene& rhs) = delete;
+        Scene& operator=(const Scene& rhs) = delete;
+
+        Scene(Scene&& rhs) noexcept;
+        Scene& operator=(Scene&& rhs) noexcept;
 
         Ref<Scene> Copy();
         Entity CreateEntity(const String& name = "Unnamed Entity");

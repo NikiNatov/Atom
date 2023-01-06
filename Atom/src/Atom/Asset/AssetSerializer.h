@@ -12,7 +12,7 @@ namespace Atom
     {
     public:
         template<typename T>
-        static bool Serialize(Ref<T> asset);
+        static bool Serialize(const std::filesystem::path& filepath, Ref<T> asset);
 
         template<typename T>
         static Ref<T> Deserialize(const std::filesystem::path& filepath);

@@ -30,7 +30,8 @@ namespace Atom
         static UUID ImportMeshAsset(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationFolder, const MeshImportSettings& importSettings);
         static Ref<Texture2D> ImportTexture(const std::filesystem::path& sourcePath, const TextureImportSettings& importSettings);
         static Ref<Texture2D> ImportTexture(const byte* compressedData, u32 dataSize, const String& name, const TextureImportSettings& importSettings);
-        static UUID CreateMaterialAsset(const String& assetName, const std::filesystem::path& destinationFolder);
+        static UUID CreateMaterialAsset(const std::filesystem::path& filepath = "");
+        static UUID CreateSceneAsset(const String& sceneName = "Unnamed Scene", const std::filesystem::path& filepath = "");
     private:
         static bool DecodeImage(const std::filesystem::path& sourcePath, TextureFormat& format, s32& width, s32& height, Vector<byte>& pixels);
         static bool DecodeImage(const byte* compressedData, u32 dataSize, TextureFormat& format, s32& width, s32& height, Vector<byte>& pixels);
