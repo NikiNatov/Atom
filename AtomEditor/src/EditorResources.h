@@ -13,6 +13,12 @@ namespace Atom
         inline static Ref<Texture2D> ScenePlayIcon = nullptr;
         inline static Ref<Texture2D> SceneStopIcon = nullptr;
         inline static Ref<Texture2D> ScenePauseIcon = nullptr;
+        inline static Ref<Texture2D> FolderIcon = nullptr;
+        inline static Ref<Texture2D> Texture2DAssetIcon = nullptr;
+        inline static Ref<Texture2D> TextureCubeAssetIcon = nullptr;
+        inline static Ref<Texture2D> MeshAssetIcon = nullptr;
+        inline static Ref<Texture2D> MaterialAssetIcon = nullptr;
+        inline static Ref<Texture2D> SceneAssetIcon = nullptr;
 
     public:
         static void Initialize()
@@ -25,6 +31,12 @@ namespace Atom
             ScenePlayIcon = ContentTools::ImportTexture("resources/icons/scene_play_icon.png", importSettings);
             SceneStopIcon = ContentTools::ImportTexture("resources/icons/scene_stop_icon.png", importSettings);
             ScenePauseIcon = ContentTools::ImportTexture("resources/icons/scene_pause_icon.png", importSettings);
+            FolderIcon = ContentTools::ImportTexture("resources/icons/folder_icon.png", importSettings);
+            Texture2DAssetIcon = ContentTools::ImportTexture("resources/icons/texture2d_asset_icon.png", importSettings);
+            TextureCubeAssetIcon = ContentTools::ImportTexture("resources/icons/texture_cube_asset_icon.png", importSettings);
+            MeshAssetIcon = ContentTools::ImportTexture("resources/icons/mesh_asset_icon.png", importSettings);
+            MaterialAssetIcon = ContentTools::ImportTexture("resources/icons/material_asset_icon.png", importSettings);
+            SceneAssetIcon = ContentTools::ImportTexture("resources/icons/scene_asset_icon.png", importSettings);
         }
 
         static void Shutdown()
@@ -35,6 +47,12 @@ namespace Atom
             ScenePlayIcon = nullptr;
             SceneStopIcon = nullptr;
             ScenePauseIcon = nullptr;
+            FolderIcon = nullptr;
+            Texture2DAssetIcon = nullptr;
+            TextureCubeAssetIcon = nullptr;
+            MeshAssetIcon = nullptr;
+            MaterialAssetIcon = nullptr;
+            SceneAssetIcon = nullptr;
         }
     };
 }

@@ -200,6 +200,7 @@ namespace Atom
         AssetManagerPanel::OnImGuiRender();
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
+        m_AssetPanel.OnImGuiRender();
 
         Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
         m_EntityInspectorPanel.SetEntity(selectedEntity);
@@ -361,6 +362,7 @@ namespace Atom
             return;
         }
 
+        m_AssetPanel = AssetPanel();
         OpenScene(Project::GetActiveProject()->GetSettings().StartScenePath);
     }
 
@@ -382,6 +384,7 @@ namespace Atom
             return;
         }
 
+        m_AssetPanel = AssetPanel();
         OpenScene(Project::GetActiveProject()->GetSettings().StartScenePath);
     }
 

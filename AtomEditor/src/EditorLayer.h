@@ -4,6 +4,7 @@
 
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/EntityInspectorPanel.h"
+#include "Panels/AssetPanel.h"
 #include "Dialogs/ImportDialog.h"
 #include "Dialogs/NewProjectDialog.h"
 
@@ -51,6 +52,7 @@ namespace Atom
         bool                 m_GuizmoSnap = false;
         SceneHierarchyPanel  m_SceneHierarchyPanel;
         EntityInspectorPanel m_EntityInspectorPanel;
+        AssetPanel           m_AssetPanel;
         TextureImportDialog  m_TextureImportDialog;
         MeshImportDialog     m_MeshImportDialog;
         NewProjectDialog     m_NewProjectDialog;

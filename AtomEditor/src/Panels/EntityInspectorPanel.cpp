@@ -325,6 +325,17 @@ namespace Atom
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
 					ImGui::InputText("##Mesh", component.Mesh ? (char*)component.Mesh->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MESH"))
+						{
+							component.Mesh = AssetManager::GetAsset<Mesh>(*(UUID*)payload->Data, true);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
 					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
@@ -347,6 +358,17 @@ namespace Atom
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
 					ImGui::InputText("##EnvironmentMap", component.EnvironmentMap ? (char*)component.EnvironmentMap->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE_CUBE"))
+						{
+							component.EnvironmentMap = AssetManager::GetAsset<TextureCube>(*(UUID*)payload->Data, true);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
 					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 				});
