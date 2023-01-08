@@ -571,6 +571,7 @@ namespace Atom
         }
 
         pixels.assign(data, data + width * height * Utils::GetFormatByteSize(format));
+        stbi_image_free(data);
         return true;
     }
 
@@ -601,6 +602,7 @@ namespace Atom
         }
 
         pixels.assign(decompressedData, decompressedData + width * height * Utils::GetFormatByteSize(format));
+        stbi_image_free(decompressedData);
         return true;
     }
 }
