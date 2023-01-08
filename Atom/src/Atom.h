@@ -22,6 +22,9 @@
 // ImGui
 #include "Atom/ImGui/ImGuiLayer.h"
 
+// Project
+#include "Atom/Project/Project.h"
+
 // Renderer
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/CommandQueue.h"

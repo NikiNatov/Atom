@@ -1,0 +1,5 @@
+Project:
+  Name: SandboxProject
+  StartScenePath: Scenes\StartScene.atmscene
+  AssetsDirectory: Assets
+  ScriptsDirectory: Scripts

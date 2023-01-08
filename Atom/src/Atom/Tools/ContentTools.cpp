@@ -83,7 +83,7 @@ namespace Atom
     {
         const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
         String assetFilename = sourcePath.stem().string() + extension;
-        std::filesystem::path assetFullPath = destinationFolder / assetFilename;
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(destinationFolder / assetFilename);
 
         if (std::filesystem::exists(assetFullPath))
         {
@@ -91,8 +91,8 @@ namespace Atom
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
 
-        if (!std::filesystem::exists(destinationFolder))
-            std::filesystem::create_directory(destinationFolder);
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
 
         s32 width, height;
         Vector<byte> decodedData;
@@ -157,7 +157,7 @@ namespace Atom
     {
         const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
         String assetFilename = assetName + extension;
-        std::filesystem::path assetFullPath = destinationFolder / assetFilename;
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(destinationFolder / assetFilename);
 
         if (std::filesystem::exists(assetFullPath))
         {
@@ -165,8 +165,8 @@ namespace Atom
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
 
-        if (!std::filesystem::exists(destinationFolder))
-            std::filesystem::create_directory(destinationFolder);
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
 
         s32 width, height;
         Vector<byte> decodedData;
@@ -208,7 +208,7 @@ namespace Atom
     UUID ContentTools::ImportMeshAsset(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationFolder, const MeshImportSettings& importSettings)
     {
         String assetFilename = sourcePath.stem().string() + Asset::AssetFileExtensions[(u32)AssetType::Mesh];
-        std::filesystem::path assetFullPath = destinationFolder / assetFilename;
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(destinationFolder / assetFilename);
 
         if (std::filesystem::exists(assetFullPath))
         {
@@ -216,8 +216,8 @@ namespace Atom
             return AssetManager::GetUUIDForAssetPath(assetFullPath);
         }
 
-        if (!std::filesystem::exists(destinationFolder))
-            std::filesystem::create_directory(destinationFolder);
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
 
         u32 processingFlags = aiProcess_ImproveCacheLocality |
                               aiProcess_LimitBoneWeights |
@@ -321,7 +321,7 @@ namespace Atom
             assimpMat->Get(AI_MATKEY_NAME, materialName);
             materialName.Append(Asset::AssetFileExtensions[(u32)AssetType::Material]);
 
-            UUID materialUUID = ContentTools::CreateMaterialAsset(AssetManager::GetAssetsFolder() / "Materials" / materialName.C_Str());
+            UUID materialUUID = ContentTools::CreateMaterialAsset(std::filesystem::path("Materials") / materialName.C_Str());
             Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
@@ -381,12 +381,12 @@ namespace Atom
                     {
                         // Texture is embedded. Decode the data buffer.
                         std::filesystem::path textureName = std::filesystem::path(aiTexture->mFilename.C_Str()).stem();
-                        textureUUID = ContentTools::ImportTextureAsset((byte*)aiTexture->pcData, aiTexture->mWidth, textureName.string(), AssetManager::GetAssetsFolder() / "Textures", importSettings);
+                        textureUUID = ContentTools::ImportTextureAsset((byte*)aiTexture->pcData, aiTexture->mWidth, textureName.string(), "Textures", importSettings);
                     }
                     else
                     {
                         // Load the texture from filepath
-                        textureUUID = ContentTools::ImportTextureAsset(sourcePath.parent_path() / aiPath.C_Str(), AssetManager::GetAssetsFolder() / "Textures", importSettings);
+                        textureUUID = ContentTools::ImportTextureAsset(sourcePath.parent_path() / aiPath.C_Str(), "Textures", importSettings);
                     }
 
                     materialAsset->SetTexture(uniformName, AssetManager::GetAsset<Texture2D>(textureUUID, true));
@@ -481,6 +481,7 @@ namespace Atom
     UUID ContentTools::CreateMaterialAsset(const std::filesystem::path& filepath)
     {
         Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested);
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())
         {
@@ -490,10 +491,10 @@ namespace Atom
                 return AssetManager::GetUUIDForAssetPath(filepath);
             }
 
-            if (!std::filesystem::exists(filepath.parent_path()))
-                std::filesystem::create_directory(filepath.parent_path());
+            if (!std::filesystem::exists(assetFullPath.parent_path()))
+                std::filesystem::create_directories(assetFullPath.parent_path());
 
-            if (!AssetSerializer::Serialize(filepath, asset))
+            if (!AssetSerializer::Serialize(assetFullPath, asset))
             {
                 ATOM_ERROR("Failed serializing material asset {}", filepath);
                 return 0;
@@ -513,6 +514,7 @@ namespace Atom
     UUID ContentTools::CreateSceneAsset(const String& sceneName, const std::filesystem::path& filepath)
     {
         Ref<Scene> asset = CreateRef<Scene>(sceneName);
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())
         {
@@ -522,10 +524,10 @@ namespace Atom
                 return AssetManager::GetUUIDForAssetPath(filepath);
             }
 
-            if (!std::filesystem::exists(filepath.parent_path()))
-                std::filesystem::create_directory(filepath.parent_path());
+            if (!std::filesystem::exists(assetFullPath.parent_path()))
+                std::filesystem::create_directories(assetFullPath.parent_path());
 
-            if (!AssetSerializer::Serialize(filepath, asset))
+            if (!AssetSerializer::Serialize(assetFullPath, asset))
             {
                 ATOM_ERROR("Failed serializing scene asset {}", filepath);
                 return 0;

@@ -20,11 +20,12 @@ namespace Atom
 
     // -----------------------------------------------------ScriptEngine------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    void ScriptEngine::Initialize()
+    void ScriptEngine::Initialize(const std::filesystem::path& scriptsDirectory)
     {
         try
         {
-            ms_AppScriptsDirectory = "TestProject/Assets/Scripts";
+            Shutdown();
+            ms_AppScriptsDirectory = std::filesystem::canonical(scriptsDirectory);
 
             py::initialize_interpreter(true, 0, nullptr, false);
             py::module::import("sys").attr("path").attr("append")(ms_AppScriptsDirectory.c_str());
@@ -34,7 +35,15 @@ namespace Atom
 
             ms_FileWatcher = CreateScope<filewatch::FileWatch<std::filesystem::path>>(ms_AppScriptsDirectory, [](const std::filesystem::path& path, const filewatch::Event changeType)
             {
-                if (changeType == filewatch::Event::modified && !ms_PendingScriptReload)
+                if (changeType == filewatch::Event::added)
+                {
+                    Application::Get().SubmitForMainThreadExecution([=]()
+                    {
+                        ScriptEngine::LoadScriptModule(path);
+                        ScriptEngine::LoadScriptClasses();
+                    });
+                }
+                else if (changeType == filewatch::Event::modified && !ms_PendingScriptReload)
                 {
                     ms_PendingScriptReload = true;
 
@@ -45,6 +54,13 @@ namespace Atom
                     {
                         ScriptEngine::ReloadScriptModules();
                         ScriptEngine::LoadScriptClasses();
+                    });
+                }
+                else if (changeType == filewatch::Event::removed)
+                {
+                    Application::Get().SubmitForMainThreadExecution([=]()
+                    {
+                        ScriptEngine::UnloadScriptModule(path.stem().string());
                     });
                 }
             });
@@ -66,7 +82,8 @@ namespace Atom
         ms_ScriptVariableMaps.clear();
         ms_AppScriptModules.clear();
 
-        py::finalize_interpreter();
+        if (Py_IsInitialized() != 0)
+            py::finalize_interpreter();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -172,13 +189,7 @@ namespace Atom
     Ref<ScriptInstance> ScriptEngine::GetScriptInstance(Entity entity)
     {
         ATOM_ENGINE_ASSERT(entity);
-
-        auto it = ms_ScriptInstances.find(entity.GetUUID());
-
-        if (it == ms_ScriptInstances.end())
-            return nullptr;
-
-        return it->second;
+        return GetScriptInstance(entity.GetUUID());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -204,6 +215,8 @@ namespace Atom
     {
         try
         {
+            ms_ScriptClasses.clear();
+
             // Get all classes that inherint from Entity
             for (auto& cls : ms_EntityClass.attr("__subclasses__")().cast<py::list>())
             {
@@ -228,9 +241,59 @@ namespace Atom
 
             for (const auto& entry : std::filesystem::directory_iterator(ms_AppScriptsDirectory))
             {
-                if (entry.path().extension() == ".py")
+                LoadScriptModule(entry.path());
+            }
+        }
+        catch (py::error_already_set& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::LoadScriptModule(const std::filesystem::path& filepath)
+    {
+        try
+        {
+            if (filepath.extension() == ".py")
+            {
+                ms_AppScriptModules.push_back(py::module::import(filepath.stem().string().c_str()));
+                ATOM_INFO("Script module \"{}\" loaded", filepath.stem().string());
+            }
+        }
+        catch (py::error_already_set& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::UnloadScriptModule(const String& moduleName)
+    {
+        try
+        {
+            for (auto it = ms_AppScriptModules.begin(); it != ms_AppScriptModules.end(); it++)
+            {
+                py::module& module = *it;
+
+                if (module.attr("__name__").cast<String>() == moduleName)
                 {
-                    ms_AppScriptModules.push_back(py::module::import(entry.path().stem().string().c_str()));
+                    py::module inspectModule = py::module::import("inspect");
+
+                    // Remove all classes from that module
+                    for (auto& [name, obj] : inspectModule.attr("getmembers")(module, inspectModule.attr("isclass")).cast<py::dict>())
+                    {
+                        ms_ScriptClasses.erase(name.cast<String>());
+                    }
+
+                    module.release();
+                    ms_AppScriptModules.erase(it);
+
+                    // Reload the core module so that it is up to date 
+                    ms_ScriptCoreModule.reload();
+
+                    ATOM_INFO("Script module \"{}\" unloaded", moduleName);
+                    return;
                 }
             }
         }

@@ -19,17 +19,19 @@ namespace Atom
         if (!ofs)
             return false;
 
-        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
         {
             // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
             AssetMetaData newMetaData = asset->m_MetaData;
             newMetaData.UUID = UUID();
-            newMetaData.AssetFilepath = filepath;
+            newMetaData.AssetFilepath = absolutePath;
             SerializeMetaData(ofs, newMetaData);
         }
         else
         {
-            asset->m_MetaData.AssetFilepath = filepath;
+            asset->m_MetaData.AssetFilepath = absolutePath;
             asset->SetAssetFlag(AssetFlags::Serialized);
             SerializeMetaData(ofs, asset->m_MetaData);
         }
@@ -80,17 +82,19 @@ namespace Atom
         if (!ofs)
             return false;
 
-        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
         {
             // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
             AssetMetaData newMetaData = asset->m_MetaData;
             newMetaData.UUID = UUID();
-            newMetaData.AssetFilepath = filepath;
+            newMetaData.AssetFilepath = absolutePath;
             SerializeMetaData(ofs, newMetaData);
         }
         else
         {
-            asset->m_MetaData.AssetFilepath = filepath;
+            asset->m_MetaData.AssetFilepath = absolutePath;
             asset->SetAssetFlag(AssetFlags::Serialized);
             SerializeMetaData(ofs, asset->m_MetaData);
         }
@@ -146,17 +150,19 @@ namespace Atom
         if (!ofs)
             return false;
 
-        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
         {
             // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
             AssetMetaData newMetaData = asset->m_MetaData;
             newMetaData.UUID = UUID();
-            newMetaData.AssetFilepath = filepath;
+            newMetaData.AssetFilepath = absolutePath;
             SerializeMetaData(ofs, newMetaData);
         }
         else
         {
-            asset->m_MetaData.AssetFilepath = filepath;
+            asset->m_MetaData.AssetFilepath = absolutePath;
             asset->SetAssetFlag(AssetFlags::Serialized);
             SerializeMetaData(ofs, asset->m_MetaData);
         }
@@ -222,17 +228,19 @@ namespace Atom
         if (!ofs)
             return false;
 
-        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
         {
             // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
             AssetMetaData newMetaData = asset->m_MetaData;
             newMetaData.UUID = UUID();
-            newMetaData.AssetFilepath = filepath;
+            newMetaData.AssetFilepath = absolutePath;
             SerializeMetaData(ofs, newMetaData);
         }
         else
         {
-            asset->m_MetaData.AssetFilepath = filepath;
+            asset->m_MetaData.AssetFilepath = absolutePath;
             asset->SetAssetFlag(AssetFlags::Serialized);
             SerializeMetaData(ofs, asset->m_MetaData);
         }
@@ -273,17 +281,19 @@ namespace Atom
         if (!ofs)
             return false;
 
-        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != filepath)
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
         {
             // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
             AssetMetaData newMetaData = asset->m_MetaData;
             newMetaData.UUID = UUID();
-            newMetaData.AssetFilepath = filepath;
+            newMetaData.AssetFilepath = absolutePath;
             SerializeMetaData(ofs, newMetaData);
         }
         else
         {
-            asset->m_MetaData.AssetFilepath = filepath;
+            asset->m_MetaData.AssetFilepath = absolutePath;
             asset->SetAssetFlag(AssetFlags::Serialized);
             SerializeMetaData(ofs, asset->m_MetaData);
         }
@@ -438,7 +448,7 @@ namespace Atom
             return nullptr;
 
         AssetMetaData metaData;
-        metaData.AssetFilepath = filepath;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Texture2D);
 
@@ -480,7 +490,7 @@ namespace Atom
             return nullptr;
 
         AssetMetaData metaData;
-        metaData.AssetFilepath = filepath;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::TextureCube);
 
@@ -526,7 +536,7 @@ namespace Atom
             return nullptr;
 
         AssetMetaData metaData;
-        metaData.AssetFilepath = filepath;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Material);
 
@@ -585,7 +595,7 @@ namespace Atom
             return nullptr;
 
         AssetMetaData metaData;
-        metaData.AssetFilepath = filepath;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Mesh);
 
@@ -636,7 +646,7 @@ namespace Atom
             return nullptr;
 
         AssetMetaData metaData;
-        metaData.AssetFilepath = filepath;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Scene);
 
@@ -804,7 +814,7 @@ namespace Atom
             return false;
 
         DeserializeMetaData(ifs, assetMetaData);
-        assetMetaData.AssetFilepath = filepath;
+        assetMetaData.AssetFilepath = std::filesystem::canonical(filepath);
 
         return true;
     }

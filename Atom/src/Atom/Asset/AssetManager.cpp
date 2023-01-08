@@ -10,20 +10,10 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    void AssetManager::Shutdown()
+    void AssetManager::Initialize(const std::filesystem::path& assetFolder)
     {
-        ms_Registry.clear();
-        ms_AssetPathUUIDs.clear();
-        ms_LoadedAssets.clear();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void AssetManager::SetAssetFolder(const std::filesystem::path& assetFolder)
-    {
-        ms_Registry.clear();
-        ms_AssetPathUUIDs.clear();
-        ms_LoadedAssets.clear();
-        ms_AssetsFolder = assetFolder;
+        Shutdown();
+        ms_AssetsFolder = std::filesystem::canonical(assetFolder);
 
         RegisterAllAssets(ms_AssetsFolder);
 
@@ -32,6 +22,9 @@ namespace Atom
             auto assetPath = ms_AssetsFolder / path;
             if (changeType == filewatch::Event::added)
             {
+                using namespace std::literals;
+                std::this_thread::sleep_for(1000ms);
+
                 Application::Get().SubmitForMainThreadExecution([=]()
                 {
                     AssetManager::RegisterAsset(assetPath);
@@ -54,6 +47,14 @@ namespace Atom
                 UnregisterAsset(assetPath);
             }
         });
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AssetManager::Shutdown()
+    {
+        ms_Registry.clear();
+        ms_AssetPathUUIDs.clear();
+        ms_LoadedAssets.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -303,12 +304,18 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID AssetManager::GetUUIDForAssetPath(const std::filesystem::path& assetPath)
     {
-        auto it = ms_AssetPathUUIDs.find(assetPath);
+        auto it = ms_AssetPathUUIDs.find(GetAssetFullPath(assetPath));
 
         if (it == ms_AssetPathUUIDs.end())
             return 0;
 
         return it->second;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    std::filesystem::path AssetManager::GetAssetFullPath(const std::filesystem::path& assetPath)
+    {
+        return ms_AssetsFolder / assetPath;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -11,8 +11,8 @@ namespace Atom
     class AssetManager
     {
     public:
+        static void Initialize(const std::filesystem::path& assetFolder);
         static void Shutdown();
-        static void SetAssetFolder(const std::filesystem::path& assetFolder);
         static void RegisterAsset(const AssetMetaData& metaData);
         static void RegisterAsset(const Ref<Asset>& asset);
         static void RegisterAsset(const std::filesystem::path& assetPath);
@@ -29,6 +29,7 @@ namespace Atom
         static u32 GetAssetRefCount(UUID uuid);
         static const HashMap<UUID, AssetMetaData>& GetRegistry();
         static UUID GetUUIDForAssetPath(const std::filesystem::path& assetPath);
+        static std::filesystem::path GetAssetFullPath(const std::filesystem::path& assetPath);
         static const std::filesystem::path& GetAssetsFolder();
         static bool IsAssetFile(const std::filesystem::path& filepath);
 

@@ -51,19 +51,22 @@ namespace Atom
 
         const auto& lights = m_Environment->GetLights();
 
-        if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+        if (!lights.empty())
         {
-            BufferDescription sbDesc;
-            sbDesc.ElementCount = lights.size();
-            sbDesc.ElementSize = sizeof(Light);
-            sbDesc.IsDynamic = true;
+            if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+            {
+                BufferDescription sbDesc;
+                sbDesc.ElementCount = lights.size();
+                sbDesc.ElementSize = sizeof(Light);
+                sbDesc.IsDynamic = true;
 
-            m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+                m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+            }
+
+            void* lightsData = m_LightsSB->Map(0, 0);
+            memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
+            m_LightsSB->Unmap();
         }
-
-        void* lightsData = m_LightsSB->Map(0, 0);
-        memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-        m_LightsSB->Unmap();
 
         void* data = m_TransformCB->Map(0, 0);
         memcpy(data, &m_TransformData, sizeof(TransformCB));
@@ -83,19 +86,22 @@ namespace Atom
 
         const auto& lights = m_Environment->GetLights();
 
-        if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+        if (!lights.empty())
         {
-            BufferDescription sbDesc;
-            sbDesc.ElementCount = lights.size();
-            sbDesc.ElementSize = sizeof(Light);
-            sbDesc.IsDynamic = true;
+            if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+            {
+                BufferDescription sbDesc;
+                sbDesc.ElementCount = lights.size();
+                sbDesc.ElementSize = sizeof(Light);
+                sbDesc.IsDynamic = true;
 
-            m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+                m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+            }
+
+            void* lightsData = m_LightsSB->Map(0, 0);
+            memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
+            m_LightsSB->Unmap();
         }
-
-        void* lightsData = m_LightsSB->Map(0, 0);
-        memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-        m_LightsSB->Unmap();
 
         void* data = m_TransformCB->Map(0, 0);
         memcpy(data, &m_TransformData, sizeof(TransformCB));

@@ -105,7 +105,7 @@ namespace Atom
     class ScriptEngine
     {
     public:
-        static void Initialize();
+        static void Initialize(const std::filesystem::path& scriptsDirectory);
         static void Shutdown();
 
         static void OnSceneStart(Scene* scene);
@@ -124,6 +124,8 @@ namespace Atom
     private:
         static void LoadScriptClasses();
         static void LoadScriptModules();
+        static void LoadScriptModule(const std::filesystem::path& filepath);
+        static void UnloadScriptModule(const String& moduleName);
         static void ReloadScriptModules();
     private:
         inline static Scene*                                             ms_RunningScene = nullptr;

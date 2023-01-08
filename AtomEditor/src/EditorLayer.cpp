@@ -4,6 +4,8 @@
 #include "Panels/AssetManagerPanel.h"
 #include "Dialogs/FileDialog.h"
 
+#include "Atom/Scripting/ScriptEngine.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -28,70 +30,8 @@ namespace Atom
     void EditorLayer::OnAttach()
     {
         EditorResources::Initialize();
-        AssetManager::SetAssetFolder("TestProject/Assets");
 
-        m_EditorScene = AssetManager::GetAsset<Scene>(ContentTools::CreateSceneAsset("TestScene"), true);
-
-        {
-            Entity camera = m_EditorScene->CreateEntity("Camera");
-            auto& cc = camera.AddComponent<CameraComponent>();
-            cc.Primary = true;
-
-            auto& sc = camera.AddComponent<ScriptComponent>();
-            sc.ScriptClass = "Camera";
-
-            camera.GetComponent<TransformComponent>().Translation.z = 3.0f;
-        }
-
-        {
-            UUID meshUUID = ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/sphere.gltf", "TestProject/Assets/Meshes/", MeshImportSettings());
-
-            Entity player = m_EditorScene->CreateEntity("Player");
-            player.AddComponent<MeshComponent>(AssetManager::GetAsset<Mesh>(meshUUID, true));
-
-            auto& sc = player.AddComponent<ScriptComponent>();
-            sc.ScriptClass = "Player";
-
-            auto& rbc = player.AddComponent<RigidbodyComponent>();
-            rbc.Type = RigidbodyComponent::RigidbodyType::Dynamic;
-
-            auto& bcc = player.AddComponent<BoxColliderComponent>();
-            bcc.Restitution = 1.0f;
-        }
-
-        {
-            UUID meshUUID = ContentTools::ImportMeshAsset("TestProject/Assets/Meshes/cube.gltf", "TestProject/Assets/Meshes/", MeshImportSettings());
-
-            Entity ground = m_EditorScene->CreateEntity("Ground");
-            ground.AddComponent<MeshComponent>(AssetManager::GetAsset<Mesh>(meshUUID, true));
-
-            ground.GetComponent<TransformComponent>().Scale = { 3.0f, 1.0f, 3.0f };
-            ground.GetComponent<TransformComponent>().Translation.y = -3.0f;
-
-            auto& rbc = ground.AddComponent<RigidbodyComponent>();
-            rbc.Type = RigidbodyComponent::RigidbodyType::Static;
-
-            auto& bcc = ground.AddComponent<BoxColliderComponent>();
-            bcc.Size = { 3.0f, 1.0f, 3.0f };
-        }
-
-        {
-            TextureImportSettings importSettings;
-            importSettings.Type = TextureType::TextureCube;
-            importSettings.Format = TextureFormat::RGBA32F;
-            UUID uuid  = ContentTools::ImportTextureAsset("TestProject/Assets/Textures/GCanyon_C_YumaPoint_3k.hdr", "TestProject/Assets/Textures", importSettings);
-
-            Entity skyLight = m_EditorScene->CreateEntity("SkyLight");
-            skyLight.AddComponent<SkyLightComponent>(AssetManager::GetAsset<TextureCube>(uuid, true));
-        }
-
-        {
-            Entity dirLight = m_EditorScene->CreateEntity("DirLight");
-            dirLight.GetComponent<TransformComponent>().Translation = { 5.0f, 5.0f, 0.0f };
-            auto& dlc = dirLight.AddComponent<DirectionalLightComponent>();
-            dlc.Color = { 1.0f, 1.0f, 1.0f };
-            dlc.Intensity = 1.0f;
-        }
+        OpenProject("SandboxProject/SandboxProject.atmproj");
         
         m_Renderer = CreateRef<SceneRenderer>();
         m_Renderer->Initialize();
@@ -180,12 +120,29 @@ namespace Atom
                     OpenScene();
                 }
 
-                ImGui::Separator();
-
                 if (ImGui::MenuItem("Save Scene...", "Ctrl+S"))
                 {
                     SaveScene();
                 }
+
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("New Project..."))
+                {
+                    m_NewProjectDialog.Open();
+                }
+
+                if (ImGui::MenuItem("Open Project..."))
+                {
+                    OpenProject();
+                }
+
+                if (ImGui::MenuItem("Save Project..."))
+                {
+                    SaveProject();
+                }
+
+                ImGui::Separator();
 
                 if (ImGui::MenuItem("Exit", "Alt+F4"))
                     Application::Get().Close();
@@ -239,6 +196,7 @@ namespace Atom
         // Render panels
         m_TextureImportDialog.OnImGuiRender();
         m_MeshImportDialog.OnImGuiRender();
+        m_NewProjectDialog.OnImGuiRender();
         AssetManagerPanel::OnImGuiRender();
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
@@ -395,6 +353,46 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::NewProject(const String& projectName, const String& startSceneName, const std::filesystem::path& projectLocation)
+    {
+        if (!Project::NewProject(projectName, startSceneName, projectLocation))
+        {
+            ATOM_ERROR("Failed creating project \"{}\"", projectName);
+            return;
+        }
+
+        OpenScene(Project::GetActiveProject()->GetSettings().StartScenePath);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::OpenProject()
+    {
+        const std::filesystem::path& path = FileDialog::OpenFile("Atom Project (*.atmproj)\0*.atmproj\0");
+
+        if (!path.empty())
+            OpenProject(path);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::OpenProject(const std::filesystem::path& filepath)
+    {
+        if (!Project::OpenProject(filepath))
+        {
+            ATOM_ERROR("Failed opening project \"{}\"", filepath);
+            return;
+        }
+
+        OpenScene(Project::GetActiveProject()->GetSettings().StartScenePath);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::SaveProject()
+    {
+        if (!Project::SaveActiveProject())
+            ATOM_ERROR("Failed saving project \"{}\"", Project::GetActiveProject()->GetProjectDirectory());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::SaveScene()
     {
         const std::filesystem::path& path = FileDialog::SaveFile("Atom Scene (*.atmscene)\0*.atmscene\0");
@@ -422,25 +420,33 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OpenScene()
     {
-        if (m_ActiveScene->GetSceneState() != SceneState::Edit)
-            StopScene();
-
         const std::filesystem::path& path = FileDialog::OpenFile("Atom Scene (*.atmscene)\0*.atmscene\0");
 
         if (!path.empty())
+            OpenScene(path);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void EditorLayer::OpenScene(const std::filesystem::path& assetPath)
+    {
+        if (m_ActiveScene && m_ActiveScene->GetSceneState() != SceneState::Edit)
+            StopScene();
+
+        UUID sceneUUID = AssetManager::GetUUIDForAssetPath(assetPath);
+
+        if (sceneUUID == 0)
         {
-            UUID sceneUUID = AssetManager::GetUUIDForAssetPath(std::filesystem::relative(path));
-            if (sceneUUID != 0)
-            {
-                AssetManager::UnloadAllAssets();
-
-                m_EditorScene = AssetManager::GetAsset<Scene>(sceneUUID, true);
-                m_EditorScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
-                m_ActiveScene = m_EditorScene;
-
-                m_SceneHierarchyPanel.SetScene(m_ActiveScene);
-            }
+            ATOM_ERROR("Failed loading scene \"{}\"", assetPath);
+            return;
         }
+
+        AssetManager::UnloadAllAssets();
+
+        m_EditorScene = AssetManager::GetAsset<Scene>(sceneUUID, true);
+        m_EditorScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+        m_ActiveScene = m_EditorScene;
+
+        m_SceneHierarchyPanel.SetScene(m_ActiveScene);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

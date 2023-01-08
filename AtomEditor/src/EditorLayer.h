@@ -5,6 +5,7 @@
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/EntityInspectorPanel.h"
 #include "Dialogs/ImportDialog.h"
+#include "Dialogs/NewProjectDialog.h"
 
 namespace Atom
 {
@@ -20,6 +21,19 @@ namespace Atom
         virtual void OnImGuiRender() override;
         virtual void OnEvent(Event& event) override;
 
+        void NewProject(const String& projectName, const String& startSceneName, const std::filesystem::path& projectLocation);
+        void OpenProject();
+        void OpenProject(const std::filesystem::path& filepath);
+        void SaveProject();
+
+        void SaveScene();
+        void NewScene();
+        void OpenScene();
+        void OpenScene(const std::filesystem::path& assetPath);
+        void PlayScene();
+        void StopScene();
+        void DuplicateEntity();
+
         inline const SceneHierarchyPanel& GetSceneHierarchyPanel() const { return m_SceneHierarchyPanel; }
         inline const EntityInspectorPanel& GetEntityInspectorPanel() const { return m_EntityInspectorPanel; }
 
@@ -27,12 +41,6 @@ namespace Atom
     private:
         bool OnKeyPressed(KeyPressedEvent& e);
 
-        void SaveScene();
-        void NewScene();
-        void OpenScene();
-        void PlayScene();
-        void StopScene();
-        void DuplicateEntity();
     private:
         Ref<Scene>           m_ActiveScene = nullptr;
         Ref<Scene>           m_EditorScene = nullptr;
@@ -45,6 +53,7 @@ namespace Atom
         EntityInspectorPanel m_EntityInspectorPanel;
         TextureImportDialog  m_TextureImportDialog;
         MeshImportDialog     m_MeshImportDialog;
+        NewProjectDialog     m_NewProjectDialog;
     private:
         inline static EditorLayer* ms_Instance = nullptr;
     };

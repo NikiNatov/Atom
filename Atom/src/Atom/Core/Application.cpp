@@ -31,7 +31,6 @@ namespace Atom
         m_Window = CreateScope<Window>(properties);
 
         Renderer::Initialize();
-        ScriptEngine::Initialize();
         PhysicsEngine::Initialize();
         Input::Initialize(m_Window->GetWindowHandle());
 

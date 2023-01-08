@@ -519,6 +519,7 @@ namespace Atom
 							{
 								currentClass = scriptClassName.c_str();
 								component.ScriptClass = currentClass;
+								ScriptEngine::GetScriptVariableMap(entity).clear();
 							}
 
 							if (isSelected)
