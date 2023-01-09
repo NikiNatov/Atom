@@ -167,6 +167,16 @@ namespace Atom
                     ImGui::EndMenu();
                 }
 
+                if (ImGui::BeginMenu("Create"))
+                {
+                    if (ImGui::MenuItem("Material", ""))
+                    {
+                        m_NewMaterialDialog.Open();
+                    }
+
+                    ImGui::EndMenu();
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -197,10 +207,12 @@ namespace Atom
         m_TextureImportDialog.OnImGuiRender();
         m_MeshImportDialog.OnImGuiRender();
         m_NewProjectDialog.OnImGuiRender();
+        m_NewMaterialDialog.OnImGuiRender();
         AssetManagerPanel::OnImGuiRender();
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();
         m_AssetPanel.OnImGuiRender();
+        m_MaterialEditorPanel.OnImGuiRender();
 
         Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
         m_EntityInspectorPanel.SetEntity(selectedEntity);

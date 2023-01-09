@@ -174,11 +174,11 @@ namespace Atom
         for (auto& drawCommand : m_DrawList)
         {
             // TODO: These should not be set by the material
-            drawCommand.Material->SetTexture("EnvironmentMap", m_Environment->GetEnvironmentMap());
-            drawCommand.Material->SetTexture("IrradianceMap", m_Environment->GetIrradianceMap());
-            drawCommand.Material->SetTexture("BRDFMap", Renderer::GetBRDF());
-            drawCommand.Material->SetUniform("Transform", drawCommand.Transform);
-            drawCommand.Material->SetUniform("NumLights", m_LightsSB->GetElementCount());
+            drawCommand.Material->SetTexture("_EnvironmentMap", m_Environment->GetEnvironmentMap());
+            drawCommand.Material->SetTexture("_IrradianceMap", m_Environment->GetIrradianceMap());
+            drawCommand.Material->SetTexture("_BRDFMap", Renderer::GetBRDF());
+            drawCommand.Material->SetUniform("_Transform", drawCommand.Transform);
+            drawCommand.Material->SetUniform("_NumLights", m_LightsSB->GetElementCount());
 
             Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_TransformCB, m_LightsSB);
         }

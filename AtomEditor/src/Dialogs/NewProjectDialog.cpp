@@ -33,7 +33,7 @@ namespace Atom
             if (ImGui::BeginPopupModal("New project", nullptr, ImGuiWindowFlags_NoResize))
             {
                 ImGui::Text("Settings");
-                if (ImGui::BeginTable("##TextureSettingsTable", 2, ImGuiTableFlags_BordersOuter))
+                if (ImGui::BeginTable("##ProjectSettingsTable", 2, ImGuiTableFlags_BordersOuter))
                 {
                     // Name 
                     {
@@ -58,7 +58,7 @@ namespace Atom
                     {
                         ImGui::TableNextRow();
                         ImGui::TableSetColumnIndex(0);
-                        ImGui::Text("Start scene name");
+                        ImGui::Text("Start Scene Name");
                         ImGui::TableSetColumnIndex(1);
                         ImGui::PushItemWidth(-1);
 

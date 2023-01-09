@@ -5,8 +5,10 @@
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/EntityInspectorPanel.h"
 #include "Panels/AssetPanel.h"
+#include "Panels/MaterialEditorPanel.h"
 #include "Dialogs/ImportDialog.h"
 #include "Dialogs/NewProjectDialog.h"
+#include "Dialogs/NewMaterialDialog.h"
 
 namespace Atom
 {
@@ -53,9 +55,11 @@ namespace Atom
         SceneHierarchyPanel  m_SceneHierarchyPanel;
         EntityInspectorPanel m_EntityInspectorPanel;
         AssetPanel           m_AssetPanel;
+        MaterialEditorPanel  m_MaterialEditorPanel;
         TextureImportDialog  m_TextureImportDialog;
         MeshImportDialog     m_MeshImportDialog;
         NewProjectDialog     m_NewProjectDialog;
+        NewMaterialDialog    m_NewMaterialDialog;
     private:
         inline static EditorLayer* ms_Instance = nullptr;
     };

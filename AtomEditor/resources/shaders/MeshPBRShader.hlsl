@@ -31,18 +31,18 @@ ConstantBuffer<Camera> CameraCB : register(b0);
 
 cbuffer TransformCB : register(b1)
 {
-    row_major matrix Transform;
-    float p0;
+    row_major matrix _Transform;
+    float _p0;
 }
 
 PSInput VSMain(in VSInput input)
 {
     PSInput output;
-    output.Position = mul(float4(input.Position, 1.0), Transform).xyz;
+    output.Position = mul(float4(input.Position, 1.0), _Transform).xyz;
     output.UV = input.UV;
-    output.Normal = normalize(mul(input.Normal, (float3x3)Transform));
-    output.Tangent = normalize(mul(input.Tangent, (float3x3)Transform));
-    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)Transform));
+    output.Normal = normalize(mul(input.Normal, (float3x3)_Transform));
+    output.Tangent = normalize(mul(input.Tangent, (float3x3)_Transform));
+    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)_Transform));
     output.CameraPosition = CameraCB.CameraPosition;
     output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
     return output;
@@ -79,8 +79,8 @@ cbuffer MaterialCB : register(b2)
 
 cbuffer LightPropertiesCB : register(b3)
 {
-    uint NumLights;
-    float p1;
+    uint _NumLights;
+    float _p1;
 }
 
 Texture2D AlbedoMap : register(t0);
@@ -95,16 +95,16 @@ SamplerState MetalnessMapSampler: register(s2);
 Texture2D RoughnessMap : register(t3);
 SamplerState RoughnessMapSampler: register(s3);
 
-TextureCube EnvironmentMap : register(t4);
-SamplerState EnvironmentMapSampler : register(s4);
+TextureCube _EnvironmentMap : register(t4);
+SamplerState _EnvironmentMapSampler : register(s4);
 
-TextureCube IrradianceMap : register(t5);
-SamplerState IrradianceMapSampler : register(s5);
+TextureCube _IrradianceMap : register(t5);
+SamplerState _IrradianceMapSampler : register(s5);
 
-Texture2D BRDFMap : register(t6);
-SamplerState BRDFMapSampler: register(s6);
+Texture2D _BRDFMap : register(t6);
+SamplerState _BRDFMapSampler: register(s6);
 
-StructuredBuffer<Light> LightsBuffer : register(t7);
+StructuredBuffer<Light> _LightsBuffer : register(t7);
 
 //GGX/Trowbridge-Reitz normal distribution function
 float NormalDistributionFunction(float alpha, float3 N, float3 H)
@@ -230,18 +230,18 @@ float4 PSMain(in PSInput input) : SV_Target
     float3 outgoingLightColor = float3(0.0, 0.0, 0.0);
 
     // Lights
-    for (uint i = 0; i < NumLights; i++)
+    for (uint i = 0; i < _NumLights; i++)
     {
-        switch (LightsBuffer[i].LightType)
+        switch (_LightsBuffer[i].LightType)
         {
         case POINT_LIGHT:
-            outgoingLightColor += CalculatePointLight(LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
+            outgoingLightColor += CalculatePointLight(_LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
             break;
         case DIR_LIGHT:
-            outgoingLightColor += CalculateDirectionalLight(LightsBuffer[i], F0, V, N, albedoColor.rgb, metalness, roughness);
+            outgoingLightColor += CalculateDirectionalLight(_LightsBuffer[i], F0, V, N, albedoColor.rgb, metalness, roughness);
             break;
         case SPOT_LIGHT:
-            outgoingLightColor += CalculateSpotLight(LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
+            outgoingLightColor += CalculateSpotLight(_LightsBuffer[i], F0, V, N, input.Position, albedoColor.rgb, metalness, roughness);
             break;
         }
     }
@@ -249,14 +249,14 @@ float4 PSMain(in PSInput input) : SV_Target
     // IBL
     float3 ambientColor = float3(0.0, 0.0, 0.0);
     {
-        float3 irradianceColor = IrradianceMap.Sample(IrradianceMapSampler, N).rgb;
+        float3 irradianceColor = _IrradianceMap.Sample(_IrradianceMapSampler, N).rgb;
 
         float3 Ks = FresnelSchlickFunction(F0, N, V);
         float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
         float3 diffuseColor = Kd * albedoColor.rgb * irradianceColor;
 
-        float3 envSpecularColor = EnvironmentMap.SampleLevel(EnvironmentMapSampler, reflect(-V, N), roughness * 10).rgb;
-        float2 specularBRDF = BRDFMap.Sample(BRDFMapSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
+        float3 envSpecularColor = _EnvironmentMap.SampleLevel(_EnvironmentMapSampler, reflect(-V, N), roughness * 10).rgb;
+        float2 specularBRDF = _BRDFMap.Sample(_BRDFMapSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
         float3 specularColor = envSpecularColor * (Ks * specularBRDF.x + specularBRDF.y);
 
         ambientColor = diffuseColor + specularColor;
