@@ -7,6 +7,7 @@
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/Components.h"
+#include "Atom/Scripting/ScriptEngine.h"
 
 namespace Atom
 {
@@ -414,6 +415,71 @@ namespace Atom
                 u32 scriptClassSize = sc.ScriptClass.size();
                 ofs.write((char*)&scriptClassSize, sizeof(u32));
                 ofs.write((char*)sc.ScriptClass.data(), scriptClassSize);
+
+                if (Ref<ScriptClass> scriptClass = ScriptEngine::GetScriptClass(sc.ScriptClass))
+                {
+                    // Get the fields from the script field map for the entity
+                    ScriptVariableMap& scriptInstanceVarMap = ScriptEngine::GetScriptVariableMap(entity);
+
+                    u32 scriptVariableCount = scriptInstanceVarMap.size();
+                    ofs.write((char*)&scriptVariableCount, sizeof(u32));
+
+                    for (auto& [name, variable] : scriptInstanceVarMap)
+                    {
+                        u32 varNameSize = name.size();
+                        ofs.write((char*)&varNameSize, sizeof(u32));
+                        ofs.write((char*)name.data(), varNameSize);
+
+                        ScriptVariableType type = variable.GetType();
+                        ofs.write((char*)&type, sizeof(ScriptVariableType));
+
+                        switch (type)
+                        {
+                            case ScriptVariableType::Int:
+                            {
+                                s32 value = variable.GetValue<s32>();
+                                ofs.write((char*)&value, sizeof(s32));
+                                break;
+                            }
+                            case ScriptVariableType::Float:
+                            {
+                                f32 value = variable.GetValue<f32>();
+                                ofs.write((char*)&value, sizeof(f32));
+                                break;
+                            }
+                            case ScriptVariableType::Bool:
+                            {
+                                bool value = variable.GetValue<bool>();
+                                ofs.write((char*)&value, sizeof(bool));
+                                break;
+                            }
+                            case ScriptVariableType::Vec2:
+                            {
+                                glm::vec2 value = variable.GetValue<glm::vec2>();
+                                ofs.write((char*)&value, sizeof(glm::vec2));
+                                break;
+                            }
+                            case ScriptVariableType::Vec3:
+                            {
+                                glm::vec3 value = variable.GetValue<glm::vec3>();
+                                ofs.write((char*)&value, sizeof(glm::vec3));
+                                break;
+                            }
+                            case ScriptVariableType::Vec4:
+                            {
+                                glm::vec4 value = variable.GetValue<glm::vec4>();
+                                ofs.write((char*)&value, sizeof(glm::vec4));
+                                break;
+                            }
+                            case ScriptVariableType::Entity:
+                            {
+                                UUID value = variable.GetValue<UUID>();
+                                ofs.write((char*)&value, sizeof(UUID));
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             bool hasRigidbodyComponent = entity.HasComponent<RigidbodyComponent>();
@@ -781,6 +847,83 @@ namespace Atom
 
                 sc.ScriptClass.resize(scriptClassSize);
                 ifs.read((char*)sc.ScriptClass.data(), scriptClassSize);
+
+                if (Ref<ScriptClass> scriptClass = ScriptEngine::GetScriptClass(sc.ScriptClass))
+                {
+                    ScriptVariableMap& scriptInstanceVarMap = ScriptEngine::GetScriptVariableMap(entity);
+
+                    u32 scriptVariableCount;
+                    ifs.read((char*)&scriptVariableCount, sizeof(u32));
+
+                    for (u32 i = 0; i < scriptVariableCount; i++)
+                    {
+                        u32 varNameSize;
+                        ifs.read((char*)&varNameSize, sizeof(u32));
+
+                        String varName(varNameSize, '\0');
+                        ifs.read((char*)varName.data(), varNameSize);
+
+                        ScriptVariableType type;
+                        ifs.read((char*)&type, sizeof(ScriptVariableType));
+
+                        ScriptVariable variable(varName, type);
+
+                        switch (type)
+                        {
+                            case ScriptVariableType::Int:
+                            {
+                                s32 value;
+                                ifs.read((char*)&value, sizeof(s32));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Float:
+                            {
+                                f32 value;
+                                ifs.read((char*)&value, sizeof(f32));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Bool:
+                            {
+                                bool value;
+                                ifs.read((char*)&value, sizeof(bool));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Vec2:
+                            {
+                                glm::vec2 value;
+                                ifs.read((char*)&value, sizeof(glm::vec2));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Vec3:
+                            {
+                                glm::vec3 value;
+                                ifs.read((char*)&value, sizeof(glm::vec3));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Vec4:
+                            {
+                                glm::vec4 value;
+                                ifs.read((char*)&value, sizeof(glm::vec4));
+                                variable.SetValue(value);
+                                break;
+                            }
+                            case ScriptVariableType::Entity:
+                            {
+                                UUID value;
+                                ifs.read((char*)&value, sizeof(UUID));
+                                variable.SetValue(value);
+                                break;
+                            }
+                        }
+
+                        scriptInstanceVarMap[varName] = variable;
+                    }
+                }
             }
 
             bool hasRigidbodyComponent;

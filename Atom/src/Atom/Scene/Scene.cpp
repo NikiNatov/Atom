@@ -40,8 +40,10 @@ namespace Atom
     Scene::Scene(Scene&& rhs) noexcept
         : Asset(AssetType::Scene),
         m_Name(std::move(rhs.m_Name)), m_Registry(std::move(rhs.m_Registry)), m_EditorCamera(std::move(rhs.m_EditorCamera)), m_State(rhs.m_State),
-        m_EntitiesByID(std::move(rhs.m_EntitiesByID)), m_LightEnvironment(std::move(rhs.m_LightEnvironment))
+        m_LightEnvironment(std::move(rhs.m_LightEnvironment))
     {
+        for (auto& [uuid, entity] : rhs.m_EntitiesByID)
+            m_EntitiesByID[uuid] = Entity((entt::entity)entity, this);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -53,8 +55,10 @@ namespace Atom
             m_Registry = std::move(rhs.m_Registry);
             m_EditorCamera = std::move(rhs.m_EditorCamera);
             m_State = rhs.m_State;
-            m_EntitiesByID = std::move(rhs.m_EntitiesByID);
             m_LightEnvironment = std::move(rhs.m_LightEnvironment);
+
+            for (auto& [uuid, entity] : rhs.m_EntitiesByID)
+                m_EntitiesByID[uuid] = Entity((entt::entity)entity, this);
         }
 
         return *this;
