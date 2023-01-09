@@ -146,21 +146,41 @@ namespace Atom
             FramebufferDescription fbDesc;
             fbDesc.SwapChainFrameBuffer = true;
 
-            GraphicsPipelineDescription pipelineDesc;
-            pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "ImGuiFramebuffer");
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("ImGuiShader");
-            pipelineDesc.EnableBlend = true;
-            pipelineDesc.EnableDepthTest = false;
-            pipelineDesc.BackfaceCulling = false;
-            pipelineDesc.Wireframe = false;
-            pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Layout = {
-                { "POSITION", ShaderDataType::Float2 },
-                { "TEX_COORD", ShaderDataType::Float2 },
-                { "COLOR", ShaderDataType::Unorm4 },
-            };
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "ImGuiFramebuffer");
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("ImGuiShader");
+                pipelineDesc.EnableBlend = true;
+                pipelineDesc.EnableDepthTest = false;
+                pipelineDesc.BackfaceCulling = false;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float2 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                    { "COLOR", ShaderDataType::Unorm4 },
+                };
 
-            ms_PipelineLibrary.Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
+                ms_PipelineLibrary.Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
+            }
+
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "SwapChainFramebuffer");
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("FullscreenQuadShader");
+                pipelineDesc.EnableBlend = false;
+                pipelineDesc.EnableDepthTest = false;
+                pipelineDesc.BackfaceCulling = true;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                };
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("SwapChainPipeline", pipelineDesc);
+            }
+
         }
 
         {
