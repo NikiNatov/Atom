@@ -136,10 +136,10 @@ float GeometryShadowingFunction(float alpha, float3 N, float3 L, float3 V)
 }
 
 //Fresnel-Schlick equation
-float3 FresnelSchlickFunction(float3 F0, float3 V, float3 H)
+float3 FresnelSchlickFunction(float3 F0, float3 V, float3 H, float roughness)
 {
     float VDotH = max(dot(V, H), 0.0);
-    return F0 + (float3(1.0, 1.0, 1.0) - F0) * pow(1.0 - VDotH, 5.0);
+    return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - VDotH, 5.0);
 }
 
 //Cook-Torrance equation
@@ -147,7 +147,7 @@ float3 CookTorranceFunction(float roughness, float3 F0, float3 N, float3 V, floa
 {
     float alpha = roughness * roughness;
 
-    float3 numerator = NormalDistributionFunction(alpha, N, H) * GeometryShadowingFunction(alpha, N, V, L) * FresnelSchlickFunction(F0, V, H);
+    float3 numerator = NormalDistributionFunction(alpha, N, H) * GeometryShadowingFunction(alpha, N, V, L) * FresnelSchlickFunction(F0, V, H, roughness);
     float denominator = max(4.0 * max(dot(V, N), 0.0) * max(dot(L, N), 0.0), Epsilon);
 
     return numerator / denominator;
@@ -167,7 +167,7 @@ float3 CalculateDirectionalLight(Light light, float3 F0, float3 V, float3 N, flo
     float3 L = normalize(-light.Direction.xyz);
     float3 H = normalize(V + L);
 
-    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Ks = FresnelSchlickFunction(F0, V, H, roughness);
     float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
 
     float3 specularColor = CookTorranceFunction(roughness, F0, N, V, L, H);
@@ -183,7 +183,7 @@ float3 CalculatePointLight(Light light, float3 F0, float3 V, float3 N, float3 fr
     L = normalize(L);
     float3 H = normalize(V + L);
 
-    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Ks = FresnelSchlickFunction(F0, V, H, roughness);
     float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
 
     float attenuation = 1.0f / max(light.AttenuationFactors[0] + light.AttenuationFactors[1] * distance + light.AttenuationFactors[2] * distance * distance, Epsilon);
@@ -200,7 +200,7 @@ float3 CalculateSpotLight(Light light, float3 F0, float3 V, float3 N, float3 fra
     L = normalize(L);
     float3 H = normalize(V + L);
 
-    float3 Ks = FresnelSchlickFunction(F0, V, H);
+    float3 Ks = FresnelSchlickFunction(F0, V, H, roughness);
     float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
 
     // Calculate spot intensity
@@ -251,7 +251,7 @@ float4 PSMain(in PSInput input) : SV_Target
     {
         float3 irradianceColor = _IrradianceMap.Sample(_IrradianceMapSampler, N).rgb;
 
-        float3 Ks = FresnelSchlickFunction(F0, N, V);
+        float3 Ks = FresnelSchlickFunction(F0, N, V, roughness);
         float3 Kd = (float3(1.0, 1.0, 1.0) - Ks) * (1.0 - metalness);
         float3 diffuseColor = Kd * albedoColor.rgb * irradianceColor;
 
