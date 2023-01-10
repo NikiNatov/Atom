@@ -49,6 +49,7 @@ namespace Atom
 					{
 						m_CurrentDirectory /= path.filename();
 					}
+					ImGui::TextWrapped(filename.string().c_str());
 					ImGui::PopStyleColor();
 					ImGui::PopID();
 				}
@@ -68,6 +69,8 @@ namespace Atom
 							ImGui::SetDragDropPayload("DRAG_TEXTURE2D", &assetUUID, sizeof(UUID));
 							ImGui::EndDragDropSource();
 						}
+
+						ImGui::TextWrapped(filename.string().c_str());
 					}
 					else if (filename.extension() == ".atmtexcube")
 					{
@@ -80,6 +83,8 @@ namespace Atom
 							ImGui::SetDragDropPayload("DRAG_TEXTURE_CUBE", &assetUUID, sizeof(UUID));
 							ImGui::EndDragDropSource();
 						}
+
+						ImGui::TextWrapped(filename.string().c_str());
 					}
 					else if (filename.extension() == ".atmmesh")
 					{
@@ -92,6 +97,8 @@ namespace Atom
 							ImGui::SetDragDropPayload("DRAG_MESH", &assetUUID, sizeof(UUID));
 							ImGui::EndDragDropSource();
 						}
+
+						ImGui::TextWrapped(filename.string().c_str());
 					}
 					else if (filename.extension() == ".atmmat")
 					{
@@ -104,6 +111,8 @@ namespace Atom
 							ImGui::SetDragDropPayload("DRAG_MATERIAL", &assetUUID, sizeof(UUID));
 							ImGui::EndDragDropSource();
 						}
+
+						ImGui::TextWrapped(filename.string().c_str());
 					}
 					else if (filename.extension() == ".atmscene")
 					{
@@ -116,13 +125,13 @@ namespace Atom
 							ImGui::SetDragDropPayload("DRAG_SCENE", &assetUUID, sizeof(UUID));
 							ImGui::EndDragDropSource();
 						}
+
+						ImGui::TextWrapped(filename.string().c_str());
 					}
 
 					ImGui::PopStyleColor();
 					ImGui::PopID();
 				}
-
-				ImGui::TextWrapped(filename.string().c_str());
 
 				ImGui::EndGroup();
 
