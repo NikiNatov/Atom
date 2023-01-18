@@ -80,6 +80,7 @@ namespace Atom
         }
 
         CopyComponent<TransformComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<SceneHierarchyComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<CameraComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<MeshComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<SkyLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
