@@ -95,8 +95,8 @@ namespace Atom::ScriptWrappers
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         auto& tc = entity.GetComponent<Atom::TransformComponent>();
 
-        return glm::normalize(glm::angleAxis(glm::radians(tc.Rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
-            glm::angleAxis(glm::radians(tc.Rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)));
+        return glm::normalize(glm::angleAxis(tc.Rotation.y, glm::vec3(0.0f, 1.0f, 0.0f)) *
+                              glm::angleAxis(tc.Rotation.x, glm::vec3(1.0f, 0.0f, 0.0f)));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
