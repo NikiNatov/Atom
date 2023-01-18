@@ -71,6 +71,35 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 TransformComponent::GetUpVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 TransformComponent::GetRightVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(1.0f, 0.0f, 0.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 TransformComponent::GetForwardVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(0.0f, 0.0f, -1.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::quat TransformComponent::GetOrientation()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        auto& tc = entity.GetComponent<Atom::TransformComponent>();
+
+        return glm::normalize(glm::angleAxis(glm::radians(tc.Rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+            glm::angleAxis(glm::radians(tc.Rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     RigidbodyComponent::RigidbodyComponent(Entity entity)
         : Component(entity)
     {

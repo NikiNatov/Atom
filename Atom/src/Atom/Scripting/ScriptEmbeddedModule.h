@@ -412,6 +412,9 @@ namespace Atom
             .def(py::init<wrappers::Entity>())
             .def_property_readonly("entity", &wrappers::Component::GetEntity)
             .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property_readonly("up_vector", &wrappers::TransformComponent::GetUpVector)
+            .def_property_readonly("right_vector", &wrappers::TransformComponent::GetRightVector)
+            .def_property_readonly("forward_vector", &wrappers::TransformComponent::GetForwardVector)
             .def_property("translation", &wrappers::TransformComponent::GetTranslation, &wrappers::TransformComponent::SetTranslation)
             .def_property("rotation", &wrappers::TransformComponent::GetRotation, &wrappers::TransformComponent::SetRotation)
             .def_property("scale", &wrappers::TransformComponent::GetScale, &wrappers::TransformComponent::SetScale);
@@ -522,10 +525,8 @@ namespace Atom
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)
             .def_static("create_entity", &wrappers::Entity::CreateEntity)
             .def_property_readonly("id", &wrappers::Entity::GetUUID)
-            .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag)
-            .def_property("translation", &wrappers::Entity::GetTranslation, &wrappers::Entity::SetTranslation)
-            .def_property("euler_angles", &wrappers::Entity::GetRotation, &wrappers::Entity::SetRotation)
-            .def_property("scale", &wrappers::Entity::GetScale, &wrappers::Entity::SetScale);
+            .def_property_readonly("transform", &wrappers::Entity::GetComponent<wrappers::TransformComponent>)
+            .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag);
 
         // --------------------------------------------------- Renderer ------------------------------------------------------------
         py::enum_<Atom::TextureType>(m, "TextureType")

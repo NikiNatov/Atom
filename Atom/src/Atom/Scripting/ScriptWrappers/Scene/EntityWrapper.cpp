@@ -95,30 +95,6 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        glm::vec3& Entity::GetTranslation() const
-        {
-            Scene* scene = ScriptEngine::GetRunningScene();
-            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<Atom::TransformComponent>().Translation;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        glm::vec3& Entity::GetRotation() const
-        {
-            Scene* scene = ScriptEngine::GetRunningScene();
-            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<Atom::TransformComponent>().Rotation;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        glm::vec3& Entity::GetScale() const
-        {
-            Scene* scene = ScriptEngine::GetRunningScene();
-            Atom::Entity entity = scene->FindEntityByUUID(m_UUID);
-            return entity.GetComponent<Atom::TransformComponent>().Scale;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
         pybind11::object Entity::GetScriptInstance() const
         {
             Ref<ScriptInstance> instance = ScriptEngine::GetScriptInstance(UUID(m_UUID));

@@ -9,6 +9,9 @@
 #include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+
 namespace Atom
 {
     namespace ScriptWrappers
@@ -38,6 +41,11 @@ namespace Atom
             const glm::vec3& GetTranslation();
             const glm::vec3& GetRotation();
             const glm::vec3& GetScale();
+            glm::vec3 GetUpVector();
+            glm::vec3 GetRightVector();
+            glm::vec3 GetForwardVector();
+        private:
+            glm::quat GetOrientation();
         };
 
         class CameraComponent : public Component

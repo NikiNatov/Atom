@@ -23,9 +23,6 @@ namespace Atom
 
             u64 GetUUID() const;
             const String& GetTag() const;
-            glm::vec3& GetTranslation() const;
-            glm::vec3& GetRotation() const;
-            glm::vec3& GetScale() const;
             pybind11::object GetScriptInstance() const;
 
             template<typename T>
