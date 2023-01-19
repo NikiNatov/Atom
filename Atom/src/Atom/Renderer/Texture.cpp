@@ -8,9 +8,6 @@
 #include "ResourceStateTracker.h"
 #include "Renderer.h"
 
-#include "stb_image.h"
-#include <glm/glm.hpp>
-
 namespace Atom
 {
     // ------------------------------------------------------ Texture --------------------------------------------------------------
