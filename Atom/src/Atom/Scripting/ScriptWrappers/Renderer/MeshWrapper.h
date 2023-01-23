@@ -13,6 +13,7 @@ namespace Atom
         {
         public:
             Mesh();
+            Mesh(u64 assetUUID);
             Mesh(const Ref<Atom::Mesh>& mesh);
 
             void UpdateGPUData(bool makeNonReadable = false);
@@ -29,6 +30,7 @@ namespace Atom
             const Vector<Submesh>& GetSubmeshes() const;
             Material GetMaterial(u32 submeshIdx) const;
 
+            UUID GetUUID() const;
             Ref<Atom::Mesh> GetMesh() const;
 
             static Mesh Find(const std::filesystem::path& assetPath);

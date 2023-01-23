@@ -9,13 +9,17 @@
 namespace Atom
 {
     static HashMap<String, ScriptVariableType> s_ScriptVariableTypes = {
-        { "<class 'int'>",         ScriptVariableType::Int    },
-        { "<class 'float'>",       ScriptVariableType::Float  },
-        { "<class 'bool'>",        ScriptVariableType::Bool   },
-        { "<class 'Atom.Vec2'>",   ScriptVariableType::Vec2   },
-        { "<class 'Atom.Vec3'>",   ScriptVariableType::Vec3   },
-        { "<class 'Atom.Vec4'>",   ScriptVariableType::Vec4   },
-        { "<class 'Atom.Entity'>", ScriptVariableType::Entity },
+        { "<class 'int'>",              ScriptVariableType::Int         },
+        { "<class 'float'>",            ScriptVariableType::Float       },
+        { "<class 'bool'>",             ScriptVariableType::Bool        },
+        { "<class 'Atom.Vec2'>",        ScriptVariableType::Vec2        },
+        { "<class 'Atom.Vec3'>",        ScriptVariableType::Vec3        },
+        { "<class 'Atom.Vec4'>",        ScriptVariableType::Vec4        },
+        { "<class 'Atom.Entity'>",      ScriptVariableType::Entity      },
+        { "<class 'Atom.Material'>",    ScriptVariableType::Material    },
+        { "<class 'Atom.Mesh'>",        ScriptVariableType::Mesh        },
+        { "<class 'Atom.Texture2D'>",   ScriptVariableType::Texture2D   },
+        { "<class 'Atom.TextureCube'>", ScriptVariableType::TextureCube },
     };
 
     // -----------------------------------------------------ScriptEngine------------------------------------------------------------
@@ -117,13 +121,17 @@ namespace Atom
                 {
                     switch (variable.GetType())
                     {
-                        case ScriptVariableType::Int:    scriptInstance->SetMemberValue(name, variable.GetValue<s32>()); break;
-                        case ScriptVariableType::Float:  scriptInstance->SetMemberValue(name, variable.GetValue<f32>()); break;
-                        case ScriptVariableType::Bool:   scriptInstance->SetMemberValue(name, variable.GetValue<bool>()); break;
-                        case ScriptVariableType::Vec2:   scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec2>()); break;
-                        case ScriptVariableType::Vec3:   scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec3>()); break;
-                        case ScriptVariableType::Vec4:   scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec4>()); break;
-                        case ScriptVariableType::Entity: scriptInstance->SetMemberValue(name, variable.GetValue<wrappers::Entity>()); break;
+                        case ScriptVariableType::Int:         scriptInstance->SetMemberValue(name, variable.GetValue<s32>()); break;
+                        case ScriptVariableType::Float:       scriptInstance->SetMemberValue(name, variable.GetValue<f32>()); break;
+                        case ScriptVariableType::Bool:        scriptInstance->SetMemberValue(name, variable.GetValue<bool>()); break;
+                        case ScriptVariableType::Vec2:        scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec2>()); break;
+                        case ScriptVariableType::Vec3:        scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec3>()); break;
+                        case ScriptVariableType::Vec4:        scriptInstance->SetMemberValue(name, variable.GetValue<glm::vec4>()); break;
+                        case ScriptVariableType::Entity:      scriptInstance->SetMemberValue(name, ScriptWrappers::Entity(variable.GetValue<UUID>())); break;
+                        case ScriptVariableType::Material:    scriptInstance->SetMemberValue(name, ScriptWrappers::Material(variable.GetValue<UUID>())); break;
+                        case ScriptVariableType::Mesh:        scriptInstance->SetMemberValue(name, ScriptWrappers::Mesh(variable.GetValue<UUID>())); break;
+                        case ScriptVariableType::Texture2D:   scriptInstance->SetMemberValue(name, ScriptWrappers::Texture2D(variable.GetValue<UUID>())); break;
+                        case ScriptVariableType::TextureCube: scriptInstance->SetMemberValue(name, ScriptWrappers::TextureCube(variable.GetValue<UUID>())); break;
                     }
                 }
             }
@@ -354,13 +362,17 @@ namespace Atom
 
                     switch (varType)
                     {
-                        case ScriptVariableType::Int:    scriptVar.SetValue<s32>(value.cast<s32>()); break;
-                        case ScriptVariableType::Float:  scriptVar.SetValue<f32>(value.cast<f32>()); break;
-                        case ScriptVariableType::Bool:   scriptVar.SetValue<bool>(value.cast<bool>()); break;
-                        case ScriptVariableType::Vec2:   scriptVar.SetValue<glm::vec2>(value.cast<glm::vec2>()); break;
-                        case ScriptVariableType::Vec3:   scriptVar.SetValue<glm::vec3>(value.cast<glm::vec3>()); break;
-                        case ScriptVariableType::Vec4:   scriptVar.SetValue<glm::vec4>(value.cast<glm::vec4>()); break;
-                        case ScriptVariableType::Entity: scriptVar.SetValue<wrappers::Entity>(value.cast<wrappers::Entity>()); break;
+                        case ScriptVariableType::Int:         scriptVar.SetValue<s32>(value.cast<s32>()); break;
+                        case ScriptVariableType::Float:       scriptVar.SetValue<f32>(value.cast<f32>()); break;
+                        case ScriptVariableType::Bool:        scriptVar.SetValue<bool>(value.cast<bool>()); break;
+                        case ScriptVariableType::Vec2:        scriptVar.SetValue<glm::vec2>(value.cast<glm::vec2>()); break;
+                        case ScriptVariableType::Vec3:        scriptVar.SetValue<glm::vec3>(value.cast<glm::vec3>()); break;
+                        case ScriptVariableType::Vec4:        scriptVar.SetValue<glm::vec4>(value.cast<glm::vec4>()); break;
+                        case ScriptVariableType::Entity:      scriptVar.SetValue<wrappers::Entity>(value.cast<wrappers::Entity>()); break;
+                        case ScriptVariableType::Material:    scriptVar.SetValue<UUID>(value.cast<wrappers::Material>().GetUUID()); break;
+                        case ScriptVariableType::Mesh:        scriptVar.SetValue<UUID>(value.cast<wrappers::Mesh>().GetUUID()); break;
+                        case ScriptVariableType::Texture2D:   scriptVar.SetValue<UUID>(value.cast<wrappers::Texture2D>().GetUUID()); break;
+                        case ScriptVariableType::TextureCube: scriptVar.SetValue<UUID>(value.cast<wrappers::TextureCube>().GetUUID()); break;
                     }
 
                     m_MemberVariables[varName] = scriptVar;

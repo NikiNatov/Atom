@@ -3,6 +3,9 @@
 
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
 
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -621,7 +624,7 @@ namespace Atom
 								}
 								else if (varType == ScriptVariableType::Entity)
 								{
-									ScriptWrappers::Entity& data = scriptInstance->GetMemberValue<ScriptWrappers::Entity>(name);
+									ScriptWrappers::Entity data = scriptInstance->GetMemberValue<ScriptWrappers::Entity>(name);
 									String entityTag = data.IsValid() ? data.GetTag() : "";
 
 									ImGui::InputText(imguiID.c_str(), entityTag.data(), entityTag.size(), ImGuiInputTextFlags_ReadOnly);
@@ -632,6 +635,74 @@ namespace Atom
 										{
 											Entity srcEntity = *(Entity*)payload->Data;
 											scriptInstance->SetMemberValue(name, ScriptWrappers::Entity(srcEntity.GetUUID()));
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Material)
+								{
+									ScriptWrappers::Material data = scriptInstance->GetMemberValue<ScriptWrappers::Material>(name);
+									Ref<Material> material = data.GetMaterial();
+
+									ImGui::InputText(imguiID.c_str(), material ? (char*)material->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MATERIAL"))
+										{
+											scriptInstance->SetMemberValue(name, ScriptWrappers::Material(*(UUID*)payload->Data));
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Mesh)
+								{
+									ScriptWrappers::Mesh data = scriptInstance->GetMemberValue<ScriptWrappers::Mesh>(name);
+									Ref<Mesh> mesh = data.GetMesh();
+
+									ImGui::InputText(imguiID.c_str(), mesh ? (char*)mesh->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MESH"))
+										{
+											scriptInstance->SetMemberValue(name, ScriptWrappers::Mesh(*(UUID*)payload->Data));
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Texture2D)
+								{
+									ScriptWrappers::Texture2D data = scriptInstance->GetMemberValue<ScriptWrappers::Texture2D>(name);
+									Ref<Texture2D> texture = data.GetTexture();
+
+									ImGui::InputText(imguiID.c_str(), texture ? (char*)texture->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE2D"))
+										{
+											scriptInstance->SetMemberValue(name, ScriptWrappers::Texture2D(*(UUID*)payload->Data));
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::TextureCube)
+								{
+									ScriptWrappers::TextureCube data = scriptInstance->GetMemberValue<ScriptWrappers::TextureCube>(name);
+									Ref<TextureCube> texture = data.GetTexture();
+
+									ImGui::InputText(imguiID.c_str(), texture ? (char*)texture->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE_CUBE"))
+										{
+											scriptInstance->SetMemberValue(name, ScriptWrappers::TextureCube(*(UUID*)payload->Data));
 										}
 
 										ImGui::EndDragDropTarget();
@@ -722,7 +793,7 @@ namespace Atom
 									// We don't have a running scene set in the ScriptEngine at the moment so we can't use the ScriptWrappers::Entity directly to get the entity name
 									// so we would have to get the active scene from the SceneHierarchyPanel
 									Ref<Scene> activeScene = EditorLayer::Get().GetSceneHierarchyPanel().GetScene();
-									Entity entity = activeScene->FindEntityByUUID(var.GetValue<ScriptWrappers::Entity>().GetUUID());
+									Entity entity = activeScene->FindEntityByUUID(var.GetValue<UUID>());
 									String entityTag = entity ? entity.GetTag() : "";
 
 									ImGui::InputText(imguiID.c_str(), entityTag.data(), entityTag.size(), ImGuiInputTextFlags_ReadOnly);
@@ -732,7 +803,71 @@ namespace Atom
 										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SRC_ENTITY"))
 										{
 											Entity srcEntity = *(Entity*)payload->Data;
-											var.SetValue(ScriptWrappers::Entity(srcEntity.GetUUID()));
+											var.SetValue(srcEntity.GetUUID());
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Material)
+								{
+									const AssetMetaData* metaData = AssetManager::GetAssetMetaData(var.GetValue<UUID>());
+
+									ImGui::InputText(imguiID.c_str(), metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MATERIAL"))
+										{
+											var.SetValue(*(UUID*)payload->Data);
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Mesh)
+								{
+									const AssetMetaData* metaData = AssetManager::GetAssetMetaData(var.GetValue<UUID>());
+
+									ImGui::InputText(imguiID.c_str(), metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MESH"))
+										{
+											var.SetValue(*(UUID*)payload->Data);
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::Texture2D)
+								{
+									const AssetMetaData* metaData = AssetManager::GetAssetMetaData(var.GetValue<UUID>());
+
+									ImGui::InputText(imguiID.c_str(), metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE2D"))
+										{
+											var.SetValue(*(UUID*)payload->Data);
+										}
+
+										ImGui::EndDragDropTarget();
+									}
+								}
+								else if (varType == ScriptVariableType::TextureCube)
+								{
+									const AssetMetaData* metaData = AssetManager::GetAssetMetaData(var.GetValue<UUID>());
+
+									ImGui::InputText(imguiID.c_str(), metaData ? (char*)metaData->AssetFilepath.stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+									if (ImGui::BeginDragDropTarget())
+									{
+										if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE_CUBE"))
+										{
+											var.SetValue(*(UUID*)payload->Data);
 										}
 
 										ImGui::EndDragDropTarget();

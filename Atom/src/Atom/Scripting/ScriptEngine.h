@@ -17,7 +17,11 @@ namespace Atom
         Float,
         Bool,
         Vec2, Vec3, Vec4,
-        Entity
+        Entity,
+        Material,
+        Mesh,
+        Texture2D,
+        TextureCube
     };
 
     struct ScriptVariable

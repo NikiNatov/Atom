@@ -560,6 +560,7 @@ namespace Atom
 
         py::class_<wrappers::Texture2D>(m, "Texture2D")
             .def(py::init<u32, u32, Atom::TextureFormat, s32>())
+            .def(py::init<u64>())
             .def("update_gpu_data", &wrappers::Texture2D::UpdateGPUData)
             .def("set_pixels", &wrappers::Texture2D::SetPixels)
             .def("get_pixels", &wrappers::Texture2D::GetPixels)
@@ -568,6 +569,7 @@ namespace Atom
 
         py::class_<wrappers::TextureCube>(m, "TextureCube")
             .def(py::init<u32, Atom::TextureFormat, s32>())
+            .def(py::init<u64>())
             .def("update_gpu_data", &wrappers::TextureCube::UpdateGPUData)
             .def("set_pixels", &wrappers::TextureCube::SetPixels)
             .def("get_pixels", &wrappers::TextureCube::GetPixels)
@@ -582,6 +584,7 @@ namespace Atom
 
         py::class_<wrappers::Material>(m, "Material")
             .def(py::init<>())
+            .def(py::init<u64>())
             .def("set_int", &wrappers::Material::SetInt)
             .def("set_float", &wrappers::Material::SetFloat)
             .def("set_vec2", &wrappers::Material::SetVec2)
@@ -625,6 +628,7 @@ namespace Atom
 
         py::class_<wrappers::Mesh>(m, "Mesh")
             .def(py::init<>())
+            .def(py::init<u64>())
             .def("update_gpu_data", &wrappers::Mesh::UpdateGPUData)
             .def("set_material", &wrappers::Mesh::SetMaterial)
             .def("get_material", &wrappers::Mesh::GetMaterial)

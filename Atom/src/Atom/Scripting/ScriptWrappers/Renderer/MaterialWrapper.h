@@ -13,6 +13,7 @@ namespace Atom
         {
         public:
             Material();
+            Material(u64 assetUUID);
             Material(const Ref<Atom::Material>& material);
 
             void SetInt(const String& uniformName, s32 value);
@@ -39,6 +40,7 @@ namespace Atom
             bool HasTextureCube(const String& uniformName) const;
             bool HasFlag(MaterialFlags flag) const;
             
+            UUID GetUUID() const;
             Ref<Atom::Material> GetMaterial() const;
 
             static Material Find(const std::filesystem::path& assetPath);

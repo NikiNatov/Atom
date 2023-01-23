@@ -136,6 +136,14 @@ namespace Atom
             : Texture(TextureType::Texture2D, width, height, format, mipLevels)
         {
         }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        Texture2D::Texture2D(u64 assetUUID)
+            : Texture(nullptr)
+        {
+            if(assetUUID != 0)
+                m_Texture = AssetManager::GetAsset<Atom::Texture2D>(assetUUID, true);
+        }
         
         // -----------------------------------------------------------------------------------------------------------------------------
         Texture2D::Texture2D(const Ref<Atom::Texture2D>& texture)
@@ -184,6 +192,12 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
+        UUID Texture2D::GetUUID() const
+        {
+            return m_Texture ? GetTexture()->GetUUID() : 0;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
         Ref<Atom::Texture2D> Texture2D::GetTexture() const
         {
             return std::dynamic_pointer_cast<Atom::Texture2D>(m_Texture);
@@ -205,6 +219,14 @@ namespace Atom
         TextureCube::TextureCube(u32 size, TextureFormat format, s32 mipLevels)
             : Texture(TextureType::TextureCube, size, size, format, mipLevels)
         {
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        TextureCube::TextureCube(u64 assetUUID)
+            : Texture(nullptr)
+        {
+            if (assetUUID != 0)
+                m_Texture = AssetManager::GetAsset<Atom::TextureCube>(assetUUID, true);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -251,6 +273,12 @@ namespace Atom
             }
 
             return {};
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        UUID TextureCube::GetUUID() const
+        {
+            return m_Texture ? GetTexture()->GetUUID() : 0;
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------

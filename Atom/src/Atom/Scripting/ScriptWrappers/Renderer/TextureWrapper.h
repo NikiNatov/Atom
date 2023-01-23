@@ -21,7 +21,7 @@ namespace Atom
             u32 GetMipLevels() const;
             TextureFilter GetFilter() const;
             TextureWrap GetWrap() const;
-
+            
         protected:
             Texture(TextureType type, u32 width, u32 height, TextureFormat format, s32 mipLevels = -1);
             Texture(const Ref<Atom::Texture>& texture);
@@ -33,6 +33,7 @@ namespace Atom
         {
         public:
             Texture2D(u32 width, u32 height, TextureFormat format, s32 mipLevels = -1);
+            Texture2D(u64 assetUUID);
             Texture2D(const Ref<Atom::Texture2D>& texture);
 
             void UpdateGPUData(bool makeNonReadable = false);
@@ -41,6 +42,7 @@ namespace Atom
             void SetPixels(const Vector<byte>& pixels, u32 mipLevel = 0);
             const Vector<byte>& GetPixels(u32 mipLevel = 0);
 
+            UUID GetUUID() const;
             Ref<Atom::Texture2D> GetTexture() const;
 
             static Texture2D Find(const std::filesystem::path& assetPath);
@@ -50,6 +52,7 @@ namespace Atom
         {
         public:
             TextureCube(u32 size, TextureFormat format, s32 mipLevels = -1);
+            TextureCube(u64 assetUUID);
             TextureCube(const Ref<Atom::TextureCube>& texture);
 
             void UpdateGPUData(bool makeNonReadable = false);
@@ -58,6 +61,7 @@ namespace Atom
             void SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel = 0);
             const Vector<byte>& GetPixels(u32 cubeFace, u32 mipLevel = 0);
 
+            UUID GetUUID() const;
             Ref<Atom::TextureCube> GetTexture() const;
 
             static TextureCube Find(const std::filesystem::path& assetPath);

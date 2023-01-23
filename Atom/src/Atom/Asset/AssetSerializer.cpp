@@ -472,6 +472,10 @@ namespace Atom
                                 break;
                             }
                             case ScriptVariableType::Entity:
+                            case ScriptVariableType::Material:
+                            case ScriptVariableType::Mesh:
+                            case ScriptVariableType::Texture2D:
+                            case ScriptVariableType::TextureCube:
                             {
                                 UUID value = variable.GetValue<UUID>();
                                 ofs.write((char*)&value, sizeof(UUID));
@@ -913,6 +917,10 @@ namespace Atom
                                 break;
                             }
                             case ScriptVariableType::Entity:
+                            case ScriptVariableType::Material:
+                            case ScriptVariableType::Mesh:
+                            case ScriptVariableType::Texture2D:
+                            case ScriptVariableType::TextureCube:
                             {
                                 UUID value;
                                 ifs.read((char*)&value, sizeof(UUID));
