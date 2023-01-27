@@ -9,9 +9,22 @@
 
 namespace Atom
 {
+    struct CommandLineArgs
+    {
+        s32 Count = 0;
+        char** Args = nullptr;
+
+        const char* operator[](u32 index) const
+        {
+            ATOM_ENGINE_ASSERT(index < Count);
+            return Args[index];
+        }
+    };
+
     struct ApplicationSpecification
     {
         String              Name = "Atom Application";
+        CommandLineArgs     CommandLineArgs;
         u32                 WindowWidth = 1280;
         u32                 WindowHeight = 720;
         bool                VSync = true;
@@ -58,6 +71,6 @@ namespace Atom
         static Application*      ms_Application;
     };
 
-    Application* CreateApplication();
+    Application* CreateApplication(const CommandLineArgs& args);
 }
 

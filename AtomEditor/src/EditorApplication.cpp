@@ -4,30 +4,34 @@
 #include "Panels/ConsolePanel.h"
 #include "EditorLayer.h"
 
-class EditorApplication : public Atom::Application
+namespace Atom
 {
-public:
-    EditorApplication(const Atom::ApplicationSpecification& spec)
-        : Application(spec)
+    class EditorApplication : public Application
     {
-        PushLayer(new Atom::EditorLayer());
-    }
+    public:
+        EditorApplication(const ApplicationSpecification& spec)
+            : Application(spec)
+        {
+            PushLayer(new EditorLayer());
+        }
 
-    ~EditorApplication()
-    {
-    }
+        ~EditorApplication()
+        {
+        }
 
-};
-
-Atom::Application* Atom::CreateApplication()
-{
-    Atom::ApplicationSpecification spec;
-    spec.Name = "Atom Editor";
-    spec.VSync = false;
-    spec.AppLoggerSinks = {
-        { std::make_shared<spdlog::sinks::stdout_color_sink_mt>(), "%^[%T] %n: %v%$" },
-        { std::make_shared<ConsoleSink>(), "%^[%T] [%l]: %v%$" }
     };
 
-    return new EditorApplication(spec);
+    Application* CreateApplication(const CommandLineArgs& args)
+    {
+        ApplicationSpecification spec;
+        spec.Name = "Atom Editor";
+        spec.CommandLineArgs = args;
+        spec.VSync = false;
+        spec.AppLoggerSinks = {
+            { std::make_shared<spdlog::sinks::stdout_color_sink_mt>(), "%^[%T] %n: %v%$" },
+            { std::make_shared<ConsoleSink>(), "%^[%T] [%l]: %v%$" }
+        };
+
+        return new EditorApplication(spec);
+    }
 }

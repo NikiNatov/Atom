@@ -3,23 +3,28 @@
 #include <Atom/Core/EntryPoint.h>
 #include "RuntimeLayer.h"
 
-class RuntimeApplication : public Atom::Application
+namespace Atom
 {
-public:
-    RuntimeApplication(const Atom::ApplicationSpecification& spec)
-        : Application(spec)
+    class RuntimeApplication : public Application
     {
-        PushLayer(new Atom::RuntimeLayer());
-    }
+    public:
+        RuntimeApplication(const ApplicationSpecification& spec)
+            : Application(spec)
+        {
+            PushLayer(new RuntimeLayer());
+        }
 
-    ~RuntimeApplication()
+        ~RuntimeApplication()
+        {
+        }
+
+    };
+
+    Application* CreateApplication(const CommandLineArgs& args)
     {
+        ApplicationSpecification spec;
+        spec.Name = "Atom Runtime";
+        spec.CommandLineArgs = args;
+        return new RuntimeApplication(spec);
     }
-
-};
-
-Atom::Application* Atom::CreateApplication()
-{
-    Atom::ApplicationSpecification spec;
-    return new RuntimeApplication(spec);
 }
