@@ -33,6 +33,7 @@ namespace Atom
 
             py::initialize_interpreter(true, 0, nullptr, false);
             py::module::import("sys").attr("path").attr("append")(ms_AppScriptsDirectory.c_str());
+            py::module::import("multiprocessing").attr("set_executable")(py::module::import("os").attr("path").attr("join")(py::module::import("sys").attr("exec_prefix"), "pythonw.exe"));
 
             LoadScriptModules();
             LoadScriptClasses();
