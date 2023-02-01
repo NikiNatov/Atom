@@ -250,24 +250,23 @@ namespace Atom
             return 0;
         }
 
-        Vector<Vertex> vertices;
-        vertices.reserve(5000);
-
-        Vector<u32> indices;
-        indices.reserve(10000);
-
-        Vector<Submesh> submeshes;
-        submeshes.reserve(scene->mNumMeshes);
-
-        Ref<MaterialTable> materialTable = CreateRef<MaterialTable>();
+        MeshDescription meshDesc;
+        meshDesc.Positions.reserve(5000);
+        meshDesc.UVs.reserve(5000);
+        meshDesc.Normals.reserve(5000);
+        meshDesc.Tangents.reserve(5000);
+        meshDesc.Bitangents.reserve(5000);
+        meshDesc.Indices.reserve(10000);
+        meshDesc.Submeshes.reserve(scene->mNumMeshes);
+        meshDesc.MaterialTable = CreateRef<MaterialTable>();
 
         // Parse all submeshes
         for (u32 submeshIdx = 0; submeshIdx < scene->mNumMeshes; submeshIdx++)
         {
             aiMesh* submesh = scene->mMeshes[submeshIdx];
 
-            u32 startVertex = vertices.size();
-            u32 startIndex = indices.size();
+            u32 startVertex = meshDesc.Positions.size();
+            u32 startIndex = meshDesc.Indices.size();
 
             // Construct all vertices
             u32 vertexCount = 0;
@@ -279,14 +278,11 @@ namespace Atom
                 const aiVector3D& tangent = submesh->mTangents[vertexIdx];
                 const aiVector3D& bitangent = submesh->mBitangents[vertexIdx];
 
-                Vertex vertex;
-                vertex.Position = { position.x, position.y, position.z };
-                vertex.TexCoord = { texCoord.x, texCoord.y };
-                vertex.Normal = { normal.x, normal.y, normal.z };
-                vertex.Tangent = { tangent.x, tangent.y, tangent.z };
-                vertex.Bitangent = { bitangent.x, bitangent.y, bitangent.z };
-
-                vertices.push_back(vertex);
+                meshDesc.Positions.emplace_back(position.x, position.y, position.z);
+                meshDesc.UVs.emplace_back(texCoord.x, texCoord.y);
+                meshDesc.Normals.emplace_back(normal.x, normal.y, normal.z);
+                meshDesc.Tangents.emplace_back(tangent.x, tangent.y, tangent.z);
+                meshDesc.Bitangents.emplace_back(bitangent.x, bitangent.y, bitangent.z);
                 vertexCount++;
             }
 
@@ -297,13 +293,13 @@ namespace Atom
                 const aiFace& face = submesh->mFaces[faceIdx];
                 for (u32 i = 0; i < face.mNumIndices; i++)
                 {
-                    indices.push_back(face.mIndices[i]);
+                    meshDesc.Indices.push_back(face.mIndices[i]);
                     indexCount++;
                 }
             }
 
             // Create submesh
-            Submesh& sm = submeshes.emplace_back();
+            Submesh& sm = meshDesc.Submeshes.emplace_back();
             sm.StartVertex = startVertex;
             sm.VertexCount = vertexCount;
             sm.StartIndex = startIndex;
@@ -406,11 +402,11 @@ namespace Atom
                 continue;
             }
 
-            materialTable->SetMaterial(materialIdx, materialAsset);
+            meshDesc.MaterialTable->SetMaterial(materialIdx, materialAsset);
         }
 
         // We have to make the mesh readable so that the data is available on the CPU during serialization
-        Ref<Mesh> asset = CreateRef<Mesh>(vertices, indices, submeshes, materialTable, true);
+        Ref<Mesh> asset = CreateRef<Mesh>(meshDesc, true);
         asset->m_MetaData.SourceFilepath = sourcePath;
         asset->m_IsReadable = importSettings.IsReadable;
 

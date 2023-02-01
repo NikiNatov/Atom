@@ -246,9 +246,13 @@ namespace Atom
             SerializeMetaData(ofs, asset->m_MetaData);
         }
 
-        u32 vertexCount = asset->m_Vertices.size();
+        u32 vertexCount = asset->m_Positions.size();
         ofs.write((char*)&vertexCount, sizeof(u32));
-        ofs.write((char*)asset->m_Vertices.data(), sizeof(Vertex) * vertexCount);
+        ofs.write((char*)asset->m_Positions.data(), sizeof(glm::vec3) * vertexCount);
+        ofs.write((char*)asset->m_UVs.data(), sizeof(glm::vec2) * vertexCount);
+        ofs.write((char*)asset->m_Normals.data(), sizeof(glm::vec3) * vertexCount);
+        ofs.write((char*)asset->m_Tangents.data(), sizeof(glm::vec3) * vertexCount);
+        ofs.write((char*)asset->m_Bitangents.data(), sizeof(glm::vec3) * vertexCount);
 
         u32 indexCount = asset->m_Indices.size();
         ofs.write((char*)&indexCount, sizeof(u32));
@@ -672,35 +676,49 @@ namespace Atom
         u32 vertexCount;
         ifs.read((char*)&vertexCount, sizeof(u32));
 
-        Vector<Vertex> vertices(vertexCount);
-        ifs.read((char*)vertices.data(), sizeof(Vertex) * vertexCount);
+        MeshDescription meshDesc;
+
+        meshDesc.Positions.resize(vertexCount);
+        ifs.read((char*)meshDesc.Positions.data(), sizeof(glm::vec3) * vertexCount);
+
+        meshDesc.UVs.resize(vertexCount);
+        ifs.read((char*)meshDesc.UVs.data(), sizeof(glm::vec2) * vertexCount);
+
+        meshDesc.Normals.resize(vertexCount);
+        ifs.read((char*)meshDesc.Normals.data(), sizeof(glm::vec3) * vertexCount);
+
+        meshDesc.Tangents.resize(vertexCount);
+        ifs.read((char*)meshDesc.Tangents.data(), sizeof(glm::vec3) * vertexCount);
+
+        meshDesc.Bitangents.resize(vertexCount);
+        ifs.read((char*)meshDesc.Bitangents.data(), sizeof(glm::vec3) * vertexCount);
 
         u32 indexCount;
         ifs.read((char*)&indexCount, sizeof(u32));
 
-        Vector<u32> indices(indexCount);
-        ifs.read((char*)indices.data(), sizeof(u32) * indexCount);
+        meshDesc.Indices.resize(indexCount);
+        ifs.read((char*)meshDesc.Indices.data(), sizeof(u32) * indexCount);
 
         u32 submeshCount;
         ifs.read((char*)&submeshCount, sizeof(u32));
 
-        Vector<Submesh> submeshes(submeshCount);
-        ifs.read((char*)submeshes.data(), sizeof(Submesh) * submeshCount);
+        meshDesc.Submeshes.resize(submeshCount);
+        ifs.read((char*)meshDesc.Submeshes.data(), sizeof(Submesh) * submeshCount);
 
         bool isReadable;
         ifs.read((char*)&isReadable, sizeof(bool));
 
-        Ref<MaterialTable> materialTable = CreateRef<MaterialTable>();
+        meshDesc.MaterialTable = CreateRef<MaterialTable>();
 
         for (u32 submeshIdx = 0; submeshIdx < submeshCount; submeshIdx++)
         {
             UUID materialUUID;
             ifs.read((char*)&materialUUID, sizeof(u64));
 
-            materialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<Material>(materialUUID, true));
+            meshDesc.MaterialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<Material>(materialUUID, true));
         }
 
-        Ref<Mesh> asset = CreateRef<Mesh>(vertices, indices, submeshes, materialTable, isReadable);
+        Ref<Mesh> asset = CreateRef<Mesh>(meshDesc, isReadable);
         asset->m_MetaData = metaData;
 
         return asset;

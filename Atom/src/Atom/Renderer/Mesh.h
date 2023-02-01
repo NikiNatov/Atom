@@ -29,13 +29,25 @@ namespace Atom
         u32 MaterialIndex;
     };
 
+    struct MeshDescription
+    {
+        Vector<glm::vec3>  Positions;
+        Vector<glm::vec2>  UVs;
+        Vector<glm::vec3>  Normals;
+        Vector<glm::vec3>  Tangents;
+        Vector<glm::vec3>  Bitangents;
+        Vector<u32>        Indices;
+        Vector<Submesh>    Submeshes;
+        Ref<MaterialTable> MaterialTable;
+    };
+
     class Mesh : public Asset
     {
         friend class AssetSerializer;
         friend class ContentTools;
     public:
         Mesh();
-        Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const Ref<MaterialTable>& materialTable, bool isReadable);
+        Mesh(const MeshDescription& desc, bool isReadable);
 
         Mesh(const Mesh& rhs) = delete;
         Mesh& operator=(const Mesh& rhs) = delete;
@@ -45,13 +57,21 @@ namespace Atom
 
         void UpdateGPUData(bool makeNonReadable = false);
 
-        inline void SetVertices(const Vector<Vertex>& vertices) { m_Vertices = vertices; }
+        inline void SetPositions(const Vector<glm::vec3>& positions) { m_Positions = positions; }
+        inline void SetUVs(const Vector<glm::vec2>& uvs) { m_UVs = uvs; }
+        inline void SetNormals(const Vector<glm::vec3>& normals) { m_Normals = normals; }
+        inline void SetTangents(const Vector<glm::vec3>& tangents) { m_Tangents = tangents; }
+        inline void SetBitangents(const Vector<glm::vec3>& bitangents) { m_Bitangents = bitangents; }
         inline void SetIndices(const Vector<u32>& indices) { m_Indices = indices; }
         inline void SetSubmeshes(const Vector<Submesh>& submeshes) { m_Submeshes = submeshes; }
         inline void SetMaterial(u32 submeshIdx, Ref<Material> material) { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); m_MaterialTable->SetMaterial(submeshIdx, material); }
         inline void SetMaterialTable(const Ref<MaterialTable>& materialTable) { m_MaterialTable = materialTable; }
 
-        inline const Vector<Vertex>& GetVertices() const { return m_Vertices; }
+        inline const Vector<glm::vec3>& GetPositions() const { return m_Positions; }
+        inline const Vector<glm::vec2>& GetUVs() const { return m_UVs; }
+        inline const Vector<glm::vec3>& GetNormals() const { return m_Normals; }
+        inline const Vector<glm::vec3>& GetTangents() const { return m_Tangents; }
+        inline const Vector<glm::vec3>& GetBitangents() const { return m_Bitangents; }
         inline const Vector<u32>& GetIndices() const { return m_Indices; }
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
         inline const Ref<Material> GetMaterial(u32 submeshIdx) const { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); return m_MaterialTable->GetMaterial(submeshIdx); }
@@ -61,7 +81,11 @@ namespace Atom
         inline Ref<VertexBuffer> GetVertexBuffer() const { return m_VertexBuffer; }
         inline Ref<IndexBuffer> GetIndexBuffer() const { return m_IndexBuffer; }
     private:
-        Vector<Vertex>     m_Vertices;
+        Vector<glm::vec3>  m_Positions;
+        Vector<glm::vec2>  m_UVs;
+        Vector<glm::vec3>  m_Normals;
+        Vector<glm::vec3>  m_Tangents;
+        Vector<glm::vec3>  m_Bitangents;
         Vector<u32>        m_Indices;
         Vector<Submesh>    m_Submeshes;
         Ref<MaterialTable> m_MaterialTable;

@@ -5,6 +5,8 @@
 
 #include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
 
+#include <pybind11/pybind11.h>
+
 namespace Atom
 {
     namespace ScriptWrappers
@@ -18,16 +20,24 @@ namespace Atom
 
             void UpdateGPUData(bool makeNonReadable = false);
 
-            void SetVertices(const Vector<Vertex>& vertices);
-            void SetIndices(const Vector<u32>& indices);
-            void SetSubmeshes(const Vector<Submesh>& submeshes);
+            void SetPositions(const pybind11::list& positions);
+            void SetUVs(const pybind11::list& uvs);
+            void SetNormals(const pybind11::list& normals);
+            void SetTangents(const pybind11::list& tangents);
+            void SetBitangents(const pybind11::list& bitangents);
+            void SetIndices(const pybind11::list& indices);
+            void SetSubmeshes(const pybind11::list& submeshes);
             void SetMaterial(u32 submeshIdx, Material material);
 
             bool IsReadable() const;
             bool IsEmpty() const;
-            const Vector<Vertex>& GetVertices() const;
-            const Vector<u32>& GetIndices() const;
-            const Vector<Submesh>& GetSubmeshes() const;
+            const pybind11::list& GetPositions() const;
+            const pybind11::list& GetUVs() const;
+            const pybind11::list& GetNormals() const;
+            const pybind11::list& GetTangents() const;
+            const pybind11::list& GetBitangents() const;
+            const pybind11::list& GetIndices() const;
+            const pybind11::list& GetSubmeshes() const;
             Material GetMaterial(u32 submeshIdx) const;
 
             UUID GetUUID() const;

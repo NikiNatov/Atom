@@ -38,29 +38,126 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void Mesh::SetVertices(const Vector<Vertex>& vertices)
+        void Mesh::SetPositions(const pybind11::list& positions)
         {
             if (m_Mesh)
             {
-                m_Mesh->SetVertices(vertices);
+                Vector<glm::vec3> vec;
+                vec.reserve(positions.size());
+
+                for (auto& elm : positions)
+                {
+                    auto tuple = elm.cast<pybind11::tuple>();
+                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                }
+
+                m_Mesh->SetPositions(vec);
             }
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void Mesh::SetIndices(const Vector<u32>& indices)
+        void Mesh::SetUVs(const pybind11::list& uvs)
         {
             if (m_Mesh)
             {
-                m_Mesh->SetIndices(indices);
+                Vector<glm::vec2> vec;
+                vec.reserve(uvs.size());
+
+                for (auto& elm : uvs)
+                {
+                    auto tuple = elm.cast<pybind11::tuple>();
+                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>());
+                }
+
+                m_Mesh->SetUVs(vec);
             }
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void Mesh::SetSubmeshes(const Vector<Submesh>& submeshes)
+        void Mesh::SetNormals(const pybind11::list& normals)
         {
             if (m_Mesh)
             {
-                m_Mesh->SetSubmeshes(submeshes);
+                Vector<glm::vec3> vec;
+                vec.reserve(normals.size());
+
+                for (auto& elm : normals)
+                {
+                    auto tuple = elm.cast<pybind11::tuple>();
+                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                }
+
+                m_Mesh->SetNormals(vec);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Mesh::SetTangents(const pybind11::list& tangents)
+        {
+            if (m_Mesh)
+            {
+                Vector<glm::vec3> vec;
+                vec.reserve(tangents.size());
+
+                for (auto& elm : tangents)
+                {
+                    auto tuple = elm.cast<pybind11::tuple>();
+                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                }
+
+                m_Mesh->SetTangents(vec);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Mesh::SetBitangents(const pybind11::list& bitangents)
+        {
+            if (m_Mesh)
+            {
+                Vector<glm::vec3> vec;
+                vec.reserve(bitangents.size());
+
+                for (auto& elm : bitangents)
+                {
+                    auto tuple = elm.cast<pybind11::tuple>();
+                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                }
+
+                m_Mesh->SetBitangents(vec);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Mesh::SetIndices(const pybind11::list& indices)
+        {
+            if (m_Mesh)
+            {
+                Vector<u32> vec;
+                vec.reserve(indices.size());
+
+                for (auto& elm : indices)
+                {
+                    vec.emplace_back(elm.cast<u32>());
+                }
+
+                m_Mesh->SetIndices(vec);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Mesh::SetSubmeshes(const pybind11::list& submeshes)
+        {
+            if (m_Mesh)
+            {
+                Vector<Atom::Submesh> vec;
+                vec.reserve(submeshes.size());
+
+                for (auto& elm : submeshes)
+                {
+                    vec.emplace_back(elm.cast<Atom::Submesh>());
+                }
+
+                m_Mesh->SetSubmeshes(vec);
             }
         }
 
@@ -103,36 +200,80 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        const Vector<Vertex>& Mesh::GetVertices() const
+        const pybind11::list& Mesh::GetPositions() const
         {
             if (m_Mesh)
             {
-                return m_Mesh->GetVertices();
+                return pybind11::cast(m_Mesh->GetPositions());
             }
 
-            return {};
+            return pybind11::none();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        const Vector<u32>& Mesh::GetIndices() const
+        const pybind11::list& Mesh::GetUVs() const
         {
             if (m_Mesh)
             {
-                return m_Mesh->GetIndices();
+                return pybind11::cast(m_Mesh->GetUVs());
             }
 
-            return {};
+            return pybind11::none();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        const Vector<Submesh>& Mesh::GetSubmeshes() const
+        const pybind11::list& Mesh::GetNormals() const
         {
             if (m_Mesh)
             {
-                return m_Mesh->GetSubmeshes();
+                return pybind11::cast(m_Mesh->GetNormals());
             }
 
-            return {};
+            return pybind11::none();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        const pybind11::list& Mesh::GetTangents() const
+        {
+            if (m_Mesh)
+            {
+                return pybind11::cast(m_Mesh->GetTangents());
+            }
+
+            return pybind11::none();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        const pybind11::list& Mesh::GetBitangents() const
+        {
+            if (m_Mesh)
+            {
+                return pybind11::cast(m_Mesh->GetBitangents());
+            }
+
+            return pybind11::none();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        const pybind11::list& Mesh::GetIndices() const
+        {
+            if (m_Mesh)
+            {
+                return pybind11::cast(m_Mesh->GetIndices());
+            }
+
+            return pybind11::none();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        const pybind11::list& Mesh::GetSubmeshes() const
+        {
+            if (m_Mesh)
+            {
+                return pybind11::cast(m_Mesh->GetSubmeshes());
+            }
+
+            return pybind11::none();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------

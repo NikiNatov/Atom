@@ -27,9 +27,23 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Mesh::Mesh(const Vector<Vertex>& vertices, const Vector<u32>& indices, const Vector<Submesh>& submeshes, const Ref<MaterialTable>& materialTable, bool isReadable)
-        : Asset(AssetType::Mesh), m_Submeshes(submeshes), m_MaterialTable(materialTable), m_IsReadable(isReadable)
+    Mesh::Mesh(const MeshDescription& desc, bool isReadable)
+        : Asset(AssetType::Mesh), m_Submeshes(desc.Submeshes), m_MaterialTable(desc.MaterialTable), m_IsReadable(isReadable)
     {
+        Vector<Vertex> vertices;
+        vertices.reserve(desc.Positions.size());
+
+        for (u32 i = 0; i < desc.Positions.size(); i++)
+        {
+            Vertex v;
+            v.Position = desc.Positions[i];
+            v.TexCoord = desc.UVs[i];
+            v.Normal = desc.Normals[i];
+            v.Tangent = desc.Tangents[i];
+            v.Bitangent = desc.Bitangents[i];
+            vertices.push_back(std::move(v));
+        }
+
         if (!vertices.empty())
         {
             BufferDescription vbDesc;
@@ -41,28 +55,33 @@ namespace Atom
             Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
         }
 
-        if (!indices.empty())
+        if (!desc.Indices.empty())
         {
             BufferDescription ibDesc;
-            ibDesc.ElementCount = indices.size();
+            ibDesc.ElementCount = desc.Indices.size();
             ibDesc.ElementSize = sizeof(u32);
             ibDesc.IsDynamic = false;
 
             m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
-            Renderer::UploadBufferData(indices.data(), m_IndexBuffer.get());
+            Renderer::UploadBufferData(desc.Indices.data(), m_IndexBuffer.get());
         }
 
         if (m_IsReadable)
         {
-            m_Vertices = vertices;
-            m_Indices = indices;
+            m_Positions = desc.Positions;
+            m_UVs = desc.UVs;
+            m_Normals = desc.Normals;
+            m_Tangents = desc.Tangents;
+            m_Bitangents = desc.Bitangents;
+            m_Indices = desc.Indices;
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Mesh::Mesh(Mesh&& rhs) noexcept
         : Asset(AssetType::Mesh), 
-        m_Vertices(std::move(rhs.m_Vertices)), m_Indices(std::move(rhs.m_Indices)), 
+        m_Positions(std::move(rhs.m_Positions)), m_UVs(std::move(rhs.m_UVs)), m_Normals(std::move(rhs.m_Normals)), m_Tangents(std::move(rhs.m_Tangents)), m_Bitangents(std::move(rhs.m_Bitangents)),
+        m_Indices(std::move(rhs.m_Indices)),
         m_Submeshes(std::move(rhs.m_Submeshes)), m_MaterialTable(std::move(rhs.m_MaterialTable)),
         m_VertexBuffer(std::move(rhs.m_VertexBuffer)), m_IndexBuffer(std::move(rhs.m_IndexBuffer)), m_IsReadable(rhs.m_IsReadable)
     {
@@ -73,7 +92,11 @@ namespace Atom
     {
         if (this != &rhs)
         {
-            m_Vertices = std::move(rhs.m_Vertices);
+            m_Positions = std::move(rhs.m_Positions);
+            m_UVs = std::move(rhs.m_UVs);
+            m_Normals = std::move(rhs.m_Normals);
+            m_Tangents = std::move(rhs.m_Tangents);
+            m_Bitangents = std::move(rhs.m_Bitangents);
             m_Indices = std::move(rhs.m_Indices);
             m_Submeshes = std::move(rhs.m_Submeshes);
             m_MaterialTable = std::move(rhs.m_MaterialTable);
@@ -92,12 +115,26 @@ namespace Atom
         {
             m_IsReadable = !makeNonReadable;
 
-            if (!m_VertexBuffer || m_VertexBuffer->GetElementCount() != m_Vertices.size())
+            Vector<Vertex> vertices;
+            vertices.reserve(m_Positions.size());
+
+            for (u32 i = 0; i < m_Positions.size(); i++)
             {
-                if (m_Vertices.size() != 0)
+                Vertex v;
+                v.Position = m_Positions[i];
+                v.TexCoord = m_UVs[i];
+                v.Normal = m_Normals[i];
+                v.Tangent = m_Tangents[i];
+                v.Bitangent = m_Bitangents[i];
+                vertices.push_back(std::move(v));
+            }
+
+            if (!m_VertexBuffer || m_VertexBuffer->GetElementCount() != vertices.size())
+            {
+                if (vertices.size() != 0)
                 {
                     BufferDescription vbDesc;
-                    vbDesc.ElementCount = m_Vertices.size();
+                    vbDesc.ElementCount = vertices.size();
                     vbDesc.ElementSize = sizeof(Vertex);
                     vbDesc.IsDynamic = false;
 
@@ -126,15 +163,15 @@ namespace Atom
                 }
             }
 
-            if(m_Vertices.size())
-                Renderer::UploadBufferData(m_Vertices.data(), m_VertexBuffer.get());
+            if(vertices.size())
+                Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
 
             if(m_Indices.size())
                 Renderer::UploadBufferData(m_Indices.data(), m_IndexBuffer.get());
 
             if (makeNonReadable)
             {
-                m_Vertices.clear();
+                vertices.clear();
                 m_Indices.clear();
             }
         }

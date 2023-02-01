@@ -18,16 +18,6 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/stl/filesystem.h>
 
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::byte>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::s32>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::s64>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::u32>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::u64>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::f32>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::f64>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::Vertex>);
-PYBIND11_MAKE_OPAQUE(Atom::Vector<Atom::Submesh>);
-
 namespace Atom
 {
     namespace py = pybind11;
@@ -35,17 +25,6 @@ namespace Atom
 
     PYBIND11_EMBEDDED_MODULE(Atom, m)
     {
-        // ---------------------------------------------------- STL ------------------------------------------------------------
-        py::bind_vector<Atom::Vector<Atom::byte>>(m, "ByteList");
-        py::bind_vector<Atom::Vector<Atom::s32>>(m, "Int32List");
-        py::bind_vector<Atom::Vector<Atom::s64>>(m, "Int64List");
-        py::bind_vector<Atom::Vector<Atom::u32>>(m, "Uint32List");
-        py::bind_vector<Atom::Vector<Atom::u64>>(m, "Uint64List");
-        py::bind_vector<Atom::Vector<Atom::f32>>(m, "Float32List");
-        py::bind_vector<Atom::Vector<Atom::f64>>(m, "Float64List");
-        py::bind_vector<Atom::Vector<Atom::Vertex>>(m, "VertexList");
-        py::bind_vector<Atom::Vector<Atom::Submesh>>(m, "SubmeshList");
-
         // --------------------------------------------------- Math ------------------------------------------------------------
         py::class_<glm::vec2>(m, "Vec2")
             .def(py::init<>())
@@ -632,11 +611,22 @@ namespace Atom
             .def("update_gpu_data", &wrappers::Mesh::UpdateGPUData)
             .def("set_material", &wrappers::Mesh::SetMaterial)
             .def("get_material", &wrappers::Mesh::GetMaterial)
+            .def("set_positions", py::overload_cast<const py::list&>(&wrappers::Mesh::SetPositions))
+            .def("set_uvs", py::overload_cast<const py::list&>(&wrappers::Mesh::SetUVs))
+            .def("set_normals", py::overload_cast<const py::list&>(&wrappers::Mesh::SetNormals))
+            .def("set_tangents", py::overload_cast<const py::list&>(&wrappers::Mesh::SetTangents))
+            .def("set_bitangents", py::overload_cast<const py::list&>(&wrappers::Mesh::SetBitangents))
+            .def("set_indices", py::overload_cast<const py::list&>(&wrappers::Mesh::SetIndices))
+            .def("set_submeshes", py::overload_cast<const py::list&>(&wrappers::Mesh::SetSubmeshes))
             .def_static("find", &wrappers::Mesh::Find)
             .def_property_readonly("is_readable", &wrappers::Mesh::IsReadable)
             .def_property_readonly("is_empty", &wrappers::Mesh::IsEmpty)
-            .def_property("vertices", &wrappers::Mesh::GetVertices, &wrappers::Mesh::SetVertices)
-            .def_property("indices", &wrappers::Mesh::GetIndices, &wrappers::Mesh::SetIndices)
-            .def_property("submeshes", &wrappers::Mesh::GetSubmeshes, &wrappers::Mesh::SetSubmeshes);
+            .def_property_readonly("positions", &wrappers::Mesh::GetPositions)
+            .def_property_readonly("uvs", &wrappers::Mesh::GetUVs)
+            .def_property_readonly("normals", &wrappers::Mesh::GetNormals)
+            .def_property_readonly("tangents", &wrappers::Mesh::GetTangents)
+            .def_property_readonly("bitangents", &wrappers::Mesh::GetBitangents)
+            .def_property_readonly("indices", &wrappers::Mesh::GetIndices)
+            .def_property_readonly("submeshes", &wrappers::Mesh::GetSubmeshes);
     }
 }
