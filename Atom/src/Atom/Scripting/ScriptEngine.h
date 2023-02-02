@@ -118,6 +118,7 @@ namespace Atom
         static void CreateEntityScript(Entity entity);
         static void UpdateEntityScript(Entity entity, Timestep ts);
         static void LateUpdateEntityScript(Entity entity, Timestep ts);
+        static void DestroyEntityScript(Entity entity);
 
         static Scene* GetRunningScene();
         static const HashMap<String, Ref<ScriptClass>>& GetScriptClasses();

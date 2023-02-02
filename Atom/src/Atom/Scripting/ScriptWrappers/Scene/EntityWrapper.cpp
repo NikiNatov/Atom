@@ -178,5 +178,13 @@ namespace Atom
             Atom::Entity entity = scene->CreateEntity(name);
             return Entity(entity.GetUUID());
         }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Entity::DeleteEntity(Entity entity)
+        {
+            Scene* scene = ScriptEngine::GetRunningScene();
+            if (Atom::Entity e = scene->FindEntityByUUID(entity.GetUUID()))
+                scene->DeleteEntity(e);
+        }
     }
 }

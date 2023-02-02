@@ -144,8 +144,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ScriptEngine::UpdateEntityScript(Entity entity, Timestep ts)
     {
-        auto& sc = entity.GetComponent<ScriptComponent>();
-
         if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
         {
             instance->OnUpdate(ts);
@@ -159,11 +157,23 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ScriptEngine::LateUpdateEntityScript(Entity entity, Timestep ts)
     {
-        auto& sc = entity.GetComponent<ScriptComponent>();
-
         if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
         {
             instance->OnLateUpdate(ts);
+        }
+        else
+        {
+            ATOM_ERROR("Entity with ID {} has no script instantiated", entity.GetUUID());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::DestroyEntityScript(Entity entity)
+    {
+        if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
+        {
+            instance->OnDestroy();
+            ms_ScriptInstances.erase(entity.GetUUID());
         }
         else
         {

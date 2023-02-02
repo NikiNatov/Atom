@@ -38,6 +38,7 @@ namespace Atom
         public:
             static Entity FindEntityByName(const String& name);
             static Entity CreateEntity(const String& name);
+            static void DeleteEntity(Entity entity);
 
         private:
             u64 m_UUID;

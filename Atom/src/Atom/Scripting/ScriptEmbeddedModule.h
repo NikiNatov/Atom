@@ -503,6 +503,7 @@ namespace Atom
             .def("is_valid", &wrappers::Entity::IsValid)
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)
             .def_static("create_entity", &wrappers::Entity::CreateEntity)
+            .def_static("delete_entity", &wrappers::Entity::DeleteEntity)
             .def_property_readonly("id", &wrappers::Entity::GetUUID)
             .def_property_readonly("transform", &wrappers::Entity::GetComponent<wrappers::TransformComponent>)
             .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag);

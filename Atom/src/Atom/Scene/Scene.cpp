@@ -133,6 +133,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::DeleteEntity(Entity entity)
     {
+        if(entity.HasComponent<ScriptComponent>())
+            ScriptEngine::DestroyEntityScript(entity);
+
         auto& shc = entity.GetComponent<SceneHierarchyComponent>();
         Entity currentChild = FindEntityByUUID(shc.FirstChild);
 
@@ -249,8 +252,14 @@ namespace Atom
     {
         m_State = SceneState::Edit;
 
-        ScriptEngine::OnSceneStop();
         PhysicsEngine::OnSceneStop();
+
+        for (auto entity : m_Registry.view<ScriptComponent>())
+        {
+            ScriptEngine::DestroyEntityScript(Entity(entity, this));
+        }
+
+        ScriptEngine::OnSceneStop();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
