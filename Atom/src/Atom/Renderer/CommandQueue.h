@@ -39,7 +39,6 @@ namespace Atom
         ComPtr<ID3D12CommandQueue> m_D3DCommandQueue;
         CommandQueueType           m_Type;
         ComPtr<ID3D12Fence1>       m_D3DFence;
-        HANDLE                     m_FenceEvent;
         u64                        m_FenceValue = 0;
 
         struct CommandBufferEntry

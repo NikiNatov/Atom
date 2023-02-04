@@ -28,9 +28,6 @@ namespace Atom
         // Create fence
         DXCall(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_D3DFence)));
 
-        // Create event
-        m_FenceEvent = CreateEvent(0, false, false, 0);
-
 #if defined (ATOM_DEBUG)
         String name = debugName;
         DXCall(m_D3DCommandQueue->SetName(STRING_TO_WSTRING(name).c_str()));
@@ -42,9 +39,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     CommandQueue::~CommandQueue()
     {
-        if (m_FenceEvent)
-            CloseHandle(m_FenceEvent);
-
         m_ProcessInFlightCmdBuffers = false;
         m_CmdBufferProcessingThread.join();
     }
@@ -61,9 +55,13 @@ namespace Atom
     {
         if (m_D3DFence->GetCompletedValue() < value)
         {
-            // If the fence value is not reached pause the current thread
-            DXCall(m_D3DFence->SetEventOnCompletion(value, m_FenceEvent));
-            WaitForSingleObject(m_FenceEvent, INFINITE);
+            if (HANDLE fenceEvent = CreateEvent(0, false, false, 0))
+            {
+                // If the fence value is not reached pause the current thread
+                DXCall(m_D3DFence->SetEventOnCompletion(value, fenceEvent));
+                WaitForSingleObject(fenceEvent, INFINITE);
+                CloseHandle(fenceEvent);
+            }
         }
     }
 
