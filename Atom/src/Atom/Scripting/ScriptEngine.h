@@ -2,6 +2,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/Timestep.h"
+#include "Atom/Core/Events/Events.h"
 #include "Atom/Scene/Entity.h"
 
 #include <pybind11/pybind11.h>
@@ -80,6 +81,7 @@ namespace Atom
         void OnUpdate(Timestep ts);
         void OnLateUpdate(Timestep ts);
         void OnDestroy();
+        void OnEvent(Event& event);
 
         template<typename ValueType>
         void SetMemberValue(const String& name, const ValueType& value)
@@ -104,6 +106,7 @@ namespace Atom
         pybind11::object m_OnUpdateFn = pybind11::none();
         pybind11::object m_OnLateUpdateFn = pybind11::none();
         pybind11::object m_OnDestroyFn = pybind11::none();
+        pybind11::object m_OnEventFn = pybind11::none();
     };
 
     class ScriptEngine
@@ -114,6 +117,7 @@ namespace Atom
 
         static void OnSceneStart(Scene* scene);
         static void OnSceneStop();
+        static void OnEvent(Event& event);
 
         static void CreateEntityScript(Entity entity);
         static void UpdateEntityScript(Entity entity, Timestep ts);

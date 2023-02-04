@@ -113,6 +113,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Application::OnEvent(Event& event)
     {
+        ScriptEngine::OnEvent(event);
+
         EventDispatcher dispatcher(event);
         dispatcher.Dispatch<WindowClosedEvent>(ATOM_BIND_EVENT_FN(Application::OnWindowClosed));
 

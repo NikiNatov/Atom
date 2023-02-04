@@ -105,6 +105,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::OnEvent(Event& event)
+    {
+        for (auto& [uuid, scriptInstance] : ms_ScriptInstances)
+        {
+            scriptInstance->OnEvent(event);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void ScriptEngine::CreateEntityScript(Entity entity)
     {
         auto& sc = entity.GetComponent<ScriptComponent>();
@@ -419,6 +428,8 @@ namespace Atom
                 m_OnLateUpdateFn = m_PythonInstance.attr("on_late_update");
             if (py::hasattr(m_PythonInstance, "on_destroy"))
                 m_OnDestroyFn = m_PythonInstance.attr("on_destroy");
+            if (py::hasattr(m_PythonInstance, "on_event"))
+                m_OnEventFn = m_PythonInstance.attr("on_event");
         }
         catch (std::exception& e)
         {
@@ -475,6 +486,28 @@ namespace Atom
         {
             if (!m_OnDestroyFn.is_none())
                 m_OnDestroyFn();
+        }
+        catch (std::exception& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptInstance::OnEvent(Event& event)
+    {
+        try
+        {
+            if (!m_OnEventFn.is_none())
+            {
+                EventDispatcher dispatcher(event);
+                dispatcher.Dispatch<KeyPressedEvent>([&](KeyPressedEvent& e) { m_OnEventFn(e); return false; });
+                dispatcher.Dispatch<KeyReleasedEvent>([&](KeyReleasedEvent& e) { m_OnEventFn(e); return false; });
+                dispatcher.Dispatch<MouseButtonPressedEvent>([&](MouseButtonPressedEvent& e) { m_OnEventFn(e); return false; });
+                dispatcher.Dispatch<MouseButtonReleasedEvent>([&](MouseButtonReleasedEvent& e) { m_OnEventFn(e); return false; });
+                dispatcher.Dispatch<MouseMovedEvent>([&](MouseMovedEvent& e) { m_OnEventFn(e); return false; });
+                dispatcher.Dispatch<MouseScrolledEvent>([&](MouseScrolledEvent& e) { m_OnEventFn(e); return false; });
+            }
         }
         catch (std::exception& e)
         {

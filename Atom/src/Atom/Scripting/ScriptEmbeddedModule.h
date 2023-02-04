@@ -370,6 +370,39 @@ namespace Atom
             .def("stop", &Atom::Timer::Stop)
             .def("get_elapsed_time", &Atom::Timer::GetElapsedTime);
 
+        py::class_<Atom::Event>(m, "Event");
+
+        py::class_<Atom::KeyEvent>(m, "KeyEvent");
+
+        py::class_<Atom::MouseButtonEvent>(m, "MouseButtonEvent");
+
+        py::class_<Atom::KeyPressedEvent, Atom::KeyEvent>(m, "KeyPressedEvent")
+            .def(py::init<Atom::Key, s32>())
+            .def_property_readonly("repeat_count", &Atom::KeyPressedEvent::GetRepeatCount)
+            .def_property_readonly("key", &Atom::KeyEvent::GetKeyCode);
+
+        py::class_<Atom::KeyReleasedEvent, Atom::KeyEvent>(m, "KeyReleasedEvent")
+            .def(py::init<Atom::Key>())
+            .def_property_readonly("key", &Atom::KeyEvent::GetKeyCode);
+
+        py::class_<Atom::MouseButtonPressedEvent, Atom::MouseButtonEvent>(m, "MouseButtonPressedEvent")
+            .def(py::init<Atom::MouseButton>())
+            .def_property_readonly("mouse_button", &Atom::MouseButtonEvent::GetButton);
+
+        py::class_<Atom::MouseButtonReleasedEvent, Atom::MouseButtonEvent>(m, "MouseButtonReleasedEvent")
+            .def(py::init<Atom::MouseButton>())
+            .def_property_readonly("mouse_button", &Atom::MouseButtonEvent::GetButton);
+
+        py::class_<Atom::MouseMovedEvent, Atom::Event>(m, "MouseMovedEvent")
+            .def(py::init<f32, f32>())
+            .def_property_readonly("x", &Atom::MouseMovedEvent::GetXPosition)
+            .def_property_readonly("y", &Atom::MouseMovedEvent::GetYPosition);
+
+        py::class_<Atom::MouseScrolledEvent, Atom::Event>(m, "MouseScrolledEvent")
+            .def(py::init<f32, f32>())
+            .def_property_readonly("x_offset", &Atom::MouseScrolledEvent::GetXOffset)
+            .def_property_readonly("y_offset", &Atom::MouseScrolledEvent::GetYOffset);
+
         // --------------------------------------------------- Scene ------------------------------------------------------------
         py::class_<Atom::SceneCamera>(m, "SceneCamera")
             .def(py::init<>())
