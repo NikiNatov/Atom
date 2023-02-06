@@ -43,7 +43,7 @@ namespace Atom
             glm::mat4     Transform;
         };
 
-        struct TransformCB
+        struct CameraCB
         {
             glm::mat4 ViewMatrix = glm::mat4(1.0f);
             glm::mat4 ProjectionMatrix = glm::mat4(1.0f);
@@ -51,12 +51,12 @@ namespace Atom
             f32 p[29]{ 0 };
         };
 
-        Ref<LightEnvironment> m_Environment;
+        Vector<DrawCommand>           m_DrawList;
 
-        Vector<DrawCommand>   m_DrawList;
-        TransformCB           m_TransformData;
-        Ref<ConstantBuffer>   m_TransformCB = nullptr;
-        Ref<StructuredBuffer> m_LightsSB = nullptr;
+        Vector<Ref<LightEnvironment>> m_LightsData;
+        Vector<CameraCB>              m_CameraData;
+        Vector<Ref<ConstantBuffer>>   m_CameraCBs;
+        Vector<Ref<StructuredBuffer>> m_LightsSBs;
 
         Ref<GraphicsPipeline> m_GeometryPipeline = nullptr;
         Ref<GraphicsPipeline> m_CompositePipeline = nullptr;

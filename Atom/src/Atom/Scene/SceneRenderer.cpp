@@ -29,83 +29,95 @@ namespace Atom
         m_CompositeMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("CompositeShader"), MaterialFlags::None);
         m_FullScreenQuadMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("FullscreenQuadShader"), MaterialFlags::None);
 
-        // Create transform constant buffer
+        // Create per-frame resources
+        u32 framesInFlight = Renderer::GetFramesInFlight();
+        m_LightsData.resize(framesInFlight);
+        m_LightsSBs.resize(framesInFlight);
+
+        m_CameraData.resize(framesInFlight);
+        m_CameraCBs.resize(framesInFlight);
+
         BufferDescription cbDesc;
         cbDesc.ElementCount = 1;
-        cbDesc.ElementSize = sizeof(TransformCB);
+        cbDesc.ElementSize = sizeof(CameraCB);
         cbDesc.IsDynamic = true;
 
-        m_TransformCB = CreateRef<ConstantBuffer>(cbDesc, "TransformCB");
+        for(u32 frameIdx = 0 ; frameIdx < framesInFlight; frameIdx++)
+            m_CameraCBs[frameIdx] = CreateRef<ConstantBuffer>(cbDesc, fmt::format("TransformCB[{}]", frameIdx).c_str());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::BeginScene(Camera& camera, const glm::mat4& cameraTransform, const Ref<LightEnvironment>& lightEnvironment)
     {
+        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
+
         // Set camera transforms
-        m_TransformData.ProjectionMatrix = camera.GetProjection();
-        m_TransformData.ViewMatrix = glm::inverse(cameraTransform);
-        m_TransformData.CameraPosition = cameraTransform[3];
+        m_CameraData[currentFrameIdx].ProjectionMatrix = camera.GetProjection();
+        m_CameraData[currentFrameIdx].ViewMatrix = glm::inverse(cameraTransform);
+        m_CameraData[currentFrameIdx].CameraPosition = cameraTransform[3];
 
         // Set lights data
-        m_Environment = lightEnvironment;
+        m_LightsData[currentFrameIdx] = lightEnvironment;
 
-        const auto& lights = m_Environment->GetLights();
+        const auto& lights = m_LightsData[currentFrameIdx]->GetLights();
 
         if (!lights.empty())
         {
-            if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+            if (!m_LightsSBs[currentFrameIdx] || m_LightsSBs[currentFrameIdx]->GetElementCount() != lights.size())
             {
                 BufferDescription sbDesc;
                 sbDesc.ElementCount = lights.size();
                 sbDesc.ElementSize = sizeof(Light);
                 sbDesc.IsDynamic = true;
 
-                m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+                m_LightsSBs[currentFrameIdx] = CreateRef<StructuredBuffer>(sbDesc, fmt::format("LightsSB[{}]", currentFrameIdx).c_str());
             }
 
-            void* lightsData = m_LightsSB->Map(0, 0);
+            void* lightsData = m_LightsSBs[currentFrameIdx]->Map(0, 0);
             memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-            m_LightsSB->Unmap();
+            m_LightsSBs[currentFrameIdx]->Unmap();
         }
 
-        void* data = m_TransformCB->Map(0, 0);
-        memcpy(data, &m_TransformData, sizeof(TransformCB));
-        m_TransformCB->Unmap();
+        void* data = m_CameraCBs[currentFrameIdx]->Map(0, 0);
+        memcpy(data, &m_CameraData[currentFrameIdx], sizeof(CameraCB));
+        m_CameraCBs[currentFrameIdx]->Unmap();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::BeginScene(EditorCamera& editorCamera, const Ref<LightEnvironment>& lightEnvironment)
     {
+        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
+
         // Set camera transforms
-        m_TransformData.ProjectionMatrix = editorCamera.GetProjection();
-        m_TransformData.ViewMatrix = editorCamera.GetViewMatrix();
-        m_TransformData.CameraPosition = editorCamera.GetPosition();
+        m_CameraData[currentFrameIdx].ProjectionMatrix = editorCamera.GetProjection();
+        m_CameraData[currentFrameIdx].ViewMatrix = editorCamera.GetViewMatrix();
+        m_CameraData[currentFrameIdx].CameraPosition = editorCamera.GetPosition();
 
         // Set lights data
-        m_Environment = lightEnvironment;
+        m_LightsData[currentFrameIdx] = lightEnvironment;
 
-        const auto& lights = m_Environment->GetLights();
+        const auto& lights = m_LightsData[currentFrameIdx]->GetLights();
 
         if (!lights.empty())
         {
-            if (!m_LightsSB || m_LightsSB->GetElementCount() != lights.size())
+            if (!m_LightsSBs[currentFrameIdx] || m_LightsSBs[currentFrameIdx]->GetElementCount() != lights.size())
             {
                 BufferDescription sbDesc;
                 sbDesc.ElementCount = lights.size();
                 sbDesc.ElementSize = sizeof(Light);
                 sbDesc.IsDynamic = true;
 
-                m_LightsSB = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
+                m_LightsSBs[currentFrameIdx] = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
             }
 
-            void* lightsData = m_LightsSB->Map(0, 0);
+            void* lightsData = m_LightsSBs[currentFrameIdx]->Map(0, 0);
             memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-            m_LightsSB->Unmap();
+            m_LightsSBs[currentFrameIdx]->Unmap();
         }
 
-        void* data = m_TransformCB->Map(0, 0);
-        memcpy(data, &m_TransformData, sizeof(TransformCB));
-        m_TransformCB->Unmap();
+        void* data = m_CameraCBs[currentFrameIdx]->Map(0, 0);
+        memcpy(data, &m_CameraData[currentFrameIdx], sizeof(CameraCB));
+        m_CameraCBs[currentFrameIdx]->Unmap();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -141,7 +153,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::PreRender()
     {
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -151,6 +162,7 @@ namespace Atom
         Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
         gfxCmdBuffer->Begin();
 
+        PreRender();
         GeometryPass(gfxCmdBuffer);
         CompositePass(gfxCmdBuffer);
 
@@ -163,24 +175,26 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::GeometryPass(Ref<CommandBuffer> commandBuffer)
     {
+        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
+
         Renderer::BeginRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
 
         // Render skybox
-        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_TransformData.ProjectionMatrix * m_TransformData.ViewMatrix));
-        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_Environment->GetEnvironmentMap());
+        m_SkyBoxMaterial->SetUniform("InvViewProjMatrix", glm::inverse(m_CameraData[currentFrameIdx].ProjectionMatrix * m_CameraData[currentFrameIdx].ViewMatrix));
+        m_SkyBoxMaterial->SetTexture("EnvironmentMap", m_LightsData[currentFrameIdx]->GetEnvironmentMap());
         Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 
         // Render meshes
         for (auto& drawCommand : m_DrawList)
         {
             // TODO: These should not be set by the material
-            drawCommand.Material->SetTexture("_EnvironmentMap", m_Environment->GetEnvironmentMap());
-            drawCommand.Material->SetTexture("_IrradianceMap", m_Environment->GetIrradianceMap());
+            drawCommand.Material->SetTexture("_EnvironmentMap", m_LightsData[currentFrameIdx]->GetEnvironmentMap());
+            drawCommand.Material->SetTexture("_IrradianceMap", m_LightsData[currentFrameIdx]->GetIrradianceMap());
             drawCommand.Material->SetTexture("_BRDFMap", Renderer::GetBRDF());
             drawCommand.Material->SetUniform("_Transform", drawCommand.Transform);
-            drawCommand.Material->SetUniform("_NumLights", m_LightsSB->GetElementCount());
+            drawCommand.Material->SetUniform("_NumLights", m_LightsSBs[currentFrameIdx] ? m_LightsSBs[currentFrameIdx]->GetElementCount() : 0);
 
-            Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_TransformCB, m_LightsSB);
+            Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], m_LightsSBs[currentFrameIdx]);
         }
 
         Renderer::EndRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
@@ -191,7 +205,7 @@ namespace Atom
     {
         Renderer::BeginRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
 
-        m_CompositeMaterial->SetUniform("Exposure", 1.0f);
+        m_CompositeMaterial->SetUniform("Exposure", 0.3f);
         m_CompositeMaterial->SetTexture("SceneTexture", m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0));
 
         Renderer::RenderFullscreenQuad(commandBuffer, m_CompositePipeline, nullptr, m_CompositeMaterial);

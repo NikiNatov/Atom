@@ -312,7 +312,7 @@ namespace Atom
             }
         }
 
-        renderer->BeginScene(m_EditorCamera, m_LightEnvironment);
+        renderer->BeginScene(m_EditorCamera, CreateRef<LightEnvironment>(*m_LightEnvironment));
 
         // Submit meshes
         {
@@ -432,7 +432,7 @@ namespace Atom
                 }
             }
 
-            renderer->BeginScene(*mainCamera, cameraTransform, m_LightEnvironment);
+            renderer->BeginScene(*mainCamera, cameraTransform, CreateRef<LightEnvironment>(*m_LightEnvironment));
 
             // Submit meshes
             {
