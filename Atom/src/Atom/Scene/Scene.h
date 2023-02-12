@@ -46,6 +46,7 @@ namespace Atom
         void OnStop();
         void OnEditRender(Ref<SceneRenderer> renderer);
         void OnRuntimeRender(Ref<SceneRenderer> renderer);
+        void OnImGuiRender();
         void OnViewportResize(u32 width, u32 height);
 
         inline const String& GetName() { return m_Name; }

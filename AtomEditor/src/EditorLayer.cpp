@@ -231,8 +231,16 @@ namespace Atom
             m_NeedsResize = true;
         }
 
+        ImVec2 prevPos = ImGui::GetCursorPos();
+
         Ref<RenderTexture2D> finalImage = m_Renderer->GetFinalImage();
         ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
+
+        if (m_ActiveScene->GetSceneState() == SceneState::Running)
+        {
+            ImGui::SetCursorPos(prevPos);
+            m_ActiveScene->OnImGuiRender();
+        }
 
         // Render guizmos
         if (selectedEntity && m_ActiveScene->GetSceneState() == SceneState::Edit && m_GuizmoOperation != -1)

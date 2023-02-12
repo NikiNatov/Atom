@@ -82,6 +82,7 @@ namespace Atom
         void OnLateUpdate(Timestep ts);
         void OnDestroy();
         void OnEvent(Event& event);
+        void OnGUI();
 
         template<typename ValueType>
         void SetMemberValue(const String& name, const ValueType& value)
@@ -107,6 +108,7 @@ namespace Atom
         pybind11::object m_OnLateUpdateFn = pybind11::none();
         pybind11::object m_OnDestroyFn = pybind11::none();
         pybind11::object m_OnEventFn = pybind11::none();
+        pybind11::object m_OnGUIFn = pybind11::none();
     };
 
     class ScriptEngine
@@ -123,6 +125,7 @@ namespace Atom
         static void UpdateEntityScript(Entity entity, Timestep ts);
         static void LateUpdateEntityScript(Entity entity, Timestep ts);
         static void DestroyEntityScript(Entity entity);
+        static void UpdateEntityGUI(Entity entity);
 
         static Scene* GetRunningScene();
         static const HashMap<String, Ref<ScriptClass>>& GetScriptClasses();

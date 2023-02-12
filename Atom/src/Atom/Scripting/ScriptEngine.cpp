@@ -191,6 +191,19 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::UpdateEntityGUI(Entity entity)
+    {
+        if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
+        {
+            instance->OnGUI();
+        }
+        else
+        {
+            ATOM_ERROR("Entity with ID {} has no script instantiated", entity.GetUUID());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Scene* ScriptEngine::GetRunningScene()
     {
         return ms_RunningScene;
@@ -430,6 +443,8 @@ namespace Atom
                 m_OnDestroyFn = m_PythonInstance.attr("on_destroy");
             if (py::hasattr(m_PythonInstance, "on_event"))
                 m_OnEventFn = m_PythonInstance.attr("on_event");
+            if (py::hasattr(m_PythonInstance, "on_gui"))
+                m_OnGUIFn = m_PythonInstance.attr("on_gui");
         }
         catch (std::exception& e)
         {
@@ -508,6 +523,20 @@ namespace Atom
                 dispatcher.Dispatch<MouseMovedEvent>([&](MouseMovedEvent& e) { m_OnEventFn(e); return false; });
                 dispatcher.Dispatch<MouseScrolledEvent>([&](MouseScrolledEvent& e) { m_OnEventFn(e); return false; });
             }
+        }
+        catch (std::exception& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptInstance::OnGUI()
+    {
+        try
+        {
+            if (!m_OnGUIFn.is_none())
+                m_OnGUIFn();
         }
         catch (std::exception& e)
         {

@@ -11,6 +11,7 @@
 #include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/ImGui/ImGuiWrapper.h"
 
 #include <glm/glm.hpp>
 #include <pybind11/embed.h>
@@ -662,5 +663,29 @@ namespace Atom
             .def_property_readonly("bitangents", &wrappers::Mesh::GetBitangents)
             .def_property_readonly("indices", &wrappers::Mesh::GetIndices)
             .def_property_readonly("submeshes", &wrappers::Mesh::GetSubmeshes);
+
+        // --------------------------------------------------- ImGui ------------------------------------------------------------
+        py::class_<wrappers::GUI>(m, "GUI")
+            .def_static("same_line", &wrappers::GUI::SameLine)
+            .def_static("get_window_size", &wrappers::GUI::GetWindowSize)
+            .def_static("get_window_position", &wrappers::GUI::GetWindowPosition)
+            .def_static("begin_drag_drop_source", &wrappers::GUI::BeginDragDropSource)
+            .def_static("end_drag_drop_source", &wrappers::GUI::EndDragDropSource)
+            .def_static("begin_drag_drop_target", &wrappers::GUI::BeginDragDropTarget)
+            .def_static("end_drag_drop_target", &wrappers::GUI::EndDragDropTarget)
+            .def_static("set_drag_drop_payload", &wrappers::GUI::SetDragDropPayload)
+            .def_static("get_drag_drop_payload", &wrappers::GUI::GetDragDropPayload)
+            .def_static("get_window_position", &wrappers::GUI::GetWindowPosition)
+            .def_static("get_window_position", &wrappers::GUI::GetWindowPosition)
+            .def_static("text", py::overload_cast<const String&>(&wrappers::GUI::Text))
+            .def_static("text", py::overload_cast<const String&, const glm::vec2&>(&wrappers::GUI::Text))
+            .def_static("button", py::overload_cast<const String&, const glm::vec2&>(&wrappers::GUI::Button))
+            .def_static("button", py::overload_cast<const String&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::Button))
+            .def_static("image_button", py::overload_cast<wrappers::Texture2D, const glm::vec2&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::ImageButton))
+            .def_static("image_button", py::overload_cast<wrappers::Texture2D, const glm::vec2&, const glm::vec2&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::ImageButton))
+            .def_static("image", py::overload_cast<wrappers::Texture2D, const glm::vec2&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::Image))
+            .def_static("image", py::overload_cast<wrappers::Texture2D, const glm::vec2&, const glm::vec2&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::Image))
+            .def_static("begin_child_window", &wrappers::GUI::BeginChildWindow)
+            .def_static("end_child_window", &wrappers::GUI::EndChildWindow);
     }
 }

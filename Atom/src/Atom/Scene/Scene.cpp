@@ -467,6 +467,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void Scene::OnImGuiRender()
+    {
+        for (auto entity : m_Registry.view<ScriptComponent>())
+        {
+            ScriptEngine::UpdateEntityGUI(Entity(entity, this));
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnViewportResize(u32 width, u32 height)
     {
         m_EditorCamera.SetViewport(width, height);
