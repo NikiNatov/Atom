@@ -127,8 +127,15 @@ namespace Atom
             auto mapIt = ms_ScriptVariableMaps.find(entity.GetUUID());
             if (mapIt != ms_ScriptVariableMaps.end())
             {
+                Vector<String> variablesToRemove;
                 for (auto& [name, variable] : mapIt->second)
                 {
+                    if (scriptClass->GetMemberVariables().find(name) == scriptClass->GetMemberVariables().end())
+                    {
+                        variablesToRemove.push_back(name);
+                        continue;
+                    }
+
                     switch (variable.GetType())
                     {
                         case ScriptVariableType::Int:         scriptInstance->SetMemberValue(name, variable.GetValue<s32>()); break;
@@ -144,6 +151,9 @@ namespace Atom
                         case ScriptVariableType::TextureCube: scriptInstance->SetMemberValue(name, ScriptWrappers::TextureCube(variable.GetValue<UUID>())); break;
                     }
                 }
+
+                for (auto& varName : variablesToRemove)
+                    mapIt->second.erase(varName);
             }
 
             scriptInstance->OnCreate();
