@@ -29,7 +29,8 @@ namespace Atom
         m_SwapChainPipeline = pipelineLib.Get<GraphicsPipeline>("SwapChainPipeline");
         m_SwapChainMaterial = CreateRef<Material>(m_SwapChainPipeline->GetShader(), MaterialFlags::None);
 
-        OpenProject("../AtomEditor/SandboxProject/SandboxProject.atmproj");
+        const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
+        OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "../AtomEditor/SandboxProject/SandboxProject.atmproj");
 
         m_SceneRenderer = CreateRef<SceneRenderer>();
         m_SceneRenderer->Initialize();

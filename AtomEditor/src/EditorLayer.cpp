@@ -31,7 +31,8 @@ namespace Atom
     {
         EditorResources::Initialize();
 
-        OpenProject("SandboxProject/SandboxProject.atmproj");
+        const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
+        OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "SandboxProject/SandboxProject.atmproj");
         
         m_Renderer = CreateRef<SceneRenderer>();
         m_Renderer->Initialize();
