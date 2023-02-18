@@ -28,6 +28,8 @@ namespace Atom
 			{
 				Entity srcEntity = *(Entity*)payload->Data;
 				srcEntity.RemoveParent();
+				srcEntity.GetComponent<SceneHierarchyComponent>().PreviousSibling = 0;
+				srcEntity.GetComponent<SceneHierarchyComponent>().NextSibling = 0;
 			}
 
 			ImGui::EndDragDropTarget();
@@ -37,7 +39,7 @@ namespace Atom
         {
             Entity entity(entityID, m_Scene.get());
 
-			if (!entity.GetComponent<SceneHierarchyComponent>().Parent)
+			if (entity && !entity.GetComponent<SceneHierarchyComponent>().Parent)
 			{
 				DrawEntityNode(entity);
 			}

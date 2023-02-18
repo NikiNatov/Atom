@@ -32,6 +32,7 @@ namespace Atom
 
 			currentChild.GetComponent<SceneHierarchyComponent>().NextSibling = entity.GetUUID();
 			entity.GetComponent<SceneHierarchyComponent>().PreviousSibling = currentChild.GetUUID();
+			entity.GetComponent<SceneHierarchyComponent>().NextSibling = UUID(0);
 		}
 
 		entity.GetComponent<SceneHierarchyComponent>().Parent = GetUUID();
