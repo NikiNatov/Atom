@@ -49,6 +49,7 @@ namespace Atom
         inline Window& GetWindow() { return *m_Window; }
         inline const ApplicationSpecification& GetSpecification() { return m_Specification; }
         inline ImGuiLayer& GetImGuiLayer() { return *m_ImGuiLayer; }
+        inline u32 GetFPS() const { return m_FPS; }
 
         void SubmitForMainThreadExecution(const std::function<void()>& function);
     private:
@@ -64,6 +65,7 @@ namespace Atom
         Scope<Window>            m_Window;
         LayerStack               m_LayerStack;
         ImGuiLayer*              m_ImGuiLayer;
+        u32                      m_FPS = 0;
 
         Vector<std::function<void()>> m_MainThreadQueue;
         std::mutex m_MainThreadQueueMutex;

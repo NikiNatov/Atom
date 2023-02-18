@@ -58,6 +58,7 @@ namespace Atom
         while (m_Running)
         {
             Timestep ts = m_FrameTimer.GetElapsedTime();
+            m_FPS = 1 / ts.GetSeconds();
 
             m_FrameTimer.Reset();
 
