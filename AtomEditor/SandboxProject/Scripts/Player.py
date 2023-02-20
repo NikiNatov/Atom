@@ -18,45 +18,59 @@ class Player(Atom.Entity):
         
         width = 5.0
         height = 5.0
-        
-        vertices = Atom.VertexList([Atom.Vertex()] * 4)
-        vertices[0].position = Atom.Vec3(-width / 2.0, 0.0, -height / 2.0)
-        vertices[0].uv = Atom.Vec2(0.0, 0.0) * 20.0
-        vertices[0].normal = Atom.Vec3(0.0, 1.0, 0.0)
-        vertices[0].tangent = Atom.Vec3(1.0, 0.0, 0.0)
-        vertices[0].bitangent = Atom.Vec3(0.0, 0.0, 1.0)
-        
-        vertices[1].position = Atom.Vec3(width / 2.0, 0.0, -height / 2.0)
-        vertices[1].uv = Atom.Vec2(1.0, 0.0) * 20.0
-        vertices[1].normal = Atom.Vec3(0.0, 1.0, 0.0)
-        vertices[1].tangent = Atom.Vec3(1.0, 0.0, 0.0)
-        vertices[1].bitangent = Atom.Vec3(0.0, 0.0, 1.0)
-        
-        vertices[2].position = Atom.Vec3(width / 2.0, 0.0, height / 2.0)
-        vertices[2].uv = Atom.Vec2(1.0, 1.0) * 20.0
-        vertices[2].normal = Atom.Vec3(0.0, 1.0, 0.0)
-        vertices[2].tangent = Atom.Vec3(1.0, 0.0, 0.0)
-        vertices[2].bitangent = Atom.Vec3(0.0, 0.0, 1.0)
-        
-        vertices[3].position = Atom.Vec3(-width / 2.0, 0.0, height / 2.0)
-        vertices[3].uv = Atom.Vec2(0.0, 1.0) * 20.0
-        vertices[3].normal = Atom.Vec3(0.0, 1.0, 0.0)
-        vertices[3].tangent = Atom.Vec3(1.0, 0.0, 0.0)
-        vertices[3].bitangent = Atom.Vec3(0.0, 0.0, 1.0)
 
-        indices = Atom.Uint32List([ 0, 3, 2, 2, 1, 0 ])
+        positions: list = [
+            Atom.Vec3(-width / 2.0, 0.0, -height / 2.0),
+            Atom.Vec3( width / 2.0, 0.0, -height / 2.0),
+            Atom.Vec3( width / 2.0, 0.0,  height / 2.0),
+            Atom.Vec3(-width / 2.0, 0.0,  height / 2.0)
+        ]
 
-        submeshes = Atom.SubmeshList([Atom.Submesh()])
+        uvs: list = [
+            Atom.Vec2(0.0, 0.0) * 20.0,
+            Atom.Vec2(1.0, 0.0) * 20.0,
+            Atom.Vec2(1.0, 1.0) * 20.0,
+            Atom.Vec2(0.0, 1.0) * 20.0
+        ]
+
+        normals: list = [
+            Atom.Vec3(0.0, 1.0, 0.0),
+            Atom.Vec3(0.0, 1.0, 0.0),
+            Atom.Vec3(0.0, 1.0, 0.0),
+            Atom.Vec3(0.0, 1.0, 0.0)
+        ]
+
+        tangents: list = [
+            Atom.Vec3(1.0, 0.0, 0.0),
+            Atom.Vec3(1.0, 0.0, 0.0),
+            Atom.Vec3(1.0, 0.0, 0.0),
+            Atom.Vec3(1.0, 0.0, 0.0)
+        ]
+
+        bitangents: list = [
+            Atom.Vec3(0.0, 0.0, 1.0),
+            Atom.Vec3(0.0, 0.0, 1.0),
+            Atom.Vec3(0.0, 0.0, 1.0),
+            Atom.Vec3(0.0, 0.0, 1.0)
+        ]
+
+        indices: list = [ 0, 3, 2, 2, 1, 0 ]
+
+        submeshes: list = [Atom.Submesh()]
         submeshes[0].start_vertex = 0
-        submeshes[0].vertex_count = len(vertices)
+        submeshes[0].vertex_count = len(positions)
         submeshes[0].start_index = 0
         submeshes[0].index_count = len(indices)
         submeshes[0].material_index = 0
 
-        mesh = Atom.Mesh()
-        mesh.vertices = vertices
-        mesh.indices = indices
-        mesh.submeshes = submeshes
+        mesh: Atom.Mesh = Atom.Mesh()
+        mesh.set_positions(positions)
+        mesh.set_uvs(uvs)
+        mesh.set_normals(normals)
+        mesh.set_tangents(tangents)
+        mesh.set_bitangents(bitangents)
+        mesh.set_indices(indices)
+        mesh.set_submeshes(submeshes)
         mesh.set_material(0, Atom.Material.find("Materials/08 - Default.atmmat"))
         mesh.update_gpu_data(True)
 

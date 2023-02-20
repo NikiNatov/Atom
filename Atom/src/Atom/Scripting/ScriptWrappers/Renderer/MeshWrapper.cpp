@@ -47,8 +47,7 @@ namespace Atom
 
                 for (auto& elm : positions)
                 {
-                    auto tuple = elm.cast<pybind11::tuple>();
-                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                    vec.emplace_back(elm.cast<glm::vec3>());
                 }
 
                 m_Mesh->SetPositions(vec);
@@ -65,8 +64,7 @@ namespace Atom
 
                 for (auto& elm : uvs)
                 {
-                    auto tuple = elm.cast<pybind11::tuple>();
-                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>());
+                    vec.emplace_back(elm.cast<glm::vec2>());
                 }
 
                 m_Mesh->SetUVs(vec);
@@ -83,8 +81,7 @@ namespace Atom
 
                 for (auto& elm : normals)
                 {
-                    auto tuple = elm.cast<pybind11::tuple>();
-                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                    vec.emplace_back(elm.cast<glm::vec3>());
                 }
 
                 m_Mesh->SetNormals(vec);
@@ -101,8 +98,7 @@ namespace Atom
 
                 for (auto& elm : tangents)
                 {
-                    auto tuple = elm.cast<pybind11::tuple>();
-                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                    vec.emplace_back(elm.cast<glm::vec3>());
                 }
 
                 m_Mesh->SetTangents(vec);
@@ -119,8 +115,7 @@ namespace Atom
 
                 for (auto& elm : bitangents)
                 {
-                    auto tuple = elm.cast<pybind11::tuple>();
-                    vec.emplace_back(tuple[0].cast<f32>(), tuple[1].cast<f32>(), tuple[2].cast<f32>());
+                    vec.emplace_back(elm.cast<glm::vec3>());
                 }
 
                 m_Mesh->SetBitangents(vec);

@@ -45,6 +45,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void EditorLayer::OnDetach()
     {
+        if(m_ActiveScene->GetSceneState() == SceneState::Running)
+            m_ActiveScene->OnStop();
+
         EditorResources::Shutdown();
     }
 
