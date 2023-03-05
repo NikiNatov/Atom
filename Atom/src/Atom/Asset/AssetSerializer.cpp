@@ -5,6 +5,7 @@
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Renderer/Animation.h"
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/Components.h"
 #include "Atom/Scripting/ScriptEngine.h"
@@ -168,6 +169,11 @@ namespace Atom
             SerializeMetaData(ofs, asset->m_MetaData);
         }
 
+        // Serialize shader name
+        u32 shaderNameLength = asset->m_Shader->GetName().length();
+        ofs.write((char*)&shaderNameLength, sizeof(u32));
+        ofs.write(asset->m_Shader->GetName().data(), shaderNameLength);
+
         // Serialize flags
         MaterialFlags flags = asset->GetFlags();
         ofs.write((char*)&flags, sizeof(MaterialFlags));
@@ -253,6 +259,7 @@ namespace Atom
         ofs.write((char*)asset->m_Normals.data(), sizeof(glm::vec3) * vertexCount);
         ofs.write((char*)asset->m_Tangents.data(), sizeof(glm::vec3) * vertexCount);
         ofs.write((char*)asset->m_Bitangents.data(), sizeof(glm::vec3) * vertexCount);
+        ofs.write((char*)asset->m_BoneWeights.data(), sizeof(BoneWeight) * vertexCount);
 
         u32 indexCount = asset->m_Indices.size();
         ofs.write((char*)&indexCount, sizeof(u32));
@@ -368,8 +375,34 @@ namespace Atom
             {
                 auto& mc = entity.GetComponent<MeshComponent>();
 
-                UUID uuid = mc.Mesh->GetUUID();
+                UUID uuid = mc.Mesh ? mc.Mesh->GetUUID() : 0;
                 ofs.write((char*)&uuid, sizeof(UUID));
+            }
+
+            bool hasAnimatedMeshComponent = entity.HasComponent<AnimatedMeshComponent>();
+            ofs.write((char*)&hasAnimatedMeshComponent, sizeof(bool));
+
+            if (hasAnimatedMeshComponent)
+            {
+                auto& amc = entity.GetComponent<AnimatedMeshComponent>();
+
+                UUID meshUUID = amc.Mesh ? amc.Mesh->GetUUID() : 0;
+                ofs.write((char*)&meshUUID, sizeof(UUID));
+
+                UUID skeletonUUID = amc.Skeleton ? amc.Skeleton->GetUUID() : 0;
+                ofs.write((char*)&skeletonUUID, sizeof(UUID));
+            }
+
+            bool hasAnimatorComponent = entity.HasComponent<AnimatorComponent>();
+            ofs.write((char*)&hasAnimatorComponent, sizeof(bool));
+
+            if (hasAnimatorComponent)
+            {
+                auto& ac = entity.GetComponent<AnimatorComponent>();
+
+                UUID animationUUID = ac.Animation ? ac.Animation->GetUUID() : 0;
+                ofs.write((char*)&animationUUID, sizeof(UUID));
+                ofs.write((char*)&ac.Play, sizeof(bool));
             }
 
             bool hasSkyLightComponent = entity.HasComponent<SkyLightComponent>();
@@ -379,7 +412,7 @@ namespace Atom
             {
                 auto& slc = entity.GetComponent<SkyLightComponent>();
 
-                UUID uuid = slc.EnvironmentMap->GetUUID();
+                UUID uuid = slc.EnvironmentMap ? slc.EnvironmentMap->GetUUID() : 0;
                 ofs.write((char*)&uuid, sizeof(UUID));
             }
 
@@ -514,6 +547,99 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Animation> asset)
+    {
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
+
+        if (!ofs)
+            return false;
+
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = absolutePath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = absolutePath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
+
+        ofs.write((char*)&asset->m_Duration, sizeof(f32));
+        ofs.write((char*)&asset->m_TicksPerSecond, sizeof(f32));
+
+        u32 keyFrameCount = asset->m_KeyFrames.size();
+        ofs.write((char*)&keyFrameCount, sizeof(u32));
+
+        for (auto& keyFrame : asset->m_KeyFrames)
+        {
+            ofs.write((char*)&keyFrame.TimeStamp, sizeof(f32));
+
+            u32 boneCount = keyFrame.BoneTransforms.size();
+            ofs.write((char*)&boneCount, sizeof(u32));
+
+            for (auto& [boneID, boneTransform] : keyFrame.BoneTransforms)
+            {
+                ofs.write((char*)&boneID, sizeof(u32));
+                ofs.write((char*)&boneTransform, sizeof(Animation::BoneTransform));
+            }
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Skeleton> asset)
+    {
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
+
+        if (!ofs)
+            return false;
+
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = absolutePath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = absolutePath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
+
+        u32 boneCount = asset->m_Bones.size();
+        ofs.write((char*)&boneCount, sizeof(u32));
+
+        for (auto& bone : asset->m_Bones)
+        {
+            ofs.write((char*)&bone.ID, sizeof(u32));
+            ofs.write((char*)&bone.ParentID, sizeof(u32));
+
+            u32 childrenCount = bone.ChildrenIDs.size();
+            ofs.write((char*)&childrenCount, sizeof(u32));
+            ofs.write((char*)bone.ChildrenIDs.data(), childrenCount * sizeof(u32));
+
+            ofs.write((char*)&bone.InverseBindTransform, sizeof(glm::mat4));
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
     Ref<Texture2D> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
     {
         std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
@@ -614,7 +740,14 @@ namespace Atom
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Material);
 
-        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::None);
+        // Deserialize shader name
+        u32 shaderNameLength;
+        ifs.read((char*)&shaderNameLength, sizeof(u32));
+
+        String shaderName(shaderNameLength, '\0');
+        ifs.read(shaderName.data(), shaderNameLength);
+
+        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::None);
         asset->m_MetaData = metaData;
 
         // Deserialize flags
@@ -692,6 +825,9 @@ namespace Atom
 
         meshDesc.Bitangents.resize(vertexCount);
         ifs.read((char*)meshDesc.Bitangents.data(), sizeof(glm::vec3) * vertexCount);
+
+        meshDesc.BoneWeights.resize(vertexCount);
+        ifs.read((char*)meshDesc.BoneWeights.data(), sizeof(BoneWeight) * vertexCount);
 
         u32 indexCount;
         ifs.read((char*)&indexCount, sizeof(u32));
@@ -815,6 +951,38 @@ namespace Atom
                 ifs.read((char*)&uuid, sizeof(UUID));
 
                 mc.Mesh = AssetManager::GetAsset<Mesh>(uuid, true);
+            }
+
+            bool hasAnimatedMeshComponent;
+            ifs.read((char*)&hasAnimatedMeshComponent, sizeof(bool));
+
+            if (hasAnimatedMeshComponent)
+            {
+                auto& amc = entity.AddOrReplaceComponent<AnimatedMeshComponent>();
+
+                UUID meshUUID;
+                ifs.read((char*)&meshUUID, sizeof(UUID));
+
+                UUID skeletonUUID;
+                ifs.read((char*)&skeletonUUID, sizeof(UUID));
+
+                amc.Mesh = AssetManager::GetAsset<Mesh>(meshUUID, true);
+                amc.Skeleton = AssetManager::GetAsset<Skeleton>(skeletonUUID, true);
+            }
+
+            bool hasAnimatorComponent;
+            ifs.read((char*)&hasAnimatorComponent, sizeof(bool));
+
+            if (hasAnimatorComponent)
+            {
+                auto& ac = entity.AddOrReplaceComponent<AnimatorComponent>();
+
+                UUID animationUUID;
+                ifs.read((char*)&animationUUID, sizeof(UUID));
+
+                ac.Animation = AssetManager::GetAsset<Animation>(animationUUID, true);
+
+                ifs.read((char*)&ac.Play, sizeof(bool));
             }
 
             bool hasSkyLightComponent;
@@ -970,6 +1138,101 @@ namespace Atom
                 ifs.read((char*)&bcc, sizeof(BoxColliderComponent));
             }
         }
+
+        return asset;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    Ref<Animation> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    {
+        std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
+
+        if (!ifs)
+            return nullptr;
+
+        AssetMetaData metaData;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Animation);
+
+        f32 duration;
+        ifs.read((char*)&duration, sizeof(f32));
+
+        f32 ticksPerSecond;
+        ifs.read((char*)&ticksPerSecond, sizeof(f32));
+
+        u32 keyFrameCount;
+        ifs.read((char*)&keyFrameCount, sizeof(u32));
+
+        Set<Animation::KeyFrame> keyFrames;
+
+        for (u32 keyFrameIdx = 0; keyFrameIdx < keyFrameCount; keyFrameIdx++)
+        {
+            Animation::KeyFrame keyFrame;
+            ifs.read((char*)&keyFrame.TimeStamp, sizeof(f32));
+
+            u32 boneCount;
+            ifs.read((char*)&boneCount, sizeof(u32));
+            keyFrame.BoneTransforms.reserve(boneCount);
+
+            for (u32 boneIdx = 0; boneIdx < boneCount; boneIdx++)
+            {
+                u32 boneID;
+                ifs.read((char*)&boneID, sizeof(u32));
+
+                Animation::BoneTransform boneTransform;
+                ifs.read((char*)&boneTransform, sizeof(Animation::BoneTransform));
+
+                keyFrame.BoneTransforms[boneID] = boneTransform;
+            }
+
+            keyFrames.insert(keyFrame);
+        }
+
+        Ref<Animation> asset = CreateRef<Animation>(duration, ticksPerSecond, keyFrames);
+        asset->m_MetaData = metaData;
+
+        return asset;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    Ref<Skeleton> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    {
+        std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
+
+        if (!ifs)
+            return nullptr;
+
+        AssetMetaData metaData;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Skeleton);
+
+        u32 boneCount;
+        ifs.read((char*)&boneCount, sizeof(u32));
+
+        Vector<Skeleton::Bone> bones;
+        bones.reserve(boneCount);
+
+        for (u32 i = 0; i < boneCount; i++)
+        {
+            Skeleton::Bone& bone = bones.emplace_back();
+            ifs.read((char*)&bone.ID, sizeof(u32));
+            ifs.read((char*)&bone.ParentID, sizeof(u32));
+
+            u32 childrenCount = bone.ChildrenIDs.size();
+            ifs.read((char*)&childrenCount, sizeof(u32));
+
+            bone.ChildrenIDs.resize(childrenCount);
+            ifs.read((char*)bone.ChildrenIDs.data(), childrenCount * sizeof(u32));
+
+            ifs.read((char*)&bone.InverseBindTransform, sizeof(glm::mat4));
+        }
+
+        Ref<Skeleton> asset = CreateRef<Skeleton>(bones);
+        asset->m_MetaData = metaData;
 
         return asset;
     }

@@ -351,6 +351,115 @@ namespace Atom
 				data.AddComponentFn = [](Entity entity) { entity.AddComponent<MeshComponent>(); };
 			}
 
+			if (m_Entity.HasComponent<AnimatedMeshComponent>())
+			{
+				Utils::DrawComponent<AnimatedMeshComponent>("Animated Mesh", m_Entity, true, [](auto& component)
+				{
+					// Mesh
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Mesh");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::InputText("##Mesh", component.Mesh ? (char*)component.Mesh->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MESH"))
+						{
+							component.Mesh = AssetManager::GetAsset<Mesh>(*(UUID*)payload->Data, true);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					// Skeleton
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Skeleton");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::InputText("##Skeleton", component.Skeleton ? (char*)component.Skeleton->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_SKELETON"))
+						{
+							component.Skeleton = AssetManager::GetAsset<Skeleton>(*(UUID*)payload->Data, true);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Animated Mesh";
+				data.ComponentHash = entt::type_id<AnimatedMeshComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<AnimatedMeshComponent>(); };
+			}
+
+			if (m_Entity.HasComponent<AnimatorComponent>())
+			{
+				Utils::DrawComponent<AnimatorComponent>("Animator", m_Entity, true, [](auto& component)
+				{
+					// Animation
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Animation");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::InputText("##Animation", component.Animation ? (char*)component.Animation->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_ANIMATION"))
+						{
+							component.Animation = AssetManager::GetAsset<Animation>(*(UUID*)payload->Data, true);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					// Current time
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Current time");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CurrentTime", &component.CurrentTime, 0.01f, 0.0f, component.Animation ? component.Animation->GetDuration() : 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					// Play
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Play");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::Checkbox("##Play", &component.Play);
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Animator";
+				data.ComponentHash = entt::type_id<AnimatorComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<AnimatorComponent>(); };
+			}
+
 			if (m_Entity.HasComponent<SkyLightComponent>())
 			{
 				Utils::DrawComponent<SkyLightComponent>("Sky Light", m_Entity, true, [](auto& component)

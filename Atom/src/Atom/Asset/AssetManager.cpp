@@ -5,6 +5,7 @@
 #include "Atom/Core/Application.h"
 #include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
+#include "Atom/Renderer/Animation.h"
 #include "Atom/Scene/Scene.h"
 
 namespace Atom
@@ -168,6 +169,8 @@ namespace Atom
             case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
             case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
             case AssetType::Scene: asset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath); break;
+            case AssetType::Animation: asset = AssetSerializer::Deserialize<Animation>(metaData.AssetFilepath); break;
+            case AssetType::Skeleton: asset = AssetSerializer::Deserialize<Skeleton>(metaData.AssetFilepath); break;
         }
 
         if (!asset)
@@ -237,11 +240,26 @@ namespace Atom
             }
             case AssetType::Scene:
             {
-                Ref<Scene> sceneAsset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath);
-                result = sceneAsset != nullptr;
+                result = true;
+                break;
+            }
+            case AssetType::Animation:
+            {
+                Ref<Animation> animationAsset = AssetSerializer::Deserialize<Animation>(metaData.AssetFilepath);
+                result = animationAsset != nullptr;
 
                 if (result)
-                    *std::dynamic_pointer_cast<Scene>(ms_LoadedAssets[uuid]) = std::move(*sceneAsset);
+                    *std::dynamic_pointer_cast<Animation>(ms_LoadedAssets[uuid]) = std::move(*animationAsset);
+
+                break;
+            }
+            case AssetType::Skeleton:
+            {
+                Ref<Skeleton> skeletonAsset = AssetSerializer::Deserialize<Skeleton>(metaData.AssetFilepath);
+                result = skeletonAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<Skeleton>(ms_LoadedAssets[uuid]) = std::move(*skeletonAsset);
 
                 break;
             }

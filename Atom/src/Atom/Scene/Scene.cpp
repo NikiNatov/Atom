@@ -68,6 +68,9 @@ namespace Atom
     Ref<Scene> Scene::Copy()
     {
         Ref<Scene> newScene = CreateRef<Scene>(m_Name);
+        *newScene->m_LightEnvironment = *m_LightEnvironment;
+        newScene->m_EditorCamera = m_EditorCamera;
+
         HashMap<UUID, entt::entity> uuidToEnttIDMap;
 
         for (auto e : m_Registry.view<IDComponent>())
@@ -83,6 +86,8 @@ namespace Atom
         CopyComponent<SceneHierarchyComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<CameraComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<MeshComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<AnimatedMeshComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<AnimatorComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<SkyLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<DirectionalLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<PointLightComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
@@ -121,6 +126,8 @@ namespace Atom
         CopyComponentIfExists<TransformComponent>(newEntity, entity);
         CopyComponentIfExists<CameraComponent>(newEntity, entity);
         CopyComponentIfExists<MeshComponent>(newEntity, entity);
+        CopyComponentIfExists<AnimatedMeshComponent>(newEntity, entity);
+        CopyComponentIfExists<AnimatorComponent>(newEntity, entity);
         CopyComponentIfExists<SkyLightComponent>(newEntity, entity);
         CopyComponentIfExists<DirectionalLightComponent>(newEntity, entity);
         CopyComponentIfExists<PointLightComponent>(newEntity, entity);
@@ -228,15 +235,56 @@ namespace Atom
     void Scene::OnUpdate(Timestep ts)
     {
         // Update scripts
-        auto view = m_Registry.view<ScriptComponent>();
-        for (auto entity : view)
         {
-            ScriptEngine::UpdateEntityScript(Entity(entity, this), ts);
+            auto view = m_Registry.view<ScriptComponent>();
+            for (auto entity : view)
+            {
+                ScriptEngine::UpdateEntityScript(Entity(entity, this), ts);
+            }
+
+            for (auto entity : view)
+            {
+                ScriptEngine::LateUpdateEntityScript(Entity(entity, this), ts);
+            }
         }
 
-        for (auto entity : view)
+        // Update animation time
         {
-            ScriptEngine::LateUpdateEntityScript(Entity(entity, this), ts);
+            auto view = m_Registry.view<AnimatedMeshComponent, AnimatorComponent>();
+            for (auto entity : view)
+            {
+                auto& [amc, ac] = view.get<AnimatedMeshComponent, AnimatorComponent>(entity);
+
+                if (ac.Animation && ac.Play)
+                {
+                    // Update animation time
+                    ac.CurrentTime += ts.GetSeconds() * ac.Animation->GetTicksPerSecond();
+                    if (ac.CurrentTime > ac.Animation->GetDuration())
+                        ac.CurrentTime = std::fmod(ac.CurrentTime, ac.Animation->GetDuration());
+
+                    // Calculate bone animated transforms
+                    Vector<Skeleton::Bone>& skeletonBones = amc.Skeleton->GetBones();
+                    Queue<Skeleton::Bone*> boneQueue;
+                    boneQueue.push(&amc.Skeleton->GetRootBone());
+
+                    while (!boneQueue.empty())
+                    {
+                        Skeleton::Bone* currentBone = boneQueue.front();
+                        glm::mat4 interpolatedTransform = ac.Animation->GetTransformAtTimeStamp(ac.CurrentTime, currentBone->ID);
+                        currentBone->AnimatedTransform = currentBone->ParentID != UINT32_MAX ? skeletonBones[currentBone->ParentID].AnimatedTransform * interpolatedTransform : interpolatedTransform;
+                        boneQueue.pop();
+
+                        for (u32 childID : currentBone->ChildrenIDs)
+                            boneQueue.push(&skeletonBones[childID]);
+                    }
+
+                    // Multiply by the inverse bind transform
+                    for (auto& bone : skeletonBones)
+                    {
+                        bone.AnimatedTransform = bone.AnimatedTransform * bone.InverseBindTransform;
+                    }
+                }
+            }
         }
 
         // Simulate physics and update transforms
@@ -338,6 +386,34 @@ namespace Atom
                     }
                     else
                         renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
+                }
+            }
+        }
+
+        // Submit animated meshes
+        {
+            auto view = m_Registry.view<AnimatedMeshComponent, TransformComponent, SceneHierarchyComponent>();
+            for (auto entity : view)
+            {
+                auto [amc, tc, shc] = view.get<AnimatedMeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
+                
+                if (amc.Mesh && !amc.Mesh->IsEmpty())
+                {
+                    if (shc.Parent)
+                    {
+                        Entity currentParent = FindEntityByUUID(shc.Parent);
+                        auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
+
+                        while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                        {
+                            currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
+                            accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
+                        }
+
+                        renderer->SubmitMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, amc.Skeleton);
+                    }
+                    else
+                        renderer->SubmitMesh(amc.Mesh, tc.GetTransform(), {}, amc.Skeleton);
                 }
             }
         }
@@ -454,10 +530,38 @@ namespace Atom
                                 accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                             }
 
-                            renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), nullptr);
+                            renderer->SubmitMesh(mc.Mesh, accumulatedTransform * tc.GetTransform(), {});
                         }
                         else
-                            renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), nullptr);
+                            renderer->SubmitMesh(mc.Mesh, tc.GetTransform(), {});
+                    }
+                }
+            }
+
+            // Submit animated meshes
+            {
+                auto view = m_Registry.view<AnimatedMeshComponent, TransformComponent, SceneHierarchyComponent>();
+                for (auto entity : view)
+                {
+                    auto [amc, tc, shc] = view.get<AnimatedMeshComponent, TransformComponent, SceneHierarchyComponent>(entity);
+
+                    if (amc.Mesh && !amc.Mesh->IsEmpty())
+                    {
+                        if (shc.Parent)
+                        {
+                            Entity currentParent = FindEntityByUUID(shc.Parent);
+                            auto accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform();
+
+                            while (currentParent.GetComponent<SceneHierarchyComponent>().Parent)
+                            {
+                                currentParent = FindEntityByUUID(currentParent.GetComponent<SceneHierarchyComponent>().Parent);
+                                accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
+                            }
+
+                            renderer->SubmitMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, amc.Skeleton);
+                        }
+                        else
+                            renderer->SubmitMesh(amc.Mesh, tc.GetTransform(), {}, amc.Skeleton);
                     }
                 }
             }

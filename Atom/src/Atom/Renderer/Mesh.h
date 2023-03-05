@@ -2,6 +2,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Renderer/Material.h"
+#include "Atom/Renderer/Animation.h"
 #include "Atom/Asset/Asset.h"
 
 #include <glm/glm.hpp>
@@ -11,6 +12,11 @@ namespace Atom
     class VertexBuffer;
     class IndexBuffer;
 
+    struct BoneWeight
+    {
+        std::pair<u32, f32> Weights[Skeleton::Bone::MAX_BONE_WEIGHTS];
+    };
+
     struct Vertex
     {
         glm::vec3 Position;
@@ -18,6 +24,17 @@ namespace Atom
         glm::vec3 Normal;
         glm::vec3 Tangent;
         glm::vec3 Bitangent;
+    };
+
+    struct AnimatedVertex
+    {
+        glm::vec3 Position;
+        glm::vec2 TexCoord;
+        glm::vec3 Normal;
+        glm::vec3 Tangent;
+        glm::vec3 Bitangent;
+        u32       BoneIDs[Skeleton::Bone::MAX_BONE_WEIGHTS];
+        f32       BoneWeights[Skeleton::Bone::MAX_BONE_WEIGHTS];
     };
 
     struct Submesh
@@ -36,6 +53,7 @@ namespace Atom
         Vector<glm::vec3>  Normals;
         Vector<glm::vec3>  Tangents;
         Vector<glm::vec3>  Bitangents;
+        Vector<BoneWeight> BoneWeights;
         Vector<u32>        Indices;
         Vector<Submesh>    Submeshes;
         Ref<MaterialTable> MaterialTable;
@@ -62,6 +80,7 @@ namespace Atom
         inline void SetNormals(const Vector<glm::vec3>& normals) { m_Normals = normals; }
         inline void SetTangents(const Vector<glm::vec3>& tangents) { m_Tangents = tangents; }
         inline void SetBitangents(const Vector<glm::vec3>& bitangents) { m_Bitangents = bitangents; }
+        inline void SetBoneWeights(const Vector<BoneWeight>& boneWeights) { m_BoneWeights = boneWeights; }
         inline void SetIndices(const Vector<u32>& indices) { m_Indices = indices; }
         inline void SetSubmeshes(const Vector<Submesh>& submeshes) { m_Submeshes = submeshes; }
         inline void SetMaterial(u32 submeshIdx, Ref<Material> material) { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); m_MaterialTable->SetMaterial(submeshIdx, material); }
@@ -72,6 +91,7 @@ namespace Atom
         inline const Vector<glm::vec3>& GetNormals() const { return m_Normals; }
         inline const Vector<glm::vec3>& GetTangents() const { return m_Tangents; }
         inline const Vector<glm::vec3>& GetBitangents() const { return m_Bitangents; }
+        inline const Vector<BoneWeight>& GetBoneWeights() const { return m_BoneWeights; }
         inline const Vector<u32>& GetIndices() const { return m_Indices; }
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
         inline const Ref<Material> GetMaterial(u32 submeshIdx) const { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); return m_MaterialTable->GetMaterial(submeshIdx); }
@@ -86,6 +106,7 @@ namespace Atom
         Vector<glm::vec3>  m_Normals;
         Vector<glm::vec3>  m_Tangents;
         Vector<glm::vec3>  m_Bitangents;
+        Vector<BoneWeight> m_BoneWeights;
         Vector<u32>        m_Indices;
         Vector<Submesh>    m_Submeshes;
         Ref<MaterialTable> m_MaterialTable;

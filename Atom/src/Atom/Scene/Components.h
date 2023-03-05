@@ -86,6 +86,29 @@ namespace Atom
 			: Mesh(mesh) {}
 	};
 
+	struct AnimatedMeshComponent
+	{
+		Ref<Mesh>	  Mesh = nullptr;
+		Ref<Skeleton> Skeleton = nullptr;
+
+		AnimatedMeshComponent() = default;
+		AnimatedMeshComponent(const AnimatedMeshComponent& other) = default;
+		AnimatedMeshComponent(Ref<Atom::Mesh> mesh, Ref<Atom::Skeleton> skeleton)
+			: Mesh(mesh), Skeleton(skeleton) {}
+	};
+
+	struct AnimatorComponent
+	{
+		Ref<Animation> Animation = nullptr;
+		f32			   CurrentTime = 0.0f;
+		bool		   Play = false;
+
+		AnimatorComponent() = default;
+		AnimatorComponent(const AnimatorComponent& other) = default;
+		AnimatorComponent(Ref<Atom::Animation> animation, f32 currentTime)
+			: Animation(animation), CurrentTime(currentTime) {}
+	};
+
 	struct SkyLightComponent
 	{
 		Ref<TextureCube> EnvironmentMap = nullptr;

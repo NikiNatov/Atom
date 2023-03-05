@@ -22,7 +22,7 @@ namespace Atom
         void Initialize();
         void BeginScene(Camera& camera, const glm::mat4& cameraTransform, const Ref<LightEnvironment>& lightEnvironment);
         void BeginScene(EditorCamera& editorCamera, const Ref<LightEnvironment>& lightEnvironment);
-        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable);
+        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, const Ref<Skeleton>& skeleton = nullptr);
         void OnViewportResize(u32 width, u32 height);
         void PreRender();
         void Flush();
@@ -41,6 +41,7 @@ namespace Atom
             u32           SubmeshIndex;
             Ref<Material> Material;
             glm::mat4     Transform;
+            Ref<Skeleton> Skeleton;
         };
 
         struct CameraCB
@@ -56,9 +57,11 @@ namespace Atom
         Vector<Ref<LightEnvironment>> m_LightsData;
         Vector<CameraCB>              m_CameraData;
         Vector<Ref<ConstantBuffer>>   m_CameraCBs;
+        Vector<Ref<ConstantBuffer>>   m_AnimationCBs;
         Vector<Ref<StructuredBuffer>> m_LightsSBs;
 
         Ref<GraphicsPipeline> m_GeometryPipeline = nullptr;
+        Ref<GraphicsPipeline> m_AnimatedGeometryPipeline = nullptr;
         Ref<GraphicsPipeline> m_CompositePipeline = nullptr;
         Ref<Material>         m_CompositeMaterial = nullptr;
         Ref<GraphicsPipeline> m_SkyBoxPipeline = nullptr;

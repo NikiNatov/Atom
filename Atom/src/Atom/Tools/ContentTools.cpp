@@ -76,6 +76,18 @@ namespace Atom
 
             return 0;
         }
+
+        static glm::mat4 AssimpMat4ToGLM(const aiMatrix4x4& matrix)
+        {
+            glm::mat4 result;
+
+            result[0].x = matrix.a1; result[0].y = matrix.b1; result[0].z = matrix.c1; result[0].w = matrix.d1;
+            result[1].x = matrix.a2; result[1].y = matrix.b2; result[1].z = matrix.c2; result[1].w = matrix.d2;
+            result[2].x = matrix.a3; result[2].y = matrix.b3; result[2].z = matrix.c3; result[2].w = matrix.d3;
+            result[3].x = matrix.a4; result[3].y = matrix.b4; result[3].z = matrix.c4; result[3].w = matrix.d4;
+
+            return result;
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -228,7 +240,6 @@ namespace Atom
                               aiProcess_CalcTangentSpace |
                               aiProcess_SortByPType |
                               aiProcess_FindDegenerates |
-                              aiProcess_FindInvalidData |
                               aiProcess_FindInstances |
                               aiProcess_ValidateDataStructure |
                               aiProcess_OptimizeMeshes |
@@ -238,8 +249,11 @@ namespace Atom
         
         if (importSettings.SmoothNormals)
             processingFlags |= aiProcess_GenSmoothNormals;
-        if (importSettings.PreserveHierarchy)
+        if (importSettings.ImportAnimations)
+        {
             processingFlags &= ~aiProcess_PreTransformVertices;
+            processingFlags |= aiProcess_OptimizeGraph;
+        }
         
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(sourcePath.string().c_str(), processingFlags);
@@ -261,6 +275,8 @@ namespace Atom
         meshDesc.MaterialTable = CreateRef<MaterialTable>();
 
         // Parse all submeshes
+        HashMap<String, std::pair<u32, glm::mat4>> bonesByName;
+
         for (u32 submeshIdx = 0; submeshIdx < scene->mNumMeshes; submeshIdx++)
         {
             aiMesh* submesh = scene->mMeshes[submeshIdx];
@@ -298,6 +314,27 @@ namespace Atom
                 }
             }
 
+            // Parse bone data
+            meshDesc.BoneWeights.resize(startVertex + vertexCount);
+            Vector<u32> boneWeightsPerVertex(vertexCount);
+
+            for (u32 boneIdx = 0; boneIdx < submesh->mNumBones; boneIdx++)
+            {
+                aiBone* bone = submesh->mBones[boneIdx];
+                String boneName = bone->mName.C_Str();
+
+                if (bonesByName.find(boneName) == bonesByName.end())
+                    bonesByName[boneName] = { bonesByName.size(), Utils::AssimpMat4ToGLM(bone->mOffsetMatrix) };
+
+                for (u32 weightIdx = 0; weightIdx < bone->mNumWeights; weightIdx++)
+                {
+                    const aiVertexWeight& vertexWeight = bone->mWeights[weightIdx];
+                    u32 currentWeightIdx = boneWeightsPerVertex[vertexWeight.mVertexId]++;
+                    ATOM_ENGINE_ASSERT(currentWeightIdx < Skeleton::Bone::MAX_BONE_WEIGHTS);
+                    meshDesc.BoneWeights[startVertex + vertexWeight.mVertexId].Weights[currentWeightIdx] = { bonesByName.at(boneName).first, vertexWeight.mWeight };
+                }
+            }
+
             // Create submesh
             Submesh& sm = meshDesc.Submeshes.emplace_back();
             sm.StartVertex = startVertex;
@@ -305,6 +342,112 @@ namespace Atom
             sm.StartIndex = startIndex;
             sm.IndexCount = indexCount;
             sm.MaterialIndex = submesh->mMaterialIndex;
+        }
+
+        if (importSettings.ImportAnimations)
+        {
+            // Create skeleton
+            Vector<Skeleton::Bone> skeletonBones;
+            skeletonBones.resize(bonesByName.size());
+
+            Queue<aiNode*> nodeQueue;
+            nodeQueue.push(scene->mRootNode);
+
+            while (!nodeQueue.empty())
+            {
+                aiNode* currentNode = nodeQueue.front();
+                String nodeName = currentNode->mName.C_Str();
+
+                if (bonesByName.find(nodeName) != bonesByName.end())
+                {
+                    // Process the node if it is a bone
+                    auto& [id, inverseBindTransform] = bonesByName[nodeName];
+
+                    Skeleton::Bone& bone = skeletonBones[id];
+                    bone.ID = id;
+                    bone.InverseBindTransform = inverseBindTransform;
+
+                    // Find the bone parent
+                    aiNode* currentParent = currentNode->mParent;
+                    while (currentParent)
+                    {
+                        if (bonesByName.find(currentParent->mName.C_Str()) != bonesByName.end())
+                            break;
+
+                        currentParent = currentParent->mParent;
+                    }
+
+                    if (!currentParent)
+                    {
+                        // We found a root node
+                        bone.ParentID = UINT32_MAX;
+                    }
+                    else
+                    {
+                        u32 parentID = bonesByName.at(currentParent->mName.C_Str()).first;
+                        bone.ParentID = parentID;
+                        skeletonBones[parentID].ChildrenIDs.push_back(id);
+                    }
+                }
+
+                for (u32 childIdx = 0; childIdx < currentNode->mNumChildren; childIdx++)
+                    nodeQueue.push(currentNode->mChildren[childIdx]);
+
+                nodeQueue.pop();
+            }
+
+            String skeletonName = sourcePath.stem().string() + "_Skeleton" + Asset::AssetFileExtensions[(u32)AssetType::Skeleton];
+            ContentTools::CreateSkeletonAsset(skeletonBones, std::filesystem::path("Skeletons") / skeletonName);
+
+            // Parse all animations
+            for (u32 animationIdx = 0; animationIdx < scene->mNumAnimations; animationIdx++)
+            {
+                aiAnimation* animation = scene->mAnimations[animationIdx];
+                HashMap<f32, HashMap<u32, Animation::BoneTransform>> boneTransformsPerKeyFrame;
+
+                for (u32 nodeIdx = 0; nodeIdx < animation->mNumChannels; nodeIdx++)
+                {
+                    aiNodeAnim* node = animation->mChannels[nodeIdx];
+                    String boneName = node->mNodeName.C_Str();
+
+                    if (bonesByName.find(boneName) != bonesByName.end())
+                    {
+                        u32 boneID = bonesByName.at(boneName).first;
+                    
+                        for (u32 keyIdx = 0; keyIdx < node->mNumPositionKeys; keyIdx++)
+                        {
+                            const aiVectorKey& posKey = node->mPositionKeys[keyIdx];
+                            f32 timeStamp = posKey.mTime;
+                            boneTransformsPerKeyFrame[timeStamp][boneID].Position = glm::vec3(posKey.mValue.x, posKey.mValue.y, posKey.mValue.z);
+                        }
+                    
+                        for (u32 keyIdx = 0; keyIdx < node->mNumRotationKeys; keyIdx++)
+                        {
+                            const aiQuatKey& rotKey = node->mRotationKeys[keyIdx];
+                            f32 timeStamp = rotKey.mTime;
+                            boneTransformsPerKeyFrame[timeStamp][boneID].Rotation = glm::quat(rotKey.mValue.w, rotKey.mValue.x, rotKey.mValue.y, rotKey.mValue.z);
+                        }
+                    
+                        for (u32 keyIdx = 0; keyIdx < node->mNumScalingKeys; keyIdx++)
+                        {
+                            const aiVectorKey& scaleKey = node->mScalingKeys[keyIdx];
+                            f32 timeStamp = scaleKey.mTime;
+                            boneTransformsPerKeyFrame[timeStamp][boneID].Scale = glm::vec3(scaleKey.mValue.x, scaleKey.mValue.y, scaleKey.mValue.z);
+                        }
+                    }
+                }
+
+                // Construct key frames
+                Set<Animation::KeyFrame> keyFrames;
+                for (auto& [timeStamp, boneTransforms] : boneTransformsPerKeyFrame)
+                    keyFrames.insert({ timeStamp, boneTransforms });
+
+                String animationName = animation->mName.C_Str();
+                animationName = animationName.substr(animationName.find_last_of('|') + 1);
+                animationName = fmt::format("{}_{}{}", sourcePath.stem().string(), animationName, Asset::AssetFileExtensions[(u32)AssetType::Animation]);
+
+                ContentTools::CreateAnimationAsset(animation->mDuration, animation->mTicksPerSecond, keyFrames, std::filesystem::path("Animations") / animationName);
+            }
         }
 
         // Parse all materials
@@ -474,9 +617,61 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    UUID ContentTools::CreateAnimationAsset(f32 duration, f32 ticksPerSecond, const Set<Animation::KeyFrame>& keyFrames, const std::filesystem::path& filepath)
+    {
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
+
+        if (std::filesystem::exists(assetFullPath))
+        {
+            ATOM_WARNING("Animation {} already exists", assetFullPath.string());
+            return AssetManager::GetUUIDForAssetPath(assetFullPath);
+        }
+
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
+
+        Ref<Animation> asset = CreateRef<Animation>(duration, ticksPerSecond, keyFrames);
+
+        if (!AssetSerializer::Serialize(assetFullPath, asset))
+        {
+            ATOM_ERROR("Failed serializing animation asset {}", assetFullPath);
+            return 0;
+        }
+
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    UUID ContentTools::CreateSkeletonAsset(const Vector<Skeleton::Bone>& bones, const std::filesystem::path& filepath)
+    {
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
+
+        if (std::filesystem::exists(assetFullPath))
+        {
+            ATOM_WARNING("Skeleton {} already exists", assetFullPath.string());
+            return AssetManager::GetUUIDForAssetPath(assetFullPath);
+        }
+
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
+
+        Ref<Skeleton> asset = CreateRef<Skeleton>(bones);
+
+        if (!AssetSerializer::Serialize(assetFullPath, asset))
+        {
+            ATOM_ERROR("Failed serializing skeleton asset {}", assetFullPath);
+            return 0;
+        }
+
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::CreateMaterialAsset(const std::filesystem::path& filepath)
     {
-        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested);
+        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested);
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())

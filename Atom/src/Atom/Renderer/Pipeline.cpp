@@ -14,15 +14,19 @@ namespace Atom
         {
             switch (type)
             {
-                case ShaderDataType::Unorm4:    return DXGI_FORMAT_R8G8B8A8_UNORM;
-                case ShaderDataType::Float:		return DXGI_FORMAT_R32_FLOAT;
-                case ShaderDataType::Float2:	return DXGI_FORMAT_R32G32_FLOAT;
-                case ShaderDataType::Float3:	return DXGI_FORMAT_R32G32B32_FLOAT;
-                case ShaderDataType::Float4:	return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                case ShaderDataType::Int:		return DXGI_FORMAT_R32_SINT;
-                case ShaderDataType::Int2:		return DXGI_FORMAT_R32G32_SINT;
-                case ShaderDataType::Int3:		return DXGI_FORMAT_R32G32B32_SINT;
-                case ShaderDataType::Int4:		return DXGI_FORMAT_R32G32B32A32_SINT;
+                case ShaderDataType::Unorm4: return DXGI_FORMAT_R8G8B8A8_UNORM;
+                case ShaderDataType::Float:  return DXGI_FORMAT_R32_FLOAT;
+                case ShaderDataType::Float2: return DXGI_FORMAT_R32G32_FLOAT;
+                case ShaderDataType::Float3: return DXGI_FORMAT_R32G32B32_FLOAT;
+                case ShaderDataType::Float4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+                case ShaderDataType::Int:    return DXGI_FORMAT_R32_SINT;
+                case ShaderDataType::Int2:   return DXGI_FORMAT_R32G32_SINT;
+                case ShaderDataType::Int3:   return DXGI_FORMAT_R32G32B32_SINT;
+                case ShaderDataType::Int4:   return DXGI_FORMAT_R32G32B32A32_SINT;
+                case ShaderDataType::Uint:   return DXGI_FORMAT_R32_UINT;
+                case ShaderDataType::Uint2:  return DXGI_FORMAT_R32G32_UINT;
+                case ShaderDataType::Uint3:  return DXGI_FORMAT_R32G32B32_UINT;
+                case ShaderDataType::Uint4:  return DXGI_FORMAT_R32G32B32A32_UINT;
             }
 
             ATOM_ENGINE_ASSERT(false, "Unknown data type!");

@@ -20,6 +20,7 @@ namespace Atom
 
         // Set pipelines
         m_GeometryPipeline = pipelineLib.Get<GraphicsPipeline>("MeshPBRPipeline");
+        m_AnimatedGeometryPipeline = pipelineLib.Get<GraphicsPipeline>("MeshPBRAnimatedPipeline");
         m_CompositePipeline = pipelineLib.Get<GraphicsPipeline>("CompositePipeline");
         m_SkyBoxPipeline = pipelineLib.Get<GraphicsPipeline>("SkyBoxPipeline");
         m_FullScreenQuadPipeline = pipelineLib.Get<GraphicsPipeline>("FullscreenQuadPipeline");
@@ -34,6 +35,7 @@ namespace Atom
         m_LightsData.resize(framesInFlight);
         m_LightsSBs.resize(framesInFlight);
 
+        // Create camera constant buffers
         m_CameraData.resize(framesInFlight);
         m_CameraCBs.resize(framesInFlight);
 
@@ -44,6 +46,9 @@ namespace Atom
 
         for(u32 frameIdx = 0 ; frameIdx < framesInFlight; frameIdx++)
             m_CameraCBs[frameIdx] = CreateRef<ConstantBuffer>(cbDesc, fmt::format("TransformCB[{}]", frameIdx).c_str());
+
+        // Create animation constant buffers
+        m_AnimationCBs.resize(framesInFlight);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -121,7 +126,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable)
+    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, const Ref<Skeleton>& skeleton)
     {
         if (!mesh)
             return;
@@ -139,6 +144,7 @@ namespace Atom
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
             drawCommand.Material = material ? material : Renderer::GetErrorMaterial();
+            drawCommand.Skeleton = skeleton;
         }
     }
 
@@ -194,7 +200,36 @@ namespace Atom
             drawCommand.Material->SetUniform("_Transform", drawCommand.Transform);
             drawCommand.Material->SetUniform("_NumLights", m_LightsSBs[currentFrameIdx] ? m_LightsSBs[currentFrameIdx]->GetElementCount() : 0);
 
-            Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], m_LightsSBs[currentFrameIdx]);
+            // Upload bone transform data if there is a skeleton
+            if (drawCommand.Skeleton)
+            {
+                Vector<Skeleton::Bone>& bones = drawCommand.Skeleton->GetBones();
+                Vector<glm::mat4> boneTransforms;
+                boneTransforms.reserve(bones.size());
+
+                for (auto& bone : bones)
+                    boneTransforms.push_back(bone.AnimatedTransform);
+
+                if (!m_AnimationCBs[currentFrameIdx] || m_AnimationCBs[currentFrameIdx]->GetSize() != sizeof(glm::mat4) * boneTransforms.size())
+                {
+                    BufferDescription cbDesc;
+                    cbDesc.ElementCount = 1;
+                    cbDesc.ElementSize = sizeof(glm::mat4) * boneTransforms.size();
+                    cbDesc.IsDynamic = true;
+
+                    m_AnimationCBs[currentFrameIdx] = CreateRef<ConstantBuffer>(cbDesc, fmt::format("AnimationCB[{}]", currentFrameIdx).c_str());
+                }
+
+                void* data = m_AnimationCBs[currentFrameIdx]->Map(0, 0);
+                memcpy(data, boneTransforms.data(), sizeof(glm::mat4) * boneTransforms.size());
+                m_AnimationCBs[currentFrameIdx]->Unmap();
+
+                Renderer::RenderMesh(commandBuffer, m_AnimatedGeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], m_AnimationCBs[currentFrameIdx], m_LightsSBs[currentFrameIdx]);
+            }
+            else
+            {
+                Renderer::RenderMesh(commandBuffer, m_GeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], nullptr, m_LightsSBs[currentFrameIdx]);
+            }
         }
 
         Renderer::EndRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());

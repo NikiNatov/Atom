@@ -219,14 +219,14 @@ namespace Atom
                 ImGui::Columns(1);
             }
 
-            // PreserveHierarchy 
+            // ImportAnimations 
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("Preserve hierarchy");
+                ImGui::Text("Import animations");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::PushItemWidth(-1);
-                ImGui::Checkbox("##PreserveHierarchy", &m_ImportSettings.PreserveHierarchy);
+                ImGui::Checkbox("##ImportAnimations", &m_ImportSettings.ImportAnimations);
                 ImGui::PopItemWidth();
                 ImGui::Columns(1);
             }

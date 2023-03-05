@@ -39,6 +39,7 @@ namespace Atom
 
         // Load shaders
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRShader.hlsl");
+        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRAnimatedShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/SkyBoxShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/CompositeShader.hlsl");
@@ -79,6 +80,28 @@ namespace Atom
                 pipelineDesc.BackfaceCulling = true;
 
                 ms_PipelineLibrary.Load<GraphicsPipeline>("MeshPBRPipeline", pipelineDesc);
+            }
+
+            {
+                GraphicsPipelineDescription pipelineDesc;
+                pipelineDesc.Topology = Topology::Triangles;
+                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader");
+                pipelineDesc.Framebuffer = frameBuffer;
+                pipelineDesc.Layout = {
+                    { "POSITION", ShaderDataType::Float3 },
+                    { "TEX_COORD", ShaderDataType::Float2 },
+                    { "NORMAL", ShaderDataType::Float3 },
+                    { "TANGENT", ShaderDataType::Float3 },
+                    { "BITANGENT", ShaderDataType::Float3 },
+                    { "BONE_IDS", ShaderDataType::Uint4 },
+                    { "BONE_WEIGHTS", ShaderDataType::Float4 },
+                };
+                pipelineDesc.EnableBlend = true;
+                pipelineDesc.EnableDepthTest = true;
+                pipelineDesc.Wireframe = false;
+                pipelineDesc.BackfaceCulling = true;
+
+                ms_PipelineLibrary.Load<GraphicsPipeline>("MeshPBRAnimatedPipeline", pipelineDesc);
             }
 
             {
@@ -380,7 +403,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> constantBuffer, Ref<StructuredBuffer> structuredBuffer)
+    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> cameraCB, Ref<ConstantBuffer> animationCB, Ref<StructuredBuffer> structuredBuffer)
     {
         commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
@@ -401,9 +424,14 @@ namespace Atom
         }
 
         // Set constant buffers and structured buffers
-        if (constantBuffer)
+        if (cameraCB)
         {
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, cameraCB.get());
+        }
+
+        if (animationCB)
+        {
+            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, animationCB.get());
         }
 
         if (structuredBuffer)

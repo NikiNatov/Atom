@@ -12,6 +12,8 @@ namespace Atom
         Mesh,
         Material,
         Scene,
+        Animation,
+        Skeleton,
         NumTypes
     };
 
@@ -43,7 +45,9 @@ namespace Atom
             ".atmtexcube",
             ".atmmesh",
             ".atmmat",
-            ".atmscene"
+            ".atmscene",
+            ".atmanim",
+            ".atmskeleton"
         };
     public:
         virtual ~Asset() = default;

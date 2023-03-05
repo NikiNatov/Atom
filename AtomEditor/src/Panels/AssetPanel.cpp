@@ -128,6 +128,34 @@ namespace Atom
 
 						ImGui::TextWrapped(filename.string().c_str());
 					}
+					else if (filename.extension() == ".atmanim")
+					{
+						ImGui::ImageButton((ImTextureID)EditorResources::AnimationAssetIcon.get(), button_sz, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0, { 0.0f, 0.0f, 0.0f, 0.0f });
+
+						if (ImGui::BeginDragDropSource())
+						{
+							ImGui::Text("%s", filename.string().c_str());
+							UUID assetUUID = AssetManager::GetUUIDForAssetPath(relativePath);
+							ImGui::SetDragDropPayload("DRAG_ANIMATION", &assetUUID, sizeof(UUID));
+							ImGui::EndDragDropSource();
+						}
+
+						ImGui::TextWrapped(filename.string().c_str());
+					}
+					else if (filename.extension() == ".atmskeleton")
+					{
+						ImGui::ImageButton((ImTextureID)EditorResources::SkeletonAssetIcon.get(), button_sz, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0, { 0.0f, 0.0f, 0.0f, 0.0f });
+
+						if (ImGui::BeginDragDropSource())
+						{
+							ImGui::Text("%s", filename.string().c_str());
+							UUID assetUUID = AssetManager::GetUUIDForAssetPath(relativePath);
+							ImGui::SetDragDropPayload("DRAG_SKELETON", &assetUUID, sizeof(UUID));
+							ImGui::EndDragDropSource();
+						}
+
+						ImGui::TextWrapped(filename.string().c_str());
+					}
 
 					ImGui::PopStyleColor();
 					ImGui::PopID();
