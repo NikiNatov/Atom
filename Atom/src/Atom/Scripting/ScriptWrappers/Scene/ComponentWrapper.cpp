@@ -279,6 +279,82 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    AnimatedMeshComponent::AnimatedMeshComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AnimatedMeshComponent::SetMesh(Mesh mesh)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::AnimatedMeshComponent>().Mesh = mesh.GetMesh();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Mesh AnimatedMeshComponent::GetMesh()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return Mesh(entity.GetComponent<Atom::AnimatedMeshComponent>().Mesh);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    AnimatorComponent::AnimatorComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AnimatorComponent::SetAnimation(Animation animation)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::AnimatorComponent>().Animation = animation.GetAnimation();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AnimatorComponent::SetTime(f32 time)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::AnimatorComponent>().CurrentTime = time;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AnimatorComponent::SetPlay(bool play)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::AnimatorComponent>().Play = play;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Animation AnimatorComponent::GetAnimation()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return Animation(entity.GetComponent<Atom::AnimatorComponent>().Animation);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 AnimatorComponent::GetTime()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::AnimatorComponent>().CurrentTime;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool AnimatorComponent::GetPlay()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::AnimatorComponent>().Play;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     SkyLightComponent::SkyLightComponent(Entity entity)
         : Component(entity)
     {

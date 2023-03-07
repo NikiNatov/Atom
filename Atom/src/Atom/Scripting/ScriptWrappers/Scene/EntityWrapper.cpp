@@ -14,6 +14,8 @@ namespace Atom
             { typeid(ScriptWrappers::TransformComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::TransformComponent>(); } },
             { typeid(ScriptWrappers::CameraComponent).hash_code(),           [](Atom::Entity e) { return e.HasComponent<Atom::CameraComponent>(); } },
             { typeid(ScriptWrappers::MeshComponent).hash_code(),             [](Atom::Entity e) { return e.HasComponent<Atom::MeshComponent>(); } },
+            { typeid(ScriptWrappers::AnimatedMeshComponent).hash_code(),     [](Atom::Entity e) { return e.HasComponent<Atom::AnimatedMeshComponent>(); } },
+            { typeid(ScriptWrappers::AnimatorComponent).hash_code(),         [](Atom::Entity e) { return e.HasComponent<Atom::AnimatorComponent>(); } },
             { typeid(ScriptWrappers::SkyLightComponent).hash_code(),         [](Atom::Entity e) { return e.HasComponent<Atom::SkyLightComponent>(); } },
             { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { return e.HasComponent<Atom::DirectionalLightComponent>(); } },
             { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { return e.HasComponent<Atom::PointLightComponent>(); } },
@@ -27,6 +29,8 @@ namespace Atom
             { typeid(ScriptWrappers::TransformComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::TransformComponent>(); } },
             { typeid(ScriptWrappers::CameraComponent).hash_code(),           [](Atom::Entity e) { e.AddComponent<Atom::CameraComponent>(); } },
             { typeid(ScriptWrappers::MeshComponent).hash_code(),             [](Atom::Entity e) { e.AddComponent<Atom::MeshComponent>(); } },
+            { typeid(ScriptWrappers::AnimatedMeshComponent).hash_code(),     [](Atom::Entity e) { e.AddComponent<Atom::AnimatedMeshComponent>(); } },
+            { typeid(ScriptWrappers::AnimatorComponent).hash_code(),         [](Atom::Entity e) { e.AddComponent<Atom::AnimatorComponent>(); } },
             { typeid(ScriptWrappers::SkyLightComponent).hash_code(),         [](Atom::Entity e) { e.AddComponent<Atom::SkyLightComponent>(); } },
             { typeid(ScriptWrappers::DirectionalLightComponent).hash_code(), [](Atom::Entity e) { e.AddComponent<Atom::DirectionalLightComponent>(); } },
             { typeid(ScriptWrappers::PointLightComponent).hash_code(),       [](Atom::Entity e) { e.AddComponent<Atom::PointLightComponent>(); } },
@@ -117,6 +121,8 @@ namespace Atom
         template TransformComponent Entity::AddComponent<TransformComponent>();
         template CameraComponent Entity::AddComponent<CameraComponent>();
         template MeshComponent Entity::AddComponent<MeshComponent>();
+        template AnimatedMeshComponent Entity::AddComponent<AnimatedMeshComponent>();
+        template AnimatorComponent Entity::AddComponent<AnimatorComponent>();
         template SkyLightComponent Entity::AddComponent<SkyLightComponent>();
         template DirectionalLightComponent Entity::AddComponent<DirectionalLightComponent>();
         template PointLightComponent Entity::AddComponent<PointLightComponent>();
@@ -136,6 +142,8 @@ namespace Atom
         template bool Entity::HasComponent<TransformComponent>() const;
         template bool Entity::HasComponent<CameraComponent>() const;
         template bool Entity::HasComponent<MeshComponent>() const;
+        template bool Entity::HasComponent<AnimatedMeshComponent>() const;
+        template bool Entity::HasComponent<AnimatorComponent>() const;
         template bool Entity::HasComponent<SkyLightComponent>() const;
         template bool Entity::HasComponent<DirectionalLightComponent>() const;
         template bool Entity::HasComponent<PointLightComponent>() const;
@@ -156,6 +164,8 @@ namespace Atom
         template TransformComponent Entity::GetComponent<TransformComponent>() const;
         template CameraComponent Entity::GetComponent<CameraComponent>() const;
         template MeshComponent Entity::GetComponent<MeshComponent>() const;
+        template AnimatedMeshComponent Entity::GetComponent<AnimatedMeshComponent>() const;
+        template AnimatorComponent Entity::GetComponent<AnimatorComponent>() const;
         template SkyLightComponent Entity::GetComponent<SkyLightComponent>() const;
         template DirectionalLightComponent Entity::GetComponent<DirectionalLightComponent>() const;
         template PointLightComponent Entity::GetComponent<PointLightComponent>() const;

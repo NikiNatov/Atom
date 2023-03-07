@@ -8,6 +8,7 @@
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/AnimationWrapper.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -70,6 +71,30 @@ namespace Atom
 
             void SetMesh(Mesh mesh);
             Mesh GetMesh();
+        };
+
+        class AnimatedMeshComponent : public Component
+        {
+        public:
+            AnimatedMeshComponent() = default;
+            AnimatedMeshComponent(Entity entity);
+
+            void SetMesh(Mesh mesh);
+            Mesh GetMesh();
+        };
+
+        class AnimatorComponent : public Component
+        {
+        public:
+            AnimatorComponent() = default;
+            AnimatorComponent(Entity entity);
+
+            void SetAnimation(Animation animation);
+            void SetTime(f32 time);
+            void SetPlay(bool play);
+            Animation GetAnimation();
+            f32 GetTime();
+            bool GetPlay();
         };
 
         class SkyLightComponent : public Component

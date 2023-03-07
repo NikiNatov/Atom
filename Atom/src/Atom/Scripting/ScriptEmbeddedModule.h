@@ -11,6 +11,7 @@
 #include "Atom/Scripting/ScriptWrappers/Renderer/MeshWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/TextureWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
+#include "Atom/Scripting/ScriptWrappers/Renderer/AnimationWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/ImGui/ImGuiWrapper.h"
 
 #include <glm/glm.hpp>
@@ -448,6 +449,22 @@ namespace Atom
             .def_property_readonly("is_valid", &wrappers::Component::IsValid)
             .def_property("mesh", &wrappers::MeshComponent::GetMesh, &wrappers::MeshComponent::SetMesh);
 
+        py::class_<wrappers::AnimatedMeshComponent>(m, "AnimatedMeshComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::Component::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property("mesh", &wrappers::AnimatedMeshComponent::GetMesh, &wrappers::AnimatedMeshComponent::SetMesh);
+
+        py::class_<wrappers::AnimatorComponent>(m, "AnimatorComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::Component::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property("animation", &wrappers::AnimatorComponent::GetAnimation, &wrappers::AnimatorComponent::SetAnimation)
+            .def_property("current_time", &wrappers::AnimatorComponent::GetTime, &wrappers::AnimatorComponent::SetTime)
+            .def_property("play", &wrappers::AnimatorComponent::GetPlay, &wrappers::AnimatorComponent::SetPlay);
+
         py::class_<wrappers::SkyLightComponent>(m, "SkyLightComponent")
             .def(py::init<>())
             .def(py::init<wrappers::Entity>())
@@ -511,6 +528,8 @@ namespace Atom
             .def(py::init<u64>())
             .def("add_camera_component", &wrappers::Entity::AddComponent<wrappers::CameraComponent>)
             .def("add_mesh_component", &wrappers::Entity::AddComponent<wrappers::MeshComponent>)
+            .def("add_animated_mesh_component", &wrappers::Entity::AddComponent<wrappers::AnimatedMeshComponent>)
+            .def("add_animator_component", &wrappers::Entity::AddComponent<wrappers::AnimatorComponent>)
             .def("add_sky_light_component", &wrappers::Entity::AddComponent<wrappers::SkyLightComponent>)
             .def("add_dir_light_component", &wrappers::Entity::AddComponent<wrappers::DirectionalLightComponent>)
             .def("add_point_light_component", &wrappers::Entity::AddComponent<wrappers::PointLightComponent>)
@@ -519,6 +538,8 @@ namespace Atom
             .def("add_box_collider_component", &wrappers::Entity::AddComponent<wrappers::BoxColliderComponent>)
             .def("has_camera_component", &wrappers::Entity::HasComponent<wrappers::CameraComponent>)
             .def("has_mesh_component", &wrappers::Entity::HasComponent<wrappers::MeshComponent>)
+            .def("has_animated_mesh_component", &wrappers::Entity::HasComponent<wrappers::AnimatedMeshComponent>)
+            .def("has_animator_component", &wrappers::Entity::HasComponent<wrappers::AnimatorComponent>)
             .def("has_sky_light_component", &wrappers::Entity::HasComponent<wrappers::SkyLightComponent>)
             .def("has_dir_light_component", &wrappers::Entity::HasComponent<wrappers::DirectionalLightComponent>)
             .def("has_point_light_component", &wrappers::Entity::HasComponent<wrappers::PointLightComponent>)
@@ -527,6 +548,8 @@ namespace Atom
             .def("has_box_collider_component", &wrappers::Entity::HasComponent<wrappers::BoxColliderComponent>)
             .def("get_camera_component", &wrappers::Entity::GetComponent<wrappers::CameraComponent>)
             .def("get_mesh_component", &wrappers::Entity::GetComponent<wrappers::MeshComponent>)
+            .def("get_animated_mesh_component", &wrappers::Entity::GetComponent<wrappers::AnimatedMeshComponent>)
+            .def("get_animator_component", &wrappers::Entity::GetComponent<wrappers::AnimatorComponent>)
             .def("get_sky_light_component", &wrappers::Entity::GetComponent<wrappers::SkyLightComponent>)
             .def("get_dir_light_component", &wrappers::Entity::GetComponent<wrappers::DirectionalLightComponent>)
             .def("get_point_light_component", &wrappers::Entity::GetComponent<wrappers::PointLightComponent>)
@@ -624,14 +647,6 @@ namespace Atom
             .def("has_flag", &wrappers::Material::HasFlag)
             .def_static("find", &wrappers::Material::Find);
 
-        py::class_<Atom::Vertex>(m, "Vertex")
-            .def(py::init<>())
-            .def_readwrite("position", &Atom::Vertex::Position)
-            .def_readwrite("uv", &Atom::Vertex::TexCoord)
-            .def_readwrite("normal", &Atom::Vertex::Normal)
-            .def_readwrite("tangent", &Atom::Vertex::Tangent)
-            .def_readwrite("bitangent", &Atom::Vertex::Bitangent);
-
         py::class_<Atom::Submesh>(m, "Submesh")
             .def(py::init<>())
             .def_readwrite("start_vertex", &Atom::Submesh::StartVertex)
@@ -663,6 +678,12 @@ namespace Atom
             .def_property_readonly("bitangents", &wrappers::Mesh::GetBitangents)
             .def_property_readonly("indices", &wrappers::Mesh::GetIndices)
             .def_property_readonly("submeshes", &wrappers::Mesh::GetSubmeshes);
+
+        py::class_<wrappers::Animation>(m, "Animation")
+            .def(py::init<u64>())
+            .def_static("find", &wrappers::Animation::Find)
+            .def_property_readonly("duration", &wrappers::Animation::GetDuration)
+            .def_property_readonly("ticks_per_second", &wrappers::Animation::GetTicksPerSecond);
 
         // --------------------------------------------------- ImGui ------------------------------------------------------------
         py::class_<wrappers::GUI>(m, "GUI")
