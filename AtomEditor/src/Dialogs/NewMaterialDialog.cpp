@@ -1,6 +1,7 @@
 #include "NewMaterialDialog.h"
 
 #include "Atom/Tools/ContentTools.h"
+#include "Atom/Renderer/Renderer.h"
 
 #include <imgui.h>
 
@@ -49,15 +50,34 @@ namespace Atom
                         ImGui::Columns(1);
                     }
 
+                    // Shader
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("Shader");
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::PushItemWidth(-1);
+
+                        char buffer[30];
+                        memset(buffer, 0, sizeof(buffer));
+                        strcpy_s(buffer, sizeof(buffer), m_ShaderName.c_str());
+
+                        if (ImGui::InputText("##Shader", buffer, sizeof(buffer)))
+                            m_ShaderName = buffer;
+
+                        ImGui::PopItemWidth();
+                        ImGui::Columns(1);
+                    }
+
                     ImGui::EndTable();
                 }
 
                 f32 importButtonWidth = (ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f;
                 if (ImGui::Button("Create", ImVec2(importButtonWidth, 32)))
                 {
-                    if (!m_MaterialName.empty())
+                    if (!m_MaterialName.empty() && Renderer::GetShaderLibrary().Exists(m_ShaderName))
                     {
-                        ContentTools::CreateMaterialAsset(std::filesystem::path("Materials") / (m_MaterialName + ".atmmat"));
+                        ContentTools::CreateMaterialAsset(m_ShaderName, std::filesystem::path("Materials") / (m_MaterialName + ".atmmat"));
                     }
 
                     ImGui::CloseCurrentPopup();

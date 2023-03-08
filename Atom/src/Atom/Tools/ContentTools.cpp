@@ -460,7 +460,8 @@ namespace Atom
             assimpMat->Get(AI_MATKEY_NAME, materialName);
             materialName.Append(Asset::AssetFileExtensions[(u32)AssetType::Material]);
 
-            UUID materialUUID = ContentTools::CreateMaterialAsset(std::filesystem::path("Materials") / materialName.C_Str());
+            String shaderName = importSettings.ImportAnimations && scene->mNumAnimations > 0 ? "MeshPBRAnimatedShader" : "MeshPBRShader";
+            UUID materialUUID = ContentTools::CreateMaterialAsset(shaderName, std::filesystem::path("Materials") / materialName.C_Str());
             Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
@@ -669,9 +670,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    UUID ContentTools::CreateMaterialAsset(const std::filesystem::path& filepath)
+    UUID ContentTools::CreateMaterialAsset(const String& shaderName, const std::filesystem::path& filepath)
     {
-        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested);
+        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())

@@ -13,5 +13,6 @@ namespace Atom
     protected:
         bool   m_IsOpened = false;
         String m_MaterialName;
+        String m_ShaderName;
     };
 }
