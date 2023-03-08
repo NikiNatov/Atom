@@ -127,16 +127,26 @@ namespace Atom
     void ShaderResourceLayout::CreateRootSignature()
     {
         // Sort resources
-        Vector<ShaderResource*> inlineResources;
+        Vector<ShaderResource*> inlineCBVs;
+        Vector<ShaderResource*> inlineSRVs;
+        Vector<ShaderResource*> inlineUAVs;
         Vector<ShaderResource*> readOnlyResources;
         Vector<ShaderResource*> readWriteResources;
         Vector<ShaderResource*> samplers;
 
         for (auto& resource : m_Resources)
         {
-            if (resource.Type == ShaderResourceType::ConstantBuffer || resource.Type == ShaderResourceType::StructuredBuffer)
+            if (resource.Type == ShaderResourceType::ConstantBuffer)
             {
-                inlineResources.push_back(&resource);
+                inlineCBVs.push_back(&resource);
+            }
+            else if (resource.Type == ShaderResourceType::StructuredBuffer)
+            {
+                inlineSRVs.push_back(&resource);
+            }
+            else if (resource.Type == ShaderResourceType::RWStructuredBuffer)
+            {
+                inlineUAVs.push_back(&resource);
             }
             else if (resource.Type == ShaderResourceType::Sampler)
             {
@@ -151,6 +161,10 @@ namespace Atom
             }
         }
 
+        std::sort(m_RootConstants.begin(), m_RootConstants.end(), [](const ConstantBuffer& lhs, const ConstantBuffer& rhs) { return lhs.Register < rhs.Register; });
+        std::sort(inlineCBVs.begin(), inlineCBVs.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
+        std::sort(inlineSRVs.begin(), inlineSRVs.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
+        std::sort(inlineUAVs.begin(), inlineUAVs.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
         std::sort(readOnlyResources.begin(), readOnlyResources.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
         std::sort(readWriteResources.begin(), readWriteResources.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
         std::sort(samplers.begin(), samplers.end(), [](const ShaderResource* lhs, const ShaderResource* rhs) { return lhs->Register < rhs->Register; });
@@ -166,34 +180,29 @@ namespace Atom
         }
 
         // Create root descriptors for constant buffers
-        for (auto resource : inlineResources)
+        for (auto resource : inlineCBVs)
         {
             CD3DX12_ROOT_PARAMETER1 param;
+            param.InitAsConstantBufferView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+            m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::CBV);
+            rootParameters.push_back(param);
+        }
 
-            switch (resource->Type)
-            {
-                case ShaderResourceType::ConstantBuffer:
-                {
-                    param.InitAsConstantBufferView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-                    m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::CBV);
-                    break;
-                }
-                case ShaderResourceType::StructuredBuffer:
-                {
-                    param.InitAsShaderResourceView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-                    m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::SRV);
-                    break;
-                }
-                case ShaderResourceType::RWStructuredBuffer:
-                {
-                    param.InitAsUnorderedAccessView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-                    m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::UAV);
-                    break;
-                }
-                default:
-                    ATOM_ENGINE_ASSERT(false, "Shader resource type is not supported to be used as inline descriptor");
-            }
-            
+        // Create root descriptors for read-only structured buffers
+        for (auto resource : inlineSRVs)
+        {
+            CD3DX12_ROOT_PARAMETER1 param;
+            param.InitAsShaderResourceView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+            m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::SRV);
+            rootParameters.push_back(param);
+        }
+
+        // Create root descriptors for read-write structured buffers
+        for (auto resource : inlineUAVs)
+        {
+            CD3DX12_ROOT_PARAMETER1 param;
+            param.InitAsUnorderedAccessView(resource->Register, resource->ShaderSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+            m_InlineDescriptors.emplace_back(rootParameters.size(), ShaderInlineDescriptorType::UAV);
             rootParameters.push_back(param);
         }
 

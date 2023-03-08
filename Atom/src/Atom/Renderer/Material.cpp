@@ -16,7 +16,6 @@ namespace Atom
         const auto& resources = resourceLayout.GetResources();
 
         // Create uniform data storage for each root constant buffer
-        m_UniformBuffersData.reserve(rootConstantBuffers.size());
         for (u32 i = 0; i < rootConstantBuffers.size(); i++)
         {
             m_UniformBuffersData.insert({ rootConstantBuffers[i].Register, Vector<byte>(rootConstantBuffers[i].Size, 0) });

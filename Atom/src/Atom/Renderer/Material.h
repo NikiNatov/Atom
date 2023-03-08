@@ -65,16 +65,16 @@ namespace Atom
         inline bool GetFlag(MaterialFlags flag) const { return (m_Flags & flag) != MaterialFlags::None; }
         inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline MaterialFlags GetFlags() const { return m_Flags; }
-        inline const HashMap<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
-        inline const HashMap<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
+        inline const Map<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
+        inline const Map<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
     private:
         const Uniform* FindUniformDeclaration(const char* name);
         const Resource* FindResourceDeclaration(const char* name);
     private:
-        Ref<GraphicsShader>        m_Shader;
-        MaterialFlags              m_Flags;
-        HashMap<u32, Vector<byte>> m_UniformBuffersData;
-        HashMap<u32, Ref<Texture>> m_Textures;
+        Ref<GraphicsShader>    m_Shader;
+        MaterialFlags          m_Flags;
+        Map<u32, Vector<byte>> m_UniformBuffersData;
+        Map<u32, Ref<Texture>> m_Textures;
     };
 
     class MaterialTable
