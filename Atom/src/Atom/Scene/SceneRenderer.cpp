@@ -143,7 +143,7 @@ namespace Atom
             drawCommand.Mesh = mesh;
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
-            drawCommand.Material = material ? material : Renderer::GetErrorMaterial();
+            drawCommand.Material = material ? material : (isAnimated ? Renderer::GetErrorMaterialAnimated() : Renderer::GetErrorMaterial());
             drawCommand.Skeleton = skeleton;
         }
     }

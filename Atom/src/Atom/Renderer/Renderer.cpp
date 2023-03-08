@@ -351,10 +351,21 @@ namespace Atom
         ms_DefaultMaterial->SetUniform("Metalness", 0.5f);
         ms_DefaultMaterial->SetUniform("Roughness", 0.5f);
 
+        // Create renderer materials
+        ms_DefaultMaterialAnimated = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ms_DefaultMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        ms_DefaultMaterialAnimated->SetUniform("Metalness", 0.5f);
+        ms_DefaultMaterialAnimated->SetUniform("Roughness", 0.5f);
+
         ms_ErrorMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
         ms_ErrorMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
         ms_ErrorMaterial->SetUniform("Metalness", 0.0f);
         ms_ErrorMaterial->SetUniform("Roughness", 1.0f);
+
+        ms_ErrorMaterialAnimated = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ms_ErrorMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
+        ms_ErrorMaterialAnimated->SetUniform("Metalness", 0.0f);
+        ms_ErrorMaterialAnimated->SetUniform("Roughness", 1.0f);
 
         // Wait for all copy/compute operations to complete before we continue
         computeQueue->Flush();
@@ -375,7 +386,9 @@ namespace Atom
         ms_BlackTexture.reset();
         ms_BlackTextureCube.reset();
         ms_DefaultMaterial.reset();
+        ms_DefaultMaterialAnimated.reset();
         ms_ErrorMaterial.reset();
+        ms_ErrorMaterialAnimated.reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -928,9 +941,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Material> Renderer::GetDefaultMaterialAnimated()
+    {
+        return ms_DefaultMaterialAnimated;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Ref<Material> Renderer::GetErrorMaterial()
     {
         return ms_ErrorMaterial;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Material> Renderer::GetErrorMaterialAnimated()
+    {
+        return ms_ErrorMaterialAnimated;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
