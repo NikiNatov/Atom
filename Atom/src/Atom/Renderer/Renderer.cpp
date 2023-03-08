@@ -416,7 +416,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> cameraCB, Ref<ConstantBuffer> animationCB, Ref<StructuredBuffer> structuredBuffer)
+    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> cameraCB, Ref<StructuredBuffer> animationSB, Ref<StructuredBuffer> lightsSB)
     {
         commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
@@ -442,14 +442,14 @@ namespace Atom
             commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, cameraCB.get());
         }
 
-        if (animationCB)
+        if (lightsSB)
         {
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, animationCB.get());
+            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, lightsSB.get());
         }
 
-        if (structuredBuffer)
+        if (animationSB)
         {
-            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, structuredBuffer.get());
+            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, animationSB.get());
         }
 
         // Set textures and samplers

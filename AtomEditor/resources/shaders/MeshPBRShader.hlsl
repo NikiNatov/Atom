@@ -1,5 +1,6 @@
 #include "include/CommonConstants.hlsli"
 
+// Inputs
 struct VSInput
 {
     float3 Position  : POSITION;
@@ -20,48 +21,18 @@ struct PSInput
     float3 CameraPosition : CAMERA_POSITION;
 };
 
-struct Camera
-{
-    row_major matrix ViewMatrix;
-    row_major matrix ProjectionMatrix;
-    float3 CameraPosition;
-};
-
-ConstantBuffer<Camera> CameraCB : register(b0);
-
-cbuffer TransformCB : register(b1)
+// Resources
+cbuffer TransformCB : register(b0)
 {
     row_major matrix _Transform;
     float _p0;
 }
 
-PSInput VSMain(in VSInput input)
+cbuffer LightPropertiesCB : register(b1)
 {
-    PSInput output;
-    output.Position = mul(float4(input.Position, 1.0), _Transform).xyz;
-    output.UV = input.UV;
-    output.Normal = normalize(mul(input.Normal, (float3x3)_Transform));
-    output.Tangent = normalize(mul(input.Tangent, (float3x3)_Transform));
-    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)_Transform));
-    output.CameraPosition = CameraCB.CameraPosition;
-    output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
-    return output;
+    uint _NumLights;
+    float _p1;
 }
-
-#define DIR_LIGHT   0
-#define POINT_LIGHT 1
-#define SPOT_LIGHT  2
-
-struct Light
-{
-    float4 Position;
-    float4 Direction;
-    float4 Color;
-    float  Intensity;
-    float  ConeAngle;
-    float3 AttenuationFactors;
-    uint   LightType;
-};
 
 cbuffer MaterialCB : register(b2)
 {
@@ -77,11 +48,14 @@ cbuffer MaterialCB : register(b2)
     int UseRoughnessMap;
 }
 
-cbuffer LightPropertiesCB : register(b3)
+struct Camera
 {
-    uint _NumLights;
-    float _p1;
-}
+    row_major matrix ViewMatrix;
+    row_major matrix ProjectionMatrix;
+    float3 CameraPosition;
+};
+
+ConstantBuffer<Camera> CameraCB : register(b3);
 
 Texture2D AlbedoMap : register(t0);
 SamplerState AlbedoMapSampler: register(s0);
@@ -104,7 +78,35 @@ SamplerState _IrradianceMapSampler : register(s5);
 Texture2D _BRDFMap : register(t6);
 SamplerState _BRDFMapSampler: register(s6);
 
+struct Light
+{
+    float4 Position;
+    float4 Direction;
+    float4 Color;
+    float  Intensity;
+    float  ConeAngle;
+    float3 AttenuationFactors;
+    uint   LightType;
+};
+
 StructuredBuffer<Light> _LightsBuffer : register(t7);
+
+PSInput VSMain(in VSInput input)
+{
+    PSInput output;
+    output.Position = mul(float4(input.Position, 1.0), _Transform).xyz;
+    output.UV = input.UV;
+    output.Normal = normalize(mul(input.Normal, (float3x3)_Transform));
+    output.Tangent = normalize(mul(input.Tangent, (float3x3)_Transform));
+    output.Bitangent = normalize(mul(input.Bitangent, (float3x3)_Transform));
+    output.CameraPosition = CameraCB.CameraPosition;
+    output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
+    return output;
+}
+
+#define DIR_LIGHT   0
+#define POINT_LIGHT 1
+#define SPOT_LIGHT  2
 
 //GGX/Trowbridge-Reitz normal distribution function
 float NormalDistributionFunction(float alpha, float3 N, float3 H)

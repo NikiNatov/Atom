@@ -30,8 +30,9 @@ namespace Atom
         m_CompositeMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("CompositeShader"), MaterialFlags::None);
         m_FullScreenQuadMaterial = CreateRef<Material>(shaderLib.Get<GraphicsShader>("FullscreenQuadShader"), MaterialFlags::None);
 
-        // Create per-frame resources
         u32 framesInFlight = Renderer::GetFramesInFlight();
+
+        // Create lights structured buffer
         m_LightsData.resize(framesInFlight);
         m_LightsSBs.resize(framesInFlight);
 
@@ -39,16 +40,24 @@ namespace Atom
         m_CameraData.resize(framesInFlight);
         m_CameraCBs.resize(framesInFlight);
 
-        BufferDescription cbDesc;
-        cbDesc.ElementCount = 1;
-        cbDesc.ElementSize = sizeof(CameraCB);
-        cbDesc.IsDynamic = true;
+        BufferDescription cameraCBDesc;
+        cameraCBDesc.ElementCount = 1;
+        cameraCBDesc.ElementSize = sizeof(CameraCB);
+        cameraCBDesc.IsDynamic = true;
 
         for(u32 frameIdx = 0 ; frameIdx < framesInFlight; frameIdx++)
-            m_CameraCBs[frameIdx] = CreateRef<ConstantBuffer>(cbDesc, fmt::format("TransformCB[{}]", frameIdx).c_str());
+            m_CameraCBs[frameIdx] = CreateRef<ConstantBuffer>(cameraCBDesc, fmt::format("TransformCB[{}]", frameIdx).c_str());
 
-        // Create animation constant buffers
-        m_AnimationCBs.resize(framesInFlight);
+        // Create animation structured buffers
+        m_AnimationSBs.resize(framesInFlight);
+
+        BufferDescription animSBDesc;
+        animSBDesc.ElementCount = MaxAnimatedMeshes * MaxBonesPerMesh;
+        animSBDesc.ElementSize = sizeof(glm::mat4);
+        animSBDesc.IsDynamic = true;
+
+        for (u32 frameIdx = 0; frameIdx < framesInFlight; frameIdx++)
+            m_AnimationSBs[frameIdx] = CreateRef<StructuredBuffer>(animSBDesc, fmt::format("AnimationSB[{}]", frameIdx).c_str());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -126,7 +135,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, const Ref<Skeleton>& skeleton)
+    void SceneRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, bool isAnimated, const Ref<Skeleton>& skeleton)
     {
         if (!mesh)
             return;
@@ -137,7 +146,7 @@ namespace Atom
         {
             const Submesh& submesh = submeshes[submeshIdx];
             const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
-            Ref<Material> material = materialTable && materialTable->HasMaterial(submeshIdx) ? materialTable->GetMaterial(submeshIdx) : meshMaterialTable->GetMaterial(submeshIdx);
+            Ref<Material> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
             DrawCommand& drawCommand = m_DrawList.emplace_back();
             drawCommand.Mesh = mesh;
@@ -145,6 +154,7 @@ namespace Atom
             drawCommand.Transform = transform;
             drawCommand.Material = material ? material : (isAnimated ? Renderer::GetErrorMaterialAnimated() : Renderer::GetErrorMaterial());
             drawCommand.Skeleton = skeleton;
+            drawCommand.IsAnimated = isAnimated;
         }
     }
 
@@ -191,6 +201,7 @@ namespace Atom
         Renderer::RenderFullscreenQuad(commandBuffer, m_SkyBoxPipeline, nullptr, m_SkyBoxMaterial);
 
         // Render meshes
+        u32 animatedMeshIdx = 0;
         for (auto& drawCommand : m_DrawList)
         {
             // TODO: These should not be set by the material
@@ -200,31 +211,33 @@ namespace Atom
             drawCommand.Material->SetUniform("_Transform", drawCommand.Transform);
             drawCommand.Material->SetUniform("_NumLights", m_LightsSBs[currentFrameIdx] ? m_LightsSBs[currentFrameIdx]->GetElementCount() : 0);
 
-            // Upload bone transform data if there is a skeleton
-            if (drawCommand.Skeleton)
+            // Upload bone transform data for animated meshes
+            if (drawCommand.IsAnimated)
             {
-                Vector<Skeleton::Bone>& bones = drawCommand.Skeleton->GetBones();
+                u32 boneTransformOffset = animatedMeshIdx * MaxBonesPerMesh;
+                drawCommand.Material->SetUniform("_BoneTransformOffset", boneTransformOffset);
+
                 Vector<glm::mat4> boneTransforms;
-                boneTransforms.reserve(bones.size());
-
-                for (auto& bone : bones)
-                    boneTransforms.push_back(bone.AnimatedTransform);
-
-                if (!m_AnimationCBs[currentFrameIdx] || m_AnimationCBs[currentFrameIdx]->GetSize() != sizeof(glm::mat4) * boneTransforms.size())
+                if (drawCommand.Skeleton)
                 {
-                    BufferDescription cbDesc;
-                    cbDesc.ElementCount = 1;
-                    cbDesc.ElementSize = sizeof(glm::mat4) * boneTransforms.size();
-                    cbDesc.IsDynamic = true;
+                    Vector<Skeleton::Bone>& bones = drawCommand.Skeleton->GetBones();
+                    boneTransforms.reserve(bones.size());
 
-                    m_AnimationCBs[currentFrameIdx] = CreateRef<ConstantBuffer>(cbDesc, fmt::format("AnimationCB[{}]", currentFrameIdx).c_str());
+                    for (auto& bone : bones)
+                        boneTransforms.push_back(bone.AnimatedTransform);
+                }
+                else
+                {
+                    boneTransforms.resize(MaxBonesPerMesh, glm::mat4(1.0f));
                 }
 
-                void* data = m_AnimationCBs[currentFrameIdx]->Map(0, 0);
-                memcpy(data, boneTransforms.data(), sizeof(glm::mat4) * boneTransforms.size());
-                m_AnimationCBs[currentFrameIdx]->Unmap();
+                void* data = m_AnimationSBs[currentFrameIdx]->Map(0, 0);
+                memcpy((glm::mat4*)data + boneTransformOffset, boneTransforms.data(), sizeof(glm::mat4) * boneTransforms.size());
+                m_AnimationSBs[currentFrameIdx]->Unmap();
 
-                Renderer::RenderMesh(commandBuffer, m_AnimatedGeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], m_AnimationCBs[currentFrameIdx], m_LightsSBs[currentFrameIdx]);
+                Renderer::RenderMesh(commandBuffer, m_AnimatedGeometryPipeline, drawCommand.Mesh, drawCommand.SubmeshIndex, drawCommand.Material, m_CameraCBs[currentFrameIdx], m_AnimationSBs[currentFrameIdx], m_LightsSBs[currentFrameIdx]);
+
+                animatedMeshIdx++;
             }
             else
             {

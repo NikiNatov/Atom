@@ -1,5 +1,6 @@
 #include "include/CommonConstants.hlsli"
 
+// Inputs
 struct VSInput
 {
     float3 Position    : POSITION;
@@ -22,78 +23,20 @@ struct PSInput
     float3 CameraPosition : CAMERA_POSITION;
 };
 
-struct Camera
-{
-    row_major matrix ViewMatrix;
-    row_major matrix ProjectionMatrix;
-    float3 CameraPosition;
-};
-
-ConstantBuffer<Camera> CameraCB : register(b0);
-
-
-cbuffer TransformCB : register(b1)
+// Resources
+cbuffer TransformCB : register(b0)
 {
     row_major matrix _Transform;
     float _p0;
 }
 
-struct AnimationData
+cbuffer LightPropertiesCB : register(b1)
 {
-    row_major matrix BoneTransforms[100];
-};
-
-ConstantBuffer<AnimationData> AnimationCB : register(b2);
-
-PSInput VSMain(in VSInput input)
-{
-    float4 animatedPos = float4(0.0, 0.0, 0.0, 0.0);
-    float4 animatedNormal = float4(0.0, 0.0, 0.0, 0.0);
-    float4 animatedTangent = float4(0.0, 0.0, 0.0, 0.0);
-    float4 animatedBitangent = float4(0.0, 0.0, 0.0, 0.0);
-
-    for (int i = 0; i < 4; i++)
-    {
-        float4 posePosition = mul(float4(input.Position, 1.0), AnimationCB.BoneTransforms[input.BoneIDs[i]]);
-        animatedPos += posePosition * input.BoneWeights[i];
-
-        float4 normal = mul(float4(input.Normal, 0.0), AnimationCB.BoneTransforms[input.BoneIDs[i]]);
-        animatedNormal += normal * input.BoneWeights[i];
-
-        float4 tangent = mul(float4(input.Tangent, 0.0), AnimationCB.BoneTransforms[input.BoneIDs[i]]);
-        animatedTangent += tangent * input.BoneWeights[i];
-
-        float4 bitangent = mul(float4(input.Bitangent, 0.0), AnimationCB.BoneTransforms[input.BoneIDs[i]]);
-        animatedBitangent += bitangent * input.BoneWeights[i];
-    }
-
-    PSInput output;
-    output.Position = mul(animatedPos, _Transform).xyz;
-    output.UV = input.UV;
-    output.Normal = normalize(mul(animatedNormal.xyz, (float3x3)_Transform));
-    output.Tangent = normalize(mul(animatedTangent.xyz, (float3x3)_Transform));
-    output.Bitangent = normalize(mul(animatedBitangent.xyz, (float3x3)_Transform));
-    output.CameraPosition = CameraCB.CameraPosition;
-    output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
-    return output;
+    uint _NumLights;
+    float _p1;
 }
 
-#define DIR_LIGHT   0
-#define POINT_LIGHT 1
-#define SPOT_LIGHT  2
-
-struct Light
-{
-    float4 Position;
-    float4 Direction;
-    float4 Color;
-    float  Intensity;
-    float  ConeAngle;
-    float3 AttenuationFactors;
-    uint   LightType;
-};
-
-cbuffer MaterialCB : register(b3)
+cbuffer MaterialCB : register(b2)
 {
     float4 AlbedoColor;
     int UseAlbedoMap;
@@ -107,11 +50,20 @@ cbuffer MaterialCB : register(b3)
     int UseRoughnessMap;
 }
 
-cbuffer LightPropertiesCB : register(b4)
+cbuffer AnimationPropertiesCB : register(b3)
 {
-    uint _NumLights;
-    float _p1;
+    uint _BoneTransformOffset;
+    float _p2;
 }
+
+struct Camera
+{
+    row_major matrix ViewMatrix;
+    row_major matrix ProjectionMatrix;
+    float3 CameraPosition;
+};
+
+ConstantBuffer<Camera> CameraCB : register(b4);
 
 Texture2D AlbedoMap : register(t0);
 SamplerState AlbedoMapSampler: register(s0);
@@ -134,7 +86,62 @@ SamplerState _IrradianceMapSampler : register(s5);
 Texture2D _BRDFMap : register(t6);
 SamplerState _BRDFMapSampler: register(s6);
 
+struct Light
+{
+    float4 Position;
+    float4 Direction;
+    float4 Color;
+    float  Intensity;
+    float  ConeAngle;
+    float3 AttenuationFactors;
+    uint   LightType;
+};
+
 StructuredBuffer<Light> _LightsBuffer : register(t7);
+
+struct AnimationData
+{
+    row_major matrix BoneTransform;
+};
+
+StructuredBuffer<AnimationData> _AnimationSB : register(t8);
+
+PSInput VSMain(in VSInput input)
+{
+    float4 animatedPos = float4(0.0, 0.0, 0.0, 0.0);
+    float4 animatedNormal = float4(0.0, 0.0, 0.0, 0.0);
+    float4 animatedTangent = float4(0.0, 0.0, 0.0, 0.0);
+    float4 animatedBitangent = float4(0.0, 0.0, 0.0, 0.0);
+
+    for (int i = 0; i < 4; i++)
+    {
+        float4 posePosition = mul(float4(input.Position, 1.0), _AnimationSB[_BoneTransformOffset + input.BoneIDs[i]].BoneTransform);
+        animatedPos += posePosition * input.BoneWeights[i];
+
+        float4 normal = mul(float4(input.Normal, 0.0), _AnimationSB[_BoneTransformOffset + input.BoneIDs[i]].BoneTransform);
+        animatedNormal += normal * input.BoneWeights[i];
+
+        float4 tangent = mul(float4(input.Tangent, 0.0), _AnimationSB[_BoneTransformOffset + input.BoneIDs[i]].BoneTransform);
+        animatedTangent += tangent * input.BoneWeights[i];
+
+        float4 bitangent = mul(float4(input.Bitangent, 0.0), _AnimationSB[_BoneTransformOffset + input.BoneIDs[i]].BoneTransform);
+        animatedBitangent += bitangent * input.BoneWeights[i];
+    }
+
+    PSInput output;
+    output.Position = mul(animatedPos, _Transform).xyz;
+    output.UV = input.UV;
+    output.Normal = normalize(mul(animatedNormal.xyz, (float3x3)_Transform));
+    output.Tangent = normalize(mul(animatedTangent.xyz, (float3x3)_Transform));
+    output.Bitangent = normalize(mul(animatedBitangent.xyz, (float3x3)_Transform));
+    output.CameraPosition = CameraCB.CameraPosition;
+    output.PositionSV = mul(float4(output.Position, 1.0), mul(CameraCB.ViewMatrix, CameraCB.ProjectionMatrix));
+    return output;
+}
+
+#define DIR_LIGHT   0
+#define POINT_LIGHT 1
+#define SPOT_LIGHT  2
 
 //GGX/Trowbridge-Reitz normal distribution function
 float NormalDistributionFunction(float alpha, float3 N, float3 H)
