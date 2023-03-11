@@ -171,6 +171,7 @@ namespace Atom
             case AssetType::Scene: asset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath); break;
             case AssetType::Animation: asset = AssetSerializer::Deserialize<Animation>(metaData.AssetFilepath); break;
             case AssetType::Skeleton: asset = AssetSerializer::Deserialize<Skeleton>(metaData.AssetFilepath); break;
+            case AssetType::AnimationController: asset = AssetSerializer::Deserialize<AnimationController>(metaData.AssetFilepath); break;
         }
 
         if (!asset)
@@ -260,6 +261,16 @@ namespace Atom
 
                 if (result)
                     *std::dynamic_pointer_cast<Skeleton>(ms_LoadedAssets[uuid]) = std::move(*skeletonAsset);
+
+                break;
+            }
+            case AssetType::AnimationController:
+            {
+                Ref<AnimationController> animControllerAsset = AssetSerializer::Deserialize<AnimationController>(metaData.AssetFilepath);
+                result = animControllerAsset != nullptr;
+
+                if (result)
+                    *std::dynamic_pointer_cast<AnimationController>(ms_LoadedAssets[uuid]) = std::move(*animControllerAsset);
 
                 break;
             }

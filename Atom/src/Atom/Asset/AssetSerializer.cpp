@@ -400,8 +400,8 @@ namespace Atom
             {
                 auto& ac = entity.GetComponent<AnimatorComponent>();
 
-                UUID animationUUID = ac.Animation ? ac.Animation->GetUUID() : 0;
-                ofs.write((char*)&animationUUID, sizeof(UUID));
+                UUID animationControllerUUID = ac.AnimationController ? ac.AnimationController->GetUUID() : 0;
+                ofs.write((char*)&animationControllerUUID, sizeof(UUID));
                 ofs.write((char*)&ac.Play, sizeof(bool));
             }
 
@@ -589,6 +589,46 @@ namespace Atom
                 ofs.write((char*)&boneID, sizeof(u32));
                 ofs.write((char*)&boneTransform, sizeof(Animation::BoneTransform));
             }
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<AnimationController> asset)
+    {
+        std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
+
+        if (!ofs)
+            return false;
+
+        std::filesystem::path absolutePath = std::filesystem::canonical(filepath);
+
+        if (asset->GetAssetFlag(AssetFlags::Serialized) && asset->m_MetaData.AssetFilepath != absolutePath)
+        {
+            // If the asset was already serialized but the path is different than the one passed as a paraeter, create a copy of the asset with a new ID
+            AssetMetaData newMetaData = asset->m_MetaData;
+            newMetaData.UUID = UUID();
+            newMetaData.AssetFilepath = absolutePath;
+            SerializeMetaData(ofs, newMetaData);
+        }
+        else
+        {
+            asset->m_MetaData.AssetFilepath = absolutePath;
+            asset->SetAssetFlag(AssetFlags::Serialized);
+            SerializeMetaData(ofs, asset->m_MetaData);
+        }
+
+        ofs.write((char*)&asset->m_InitialStateIdx, sizeof(u16));
+
+        u32 animationStatesCount = asset->m_AnimationStates.size();
+        ofs.write((char*)&animationStatesCount, sizeof(u32));
+
+        for (const auto& animState : asset->m_AnimationStates)
+        {
+            UUID uuid = animState->GetUUID();
+            ofs.write((char*)&uuid, sizeof(UUID));
         }
 
         return true;
@@ -977,10 +1017,10 @@ namespace Atom
             {
                 auto& ac = entity.AddOrReplaceComponent<AnimatorComponent>();
 
-                UUID animationUUID;
-                ifs.read((char*)&animationUUID, sizeof(UUID));
+                UUID animationControllerUUID;
+                ifs.read((char*)&animationControllerUUID, sizeof(UUID));
 
-                ac.Animation = AssetManager::GetAsset<Animation>(animationUUID, true);
+                ac.AnimationController = AssetManager::GetAsset<AnimationController>(animationControllerUUID, true);
 
                 ifs.read((char*)&ac.Play, sizeof(bool));
             }
@@ -1191,6 +1231,42 @@ namespace Atom
         }
 
         Ref<Animation> asset = CreateRef<Animation>(duration, ticksPerSecond, keyFrames);
+        asset->m_MetaData = metaData;
+
+        return asset;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    Ref<AnimationController> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    {
+        std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
+
+        if (!ifs)
+            return nullptr;
+
+        AssetMetaData metaData;
+        metaData.AssetFilepath = std::filesystem::canonical(filepath);
+        DeserializeMetaData(ifs, metaData);
+        ATOM_ENGINE_ASSERT(metaData.Type == AssetType::AnimationController);
+
+        u16 initialStateIdx;
+        ifs.read((char*)&initialStateIdx, sizeof(u16));
+
+        u32 animationStatesCount;
+        ifs.read((char*)&animationStatesCount, sizeof(u32));
+
+        Vector<Ref<Animation>> animationStates;
+        animationStates.reserve(animationStatesCount);
+
+        for (u32 i = 0 ; i < animationStatesCount; i++)
+        {
+            UUID uuid;
+            ifs.read((char*)&uuid, sizeof(UUID));
+            animationStates.push_back(AssetManager::GetAsset<Animation>(uuid, true));
+        }
+
+        Ref<AnimationController> asset = CreateRef<AnimationController>(animationStates, initialStateIdx);
         asset->m_MetaData = metaData;
 
         return asset;

@@ -89,10 +89,10 @@ namespace Atom
             AnimatorComponent() = default;
             AnimatorComponent(Entity entity);
 
-            void SetAnimation(Animation animation);
+            void SetAnimationController(AnimationController controller);
             void SetTime(f32 time);
             void SetPlay(bool play);
-            Animation GetAnimation();
+            AnimationController GetAnimationController();
             f32 GetTime();
             bool GetPlay();
         };

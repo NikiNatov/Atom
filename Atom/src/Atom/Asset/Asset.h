@@ -14,6 +14,7 @@ namespace Atom
         Scene,
         Animation,
         Skeleton,
+        AnimationController,
         NumTypes
     };
 
@@ -47,7 +48,8 @@ namespace Atom
             ".atmmat",
             ".atmscene",
             ".atmanim",
-            ".atmskeleton"
+            ".atmskeleton",
+            ".atmanimcontroller"
         };
     public:
         virtual ~Asset() = default;

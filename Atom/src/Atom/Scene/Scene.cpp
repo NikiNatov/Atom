@@ -255,12 +255,13 @@ namespace Atom
             {
                 auto& [amc, ac] = view.get<AnimatedMeshComponent, AnimatorComponent>(entity);
 
-                if (ac.Animation && ac.Play)
+                if (ac.AnimationController && ac.Play)
                 {
+                    Ref<Animation> currentAnimState = ac.AnimationController->GetCurrentState();
                     // Update animation time
-                    ac.CurrentTime += ts.GetSeconds() * ac.Animation->GetTicksPerSecond();
-                    if (ac.CurrentTime > ac.Animation->GetDuration())
-                        ac.CurrentTime = std::fmod(ac.CurrentTime, ac.Animation->GetDuration());
+                    ac.CurrentTime += ts.GetSeconds() * currentAnimState->GetTicksPerSecond();
+                    if (ac.CurrentTime > currentAnimState->GetDuration())
+                        ac.CurrentTime = std::fmod(ac.CurrentTime, currentAnimState->GetDuration());
 
                     // Calculate bone animated transforms
                     Vector<Skeleton::Bone>& skeletonBones = amc.Skeleton->GetBones();
@@ -270,7 +271,7 @@ namespace Atom
                     while (!boneQueue.empty())
                     {
                         Skeleton::Bone* currentBone = boneQueue.front();
-                        glm::mat4 interpolatedTransform = ac.Animation->GetTransformAtTimeStamp(ac.CurrentTime, currentBone->ID);
+                        glm::mat4 interpolatedTransform = currentAnimState->GetTransformAtTimeStamp(ac.CurrentTime, currentBone->ID);
                         currentBone->AnimatedTransform = currentBone->ParentID != UINT32_MAX ? skeletonBones[currentBone->ParentID].AnimatedTransform * interpolatedTransform : interpolatedTransform;
                         boneQueue.pop();
 

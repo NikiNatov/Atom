@@ -156,6 +156,20 @@ namespace Atom
 
 						ImGui::TextWrapped(filename.string().c_str());
 					}
+					else if (filename.extension() == ".atmanimcontroller")
+					{
+						ImGui::ImageButton((ImTextureID)EditorResources::AnimationControllerAssetIcon.get(), button_sz, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0, { 0.0f, 0.0f, 0.0f, 0.0f });
+
+						if (ImGui::BeginDragDropSource())
+						{
+							ImGui::Text("%s", filename.string().c_str());
+							UUID assetUUID = AssetManager::GetUUIDForAssetPath(relativePath);
+							ImGui::SetDragDropPayload("DRAG_ANIMATION_CONTROLLER", &assetUUID, sizeof(UUID));
+							ImGui::EndDragDropSource();
+						}
+
+						ImGui::TextWrapped(filename.string().c_str());
+					}
 
 					ImGui::PopStyleColor();
 					ImGui::PopID();

@@ -307,11 +307,11 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void AnimatorComponent::SetAnimation(Animation animation)
+    void AnimatorComponent::SetAnimationController(AnimationController controller)
     {
         Scene* scene = ScriptEngine::GetRunningScene();
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
-        entity.GetComponent<Atom::AnimatorComponent>().Animation = animation.GetAnimation();
+        entity.GetComponent<Atom::AnimatorComponent>().AnimationController = controller.GetAnimationController();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -331,11 +331,11 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Animation AnimatorComponent::GetAnimation()
+    AnimationController AnimatorComponent::GetAnimationController()
     {
         Scene* scene = ScriptEngine::GetRunningScene();
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
-        return Animation(entity.GetComponent<Atom::AnimatorComponent>().Animation);
+        return AnimationController(entity.GetComponent<Atom::AnimatorComponent>().AnimationController);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -670,6 +670,32 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    UUID ContentTools::CreateAnimationControllerAsset(const Vector<Ref<Animation>>& animationStates, u16 initialStateIdx, const std::filesystem::path& filepath)
+    {
+        std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
+
+        if (std::filesystem::exists(assetFullPath))
+        {
+            ATOM_WARNING("Animation controller {} already exists", assetFullPath.string());
+            return AssetManager::GetUUIDForAssetPath(assetFullPath);
+        }
+
+        if (!std::filesystem::exists(assetFullPath.parent_path()))
+            std::filesystem::create_directories(assetFullPath.parent_path());
+
+        Ref<AnimationController> asset = CreateRef<AnimationController>(animationStates, initialStateIdx);
+
+        if (!AssetSerializer::Serialize(assetFullPath, asset))
+        {
+            ATOM_ERROR("Failed serializing animation controller asset {}", assetFullPath);
+            return 0;
+        }
+
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::CreateMaterialAsset(const String& shaderName, const std::filesystem::path& filepath)
     {
         Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);

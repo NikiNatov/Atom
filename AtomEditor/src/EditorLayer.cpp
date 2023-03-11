@@ -177,6 +177,10 @@ namespace Atom
                     {
                         m_NewMaterialDialog.Open();
                     }
+                    if (ImGui::MenuItem("Animation Controller", ""))
+                    {
+                        m_NewAnimationControllerDialog.Open();
+                    }
 
                     ImGui::EndMenu();
                 }
@@ -212,6 +216,7 @@ namespace Atom
         m_MeshImportDialog.OnImGuiRender();
         m_NewProjectDialog.OnImGuiRender();
         m_NewMaterialDialog.OnImGuiRender();
+        m_NewAnimationControllerDialog.OnImGuiRender();
         AssetManagerPanel::OnImGuiRender();
         ConsolePanel::OnImGuiRender();
         m_SceneHierarchyPanel.OnImGuiRender();

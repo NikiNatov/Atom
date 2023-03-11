@@ -413,16 +413,16 @@ namespace Atom
 					// Animation
 					ImGui::Columns(2);
 					ImGui::SetColumnWidth(0, 150.0f);
-					ImGui::Text("Animation");
+					ImGui::Text("Animation controller");
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
-					ImGui::InputText("##Animation", component.Animation ? (char*)component.Animation->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
+					ImGui::InputText("##AnimationController", component.AnimationController ? (char*)component.AnimationController->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
 
 					if (ImGui::BeginDragDropTarget())
 					{
-						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_ANIMATION"))
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_ANIMATION_CONTROLLER"))
 						{
-							component.Animation = AssetManager::GetAsset<Animation>(*(UUID*)payload->Data, true);
+							component.AnimationController = AssetManager::GetAsset<AnimationController>(*(UUID*)payload->Data, true);
 						}
 
 						ImGui::EndDragDropTarget();
@@ -437,7 +437,8 @@ namespace Atom
 					ImGui::Text("Current time");
 					ImGui::NextColumn();
 					ImGui::PushItemWidth(-1);
-					ImGui::DragFloat("##CurrentTime", &component.CurrentTime, 0.01f, 0.0f, component.Animation ? component.Animation->GetDuration() : 0.0f, "%.2f");
+					Ref<Animation> currentAnimState = component.AnimationController ? component.AnimationController->GetCurrentState() : nullptr;
+					ImGui::DragFloat("##CurrentTime", &component.CurrentTime, 0.01f, 0.0f, currentAnimState ? currentAnimState->GetDuration() : 0.0f, "%.2f");
 					ImGui::PopItemWidth();
 					ImGui::Columns(1);
 

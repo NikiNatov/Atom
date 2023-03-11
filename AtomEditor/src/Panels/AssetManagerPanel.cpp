@@ -9,13 +9,14 @@ namespace Atom
     {
         switch (type)
         {
-            case AssetType::Texture2D:      return "Texture2D";
-            case AssetType::TextureCube:    return "TextureCube";
-            case AssetType::Mesh:           return "Mesh";
-            case AssetType::Material:       return "Material";
-            case AssetType::Scene:          return "Scene";
-            case AssetType::Animation:      return "Animation";
-            case AssetType::Skeleton:       return "Skeleton";
+            case AssetType::Texture2D:           return "Texture2D";
+            case AssetType::TextureCube:         return "TextureCube";
+            case AssetType::Mesh:                return "Mesh";
+            case AssetType::Material:            return "Material";
+            case AssetType::Scene:               return "Scene";
+            case AssetType::Animation:           return "Animation";
+            case AssetType::Skeleton:            return "Skeleton";
+            case AssetType::AnimationController: return "AnimationController";
         }
 
         ATOM_ENGINE_ASSERT(false, "Unknown asset type");

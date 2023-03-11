@@ -36,6 +36,7 @@ namespace Atom
         static Ref<Texture2D> ImportTexture(const byte* compressedData, u32 dataSize, const String& name, const TextureImportSettings& importSettings);
         static UUID CreateAnimationAsset(f32 duration, f32 ticksPerSecond, const Set<Animation::KeyFrame>& keyFrames, const std::filesystem::path& filepath);
         static UUID CreateSkeletonAsset(const Vector<Skeleton::Bone>& bones, const std::filesystem::path& filepath);
+        static UUID CreateAnimationControllerAsset(const Vector<Ref<Animation>>& animationStates, u16 initialStateIdx, const std::filesystem::path& filepath);
         static UUID CreateMaterialAsset(const String& shaderName, const std::filesystem::path& filepath = "");
         static UUID CreateSceneAsset(const String& sceneName = "Unnamed Scene", const std::filesystem::path& filepath = "");
     private:

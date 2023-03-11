@@ -9,6 +9,7 @@
 #include "Dialogs/ImportDialog.h"
 #include "Dialogs/NewProjectDialog.h"
 #include "Dialogs/NewMaterialDialog.h"
+#include "Dialogs/NewAnimationControllerDialog.h"
 
 namespace Atom
 {
@@ -45,21 +46,22 @@ namespace Atom
         bool OnKeyPressed(KeyPressedEvent& e);
 
     private:
-        Ref<Scene>           m_ActiveScene = nullptr;
-        Ref<Scene>           m_EditorScene = nullptr;
-        Ref<SceneRenderer>   m_Renderer = nullptr;
-        glm::vec2            m_ViewportSize = { 0.0f, 0.0f };
-        bool                 m_NeedsResize = false;
-        s32                  m_GuizmoOperation = -1;
-        bool                 m_GuizmoSnap = false;
-        SceneHierarchyPanel  m_SceneHierarchyPanel;
-        EntityInspectorPanel m_EntityInspectorPanel;
-        AssetPanel           m_AssetPanel;
-        MaterialEditorPanel  m_MaterialEditorPanel;
-        TextureImportDialog  m_TextureImportDialog;
-        MeshImportDialog     m_MeshImportDialog;
-        NewProjectDialog     m_NewProjectDialog;
-        NewMaterialDialog    m_NewMaterialDialog;
+        Ref<Scene>                   m_ActiveScene = nullptr;
+        Ref<Scene>                   m_EditorScene = nullptr;
+        Ref<SceneRenderer>           m_Renderer = nullptr;
+        glm::vec2                    m_ViewportSize = { 0.0f, 0.0f };
+        bool                         m_NeedsResize = false;
+        s32                          m_GuizmoOperation = -1;
+        bool                         m_GuizmoSnap = false;
+        SceneHierarchyPanel          m_SceneHierarchyPanel;
+        EntityInspectorPanel         m_EntityInspectorPanel;
+        AssetPanel                   m_AssetPanel;
+        MaterialEditorPanel          m_MaterialEditorPanel;
+        TextureImportDialog          m_TextureImportDialog;
+        MeshImportDialog             m_MeshImportDialog;
+        NewProjectDialog             m_NewProjectDialog;
+        NewMaterialDialog            m_NewMaterialDialog;
+        NewAnimationControllerDialog m_NewAnimationControllerDialog;
     private:
         inline static EditorLayer* ms_Instance = nullptr;
     };

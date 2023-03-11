@@ -21,6 +21,7 @@ namespace Atom
         inline static Ref<Texture2D> SceneAssetIcon = nullptr;
         inline static Ref<Texture2D> AnimationAssetIcon = nullptr;
         inline static Ref<Texture2D> SkeletonAssetIcon = nullptr;
+        inline static Ref<Texture2D> AnimationControllerAssetIcon = nullptr;
 
     public:
         static void Initialize()
@@ -41,6 +42,7 @@ namespace Atom
             SceneAssetIcon = ContentTools::ImportTexture("resources/icons/scene_asset_icon.png", importSettings);
             AnimationAssetIcon = ContentTools::ImportTexture("resources/icons/animation_asset_icon.png", importSettings);
             SkeletonAssetIcon = ContentTools::ImportTexture("resources/icons/skeleton_asset_icon.png", importSettings);
+            AnimationControllerAssetIcon = ContentTools::ImportTexture("resources/icons/animation_controller_asset_icon.png", importSettings);
         }
 
         static void Shutdown()
@@ -59,6 +61,7 @@ namespace Atom
             SceneAssetIcon = nullptr;
             AnimationAssetIcon = nullptr;
             SkeletonAssetIcon = nullptr;
+            AnimationControllerAssetIcon = nullptr;
         }
     };
 }

@@ -461,7 +461,7 @@ namespace Atom
             .def(py::init<wrappers::Entity>())
             .def_property_readonly("entity", &wrappers::Component::GetEntity)
             .def_property_readonly("is_valid", &wrappers::Component::IsValid)
-            .def_property("animation", &wrappers::AnimatorComponent::GetAnimation, &wrappers::AnimatorComponent::SetAnimation)
+            .def_property("animation_controller", &wrappers::AnimatorComponent::GetAnimationController, &wrappers::AnimatorComponent::SetAnimationController)
             .def_property("current_time", &wrappers::AnimatorComponent::GetTime, &wrappers::AnimatorComponent::SetTime)
             .def_property("play", &wrappers::AnimatorComponent::GetPlay, &wrappers::AnimatorComponent::SetPlay);
 
@@ -684,6 +684,14 @@ namespace Atom
             .def_static("find", &wrappers::Animation::Find)
             .def_property_readonly("duration", &wrappers::Animation::GetDuration)
             .def_property_readonly("ticks_per_second", &wrappers::Animation::GetTicksPerSecond);
+
+        py::class_<wrappers::AnimationController>(m, "AnimationController")
+            .def(py::init<u64>())
+            .def_static("find", &wrappers::AnimationController::Find)
+            .def("transition_to_state", &wrappers::AnimationController::TransitionToState)
+            .def_property_readonly("current_state", &wrappers::AnimationController::GetCurrentState)
+            .def_property_readonly("initial_state", &wrappers::AnimationController::GetInitialState)
+            .def_property_readonly("animation_states", &wrappers::AnimationController::GetAnimationStates);
 
         // --------------------------------------------------- ImGui ------------------------------------------------------------
         py::class_<wrappers::GUI>(m, "GUI")
