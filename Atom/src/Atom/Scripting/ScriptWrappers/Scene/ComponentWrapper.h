@@ -187,5 +187,23 @@ namespace Atom
             f32 GetStaticFriction();
             f32 GetDynamicFriction();
         };
+
+        class SphereColliderComponent : public Component
+        {
+        public:
+            SphereColliderComponent() = default;
+            SphereColliderComponent(Entity entity);
+
+            void SetCenter(const glm::vec3& center);
+            void SetRadius(f32 radius);
+            void SetRestitution(f32 restitution);
+            void SetStaticFriction(f32 staticFriction);
+            void SetDynamicFriction(f32 dynamicFriction);
+            const glm::vec3& GetCenter();
+            f32 GetRadius();
+            f32 GetRestitution();
+            f32 GetStaticFriction();
+            f32 GetDynamicFriction();
+        };
     }
 }

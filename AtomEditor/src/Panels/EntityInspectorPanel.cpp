@@ -1123,6 +1123,64 @@ namespace Atom
 				data.AddComponentFn = [](Entity entity) { entity.AddComponent<BoxColliderComponent>(); };
 			}
 
+			if (m_Entity.HasComponent<SphereColliderComponent>())
+			{
+				Utils::DrawComponent<SphereColliderComponent>("Sphere Collider", m_Entity, true, [](auto& component)
+				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Center");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat3("##SphereColliderCenter", glm::value_ptr(component.Center), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Radius");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SphereColliderRadius", &component.Radius, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Restitution");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SphereColliderRestitution", &component.Restitution, 0.05f, 0.0f, 1.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Static Friction");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SphereColliderStaticFriction", &component.StaticFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Dynamic Friction");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SphereColliderDynamicFriction", &component.DynamicFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Sphere Collider";
+				data.ComponentHash = entt::type_id<SphereColliderComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<SphereColliderComponent>(); };
+			}
+
 			if (!missingComponents.empty())
 			{
 				if (ImGui::Button("Add Component"))

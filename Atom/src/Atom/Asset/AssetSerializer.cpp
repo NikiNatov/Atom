@@ -540,6 +540,15 @@ namespace Atom
                 auto& bcc = entity.GetComponent<BoxColliderComponent>();
                 ofs.write((char*)&bcc, sizeof(BoxColliderComponent));
             }
+
+            bool hasSphereColliderComponent = entity.HasComponent<SphereColliderComponent>();
+            ofs.write((char*)&hasSphereColliderComponent, sizeof(bool));
+
+            if (hasSphereColliderComponent)
+            {
+                auto& scc = entity.GetComponent<SphereColliderComponent>();
+                ofs.write((char*)&scc, sizeof(SphereColliderComponent));
+            }
         });
 
         return true;
@@ -1176,6 +1185,15 @@ namespace Atom
             {
                 auto& bcc = entity.AddOrReplaceComponent<BoxColliderComponent>();
                 ifs.read((char*)&bcc, sizeof(BoxColliderComponent));
+            }
+
+            bool hasSphereColliderComponent;
+            ifs.read((char*)&hasSphereColliderComponent, sizeof(bool));
+
+            if (hasSphereColliderComponent)
+            {
+                auto& scc = entity.AddOrReplaceComponent<SphereColliderComponent>();
+                ifs.read((char*)&scc, sizeof(SphereColliderComponent));
             }
         }
 

@@ -27,6 +27,8 @@ namespace Atom
         ms_PhysXPvd->connect(*transport, physx::PxPvdInstrumentationFlag::eALL);
 
         ms_PhysX = PxCreatePhysics(PX_PHYSICS_VERSION, *ms_PhysXFoundation, physx::PxTolerancesScale(), true, ms_PhysXPvd);
+        ATOM_ENGINE_ASSERT(ms_PhysX, "Failed creating PhysX");
+
         ms_PhysXDispatcher = physx::PxDefaultCpuDispatcherCreate(2);
     }
 
@@ -74,6 +76,7 @@ namespace Atom
     void PhysicsEngine::OnSceneStop()
     {
         ms_BoxColliders.clear();
+        ms_SphereColliders.clear();
         ms_Rigidbodies.clear();
         ms_PhysXMaterials.clear();
         ms_RunningScene = nullptr;
@@ -150,6 +153,24 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void PhysicsEngine::CreateSphereCollider(Entity entity)
+    {
+        ATOM_ENGINE_ASSERT(ms_RunningPhysXScene);
+        auto& scc = entity.GetComponent<SphereColliderComponent>();
+
+        if (physx::PxRigidActor* rb = GetRigidBody(entity))
+        {
+            physx::PxMaterial* material = ms_PhysX->createMaterial(scc.StaticFriction, scc.DynamicFriction, scc.Restitution);
+            ms_PhysXMaterials[entity.GetUUID()] = material;
+
+            physx::PxShape* collider = ms_PhysX->createShape(physx::PxSphereGeometry(scc.Radius), *material);
+            collider->setLocalPose(physx::PxTransform(scc.Center.x, scc.Center.y, scc.Center.z));
+            rb->attachShape(*collider);
+            ms_SphereColliders[entity.GetUUID()] = collider;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     physx::PxRigidActor* PhysicsEngine::GetRigidBody(Entity entity)
     {
         ATOM_ENGINE_ASSERT(entity);
@@ -180,6 +201,24 @@ namespace Atom
         auto it = ms_BoxColliders.find(uuid);
 
         if (it == ms_BoxColliders.end())
+            return nullptr;
+
+        return it->second;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    physx::PxShape* PhysicsEngine::GetShepreCollider(Entity entity)
+    {
+        ATOM_ENGINE_ASSERT(entity);
+        return GetShepreCollider(entity.GetUUID());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    physx::PxShape* PhysicsEngine::GetShepreCollider(UUID uuid)
+    {
+        auto it = ms_SphereColliders.find(uuid);
+
+        if (it == ms_SphereColliders.end())
             return nullptr;
 
         return it->second;

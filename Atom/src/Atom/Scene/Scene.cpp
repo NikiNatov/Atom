@@ -95,6 +95,7 @@ namespace Atom
         CopyComponent<ScriptComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<RigidbodyComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
         CopyComponent<BoxColliderComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
+        CopyComponent<SphereColliderComponent>(newScene->m_Registry, m_Registry, uuidToEnttIDMap);
 
         return newScene;
     }
@@ -135,6 +136,7 @@ namespace Atom
         CopyComponentIfExists<ScriptComponent>(newEntity, entity);
         CopyComponentIfExists<RigidbodyComponent>(newEntity, entity);
         CopyComponentIfExists<BoxColliderComponent>(newEntity, entity);
+        CopyComponentIfExists<SphereColliderComponent>(newEntity, entity);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -220,6 +222,11 @@ namespace Atom
         for (auto entity : m_Registry.view<BoxColliderComponent>())
         {
             PhysicsEngine::CreateBoxCollider(Entity(entity, this));
+        }
+
+        for (auto entity : m_Registry.view<SphereColliderComponent>())
+        {
+            PhysicsEngine::CreateSphereCollider(Entity(entity, this));
         }
 
         // Create script instances

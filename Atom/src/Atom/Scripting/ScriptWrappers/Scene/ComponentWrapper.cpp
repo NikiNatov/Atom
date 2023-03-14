@@ -639,4 +639,90 @@ namespace Atom::ScriptWrappers
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         return entity.GetComponent<Atom::BoxColliderComponent>().DynamicFriction;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    SphereColliderComponent::SphereColliderComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SphereColliderComponent::SetCenter(const glm::vec3& center)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SphereColliderComponent>().Center = center;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SphereColliderComponent::SetRadius(f32 radius)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SphereColliderComponent>().Radius = radius;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SphereColliderComponent::SetRestitution(f32 restitution)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SphereColliderComponent>().Restitution = restitution;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SphereColliderComponent::SetStaticFriction(f32 staticFriction)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SphereColliderComponent>().StaticFriction = staticFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SphereColliderComponent::SetDynamicFriction(f32 dynamicFriction)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::SphereColliderComponent>().DynamicFriction = dynamicFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const glm::vec3& SphereColliderComponent::GetCenter()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::SphereColliderComponent>().Center;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 SphereColliderComponent::GetRadius()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::SphereColliderComponent>().Radius;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 SphereColliderComponent::GetRestitution()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::SphereColliderComponent>().Restitution;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 SphereColliderComponent::GetStaticFriction()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::SphereColliderComponent>().StaticFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 SphereColliderComponent::GetDynamicFriction()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::SphereColliderComponent>().DynamicFriction;
+    }
 }
