@@ -145,7 +145,8 @@ namespace Atom
             physx::PxMaterial* material = ms_PhysX->createMaterial(bcc.StaticFriction, bcc.DynamicFriction, bcc.Restitution);
             ms_PhysXMaterials[entity.GetUUID()] = material;
 
-            physx::PxShape* collider = ms_PhysX->createShape(physx::PxBoxGeometry(bcc.Size.x / 2.0f, bcc.Size.y / 2.0f, bcc.Size.z / 2.0f), *material);
+            auto& tc = entity.GetComponent<TransformComponent>();
+            physx::PxShape* collider = ms_PhysX->createShape(physx::PxBoxGeometry(bcc.Size.x / 2.0f * tc.Scale.x, bcc.Size.y / 2.0f * tc.Scale.y, bcc.Size.z / 2.0f * tc.Scale.z), *material);
             collider->setLocalPose(physx::PxTransform(bcc.Center.x, bcc.Center.y, bcc.Center.z));
             rb->attachShape(*collider);
             ms_BoxColliders[entity.GetUUID()] = collider;
@@ -163,7 +164,8 @@ namespace Atom
             physx::PxMaterial* material = ms_PhysX->createMaterial(scc.StaticFriction, scc.DynamicFriction, scc.Restitution);
             ms_PhysXMaterials[entity.GetUUID()] = material;
 
-            physx::PxShape* collider = ms_PhysX->createShape(physx::PxSphereGeometry(scc.Radius), *material);
+            auto& tc = entity.GetComponent<TransformComponent>();
+            physx::PxShape* collider = ms_PhysX->createShape(physx::PxSphereGeometry(scc.Radius * glm::max(glm::max(tc.Scale.x, tc.Scale.y), tc.Scale.z)), *material);
             collider->setLocalPose(physx::PxTransform(scc.Center.x, scc.Center.y, scc.Center.z));
             rb->attachShape(*collider);
             ms_SphereColliders[entity.GetUUID()] = collider;
