@@ -725,4 +725,106 @@ namespace Atom::ScriptWrappers
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         return entity.GetComponent<Atom::SphereColliderComponent>().DynamicFriction;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    CapsuleColliderComponent::CapsuleColliderComponent(Entity entity)
+        : Component(entity)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetCenter(const glm::vec3& center)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().Center = center;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetRadius(f32 radius)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().Radius = radius;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetHeight(f32 height)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().Height = height;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetRestitution(f32 restitution)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().Restitution = restitution;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetStaticFriction(f32 staticFriction)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().StaticFriction = staticFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CapsuleColliderComponent::SetDynamicFriction(f32 dynamicFriction)
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        entity.GetComponent<Atom::CapsuleColliderComponent>().DynamicFriction = dynamicFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const glm::vec3& CapsuleColliderComponent::GetCenter()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().Center;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 CapsuleColliderComponent::GetRadius()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().Radius;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 CapsuleColliderComponent::GetHeight()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().Height;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 CapsuleColliderComponent::GetRestitution()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().Restitution;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 CapsuleColliderComponent::GetStaticFriction()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().StaticFriction;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    f32 CapsuleColliderComponent::GetDynamicFriction()
+    {
+        Scene* scene = ScriptEngine::GetRunningScene();
+        Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
+        return entity.GetComponent<Atom::CapsuleColliderComponent>().DynamicFriction;
+    }
 }

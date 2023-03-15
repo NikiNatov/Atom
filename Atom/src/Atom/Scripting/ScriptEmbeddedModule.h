@@ -534,6 +534,18 @@ namespace Atom
             .def_property("static_friction", &wrappers::SphereColliderComponent::GetStaticFriction, &wrappers::SphereColliderComponent::SetStaticFriction)
             .def_property("dynamic_friction", &wrappers::SphereColliderComponent::GetDynamicFriction, &wrappers::SphereColliderComponent::SetDynamicFriction);
 
+        py::class_<wrappers::CapsuleColliderComponent>(m, "CapsuleColliderComponent")
+            .def(py::init<>())
+            .def(py::init<wrappers::Entity>())
+            .def_property_readonly("entity", &wrappers::Component::GetEntity)
+            .def_property_readonly("is_valid", &wrappers::Component::IsValid)
+            .def_property("center", &wrappers::CapsuleColliderComponent::GetCenter, &wrappers::CapsuleColliderComponent::SetCenter)
+            .def_property("radius", &wrappers::CapsuleColliderComponent::GetRadius, &wrappers::CapsuleColliderComponent::SetRadius)
+            .def_property("height", &wrappers::CapsuleColliderComponent::GetHeight, &wrappers::CapsuleColliderComponent::SetHeight)
+            .def_property("restitution", &wrappers::CapsuleColliderComponent::GetRestitution, &wrappers::CapsuleColliderComponent::SetRestitution)
+            .def_property("static_friction", &wrappers::CapsuleColliderComponent::GetStaticFriction, &wrappers::CapsuleColliderComponent::SetStaticFriction)
+            .def_property("dynamic_friction", &wrappers::CapsuleColliderComponent::GetDynamicFriction, &wrappers::CapsuleColliderComponent::SetDynamicFriction);
+
         py::class_<wrappers::Entity>(m, "Entity")
             .def(py::init<>())
             .def(py::init<u64>())
@@ -548,6 +560,7 @@ namespace Atom
             .def("add_rigidbody_component", &wrappers::Entity::AddComponent<wrappers::RigidbodyComponent>)
             .def("add_box_collider_component", &wrappers::Entity::AddComponent<wrappers::BoxColliderComponent>)
             .def("add_sphere_collider_component", &wrappers::Entity::AddComponent<wrappers::SphereColliderComponent>)
+            .def("add_capsule_collider_component", &wrappers::Entity::AddComponent<wrappers::CapsuleColliderComponent>)
             .def("has_camera_component", &wrappers::Entity::HasComponent<wrappers::CameraComponent>)
             .def("has_mesh_component", &wrappers::Entity::HasComponent<wrappers::MeshComponent>)
             .def("has_animated_mesh_component", &wrappers::Entity::HasComponent<wrappers::AnimatedMeshComponent>)
@@ -559,6 +572,7 @@ namespace Atom
             .def("has_rigid_body_component", &wrappers::Entity::HasComponent<wrappers::RigidbodyComponent>)
             .def("has_box_collider_component", &wrappers::Entity::HasComponent<wrappers::BoxColliderComponent>)
             .def("has_sphere_collider_component", &wrappers::Entity::HasComponent<wrappers::SphereColliderComponent>)
+            .def("has_capsule_collider_component", &wrappers::Entity::HasComponent<wrappers::CapsuleColliderComponent>)
             .def("get_camera_component", &wrappers::Entity::GetComponent<wrappers::CameraComponent>)
             .def("get_mesh_component", &wrappers::Entity::GetComponent<wrappers::MeshComponent>)
             .def("get_animated_mesh_component", &wrappers::Entity::GetComponent<wrappers::AnimatedMeshComponent>)
@@ -570,6 +584,7 @@ namespace Atom
             .def("get_rigidbody_component", &wrappers::Entity::GetComponent<wrappers::RigidbodyComponent>)
             .def("get_box_collider_component", &wrappers::Entity::GetComponent<wrappers::BoxColliderComponent>)
             .def("get_sphere_collider_component", &wrappers::Entity::GetComponent<wrappers::SphereColliderComponent>)
+            .def("get_capsule_collider_component", &wrappers::Entity::GetComponent<wrappers::CapsuleColliderComponent>)
             .def("get_script", &wrappers::Entity::GetScriptInstance)
             .def("is_valid", &wrappers::Entity::IsValid)
             .def_static("find_entity_by_name", &wrappers::Entity::FindEntityByName)

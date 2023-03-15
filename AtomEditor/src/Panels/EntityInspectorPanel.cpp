@@ -1181,6 +1181,73 @@ namespace Atom
 				data.AddComponentFn = [](Entity entity) { entity.AddComponent<SphereColliderComponent>(); };
 			}
 
+			if (m_Entity.HasComponent<CapsuleColliderComponent>())
+			{
+				Utils::DrawComponent<CapsuleColliderComponent>("Capsule Collider", m_Entity, true, [](auto& component)
+				{
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Center");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat3("##CapsuleColliderCenter", glm::value_ptr(component.Center), 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Radius");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CapsuleColliderRadius", &component.Radius, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Height");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CapsuleColliderHeight", &component.Height, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Restitution");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CapsuleColliderRestitution", &component.Restitution, 0.05f, 0.0f, 1.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Static Friction");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CapsuleColliderStaticFriction", &component.StaticFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text("Dynamic Friction");
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##CapsuleColliderDynamicFriction", &component.DynamicFriction, 0.05f, 0.0f, 0.0f, "%.2f");
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+				});
+			}
+			else
+			{
+				ComponentData& data = missingComponents.emplace_back();
+				data.ComponentName = "Capsule Collider";
+				data.ComponentHash = entt::type_id<CapsuleColliderComponent>().hash();
+				data.AddComponentFn = [](Entity entity) { entity.AddComponent<CapsuleColliderComponent>(); };
+			}
+
 			if (!missingComponents.empty())
 			{
 				if (ImGui::Button("Add Component"))

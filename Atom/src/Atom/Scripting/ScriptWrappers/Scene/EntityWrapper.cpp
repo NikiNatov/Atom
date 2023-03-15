@@ -23,6 +23,7 @@ namespace Atom
             { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { return e.HasComponent<Atom::RigidbodyComponent>(); } },
             { typeid(ScriptWrappers::BoxColliderComponent).hash_code(),      [](Atom::Entity e) { return e.HasComponent<Atom::BoxColliderComponent>(); } },
             { typeid(ScriptWrappers::SphereColliderComponent).hash_code(),   [](Atom::Entity e) { return e.HasComponent<Atom::SphereColliderComponent>(); } },
+            { typeid(ScriptWrappers::CapsuleColliderComponent).hash_code(),  [](Atom::Entity e) { return e.HasComponent<Atom::CapsuleColliderComponent>(); } },
         };
 
         static HashMap<u64, std::function<void(Atom::Entity)>> s_AddComponentFunctions = {
@@ -39,6 +40,7 @@ namespace Atom
             { typeid(ScriptWrappers::RigidbodyComponent).hash_code(),        [](Atom::Entity e) { e.AddComponent<Atom::RigidbodyComponent>(); } },
             { typeid(ScriptWrappers::BoxColliderComponent).hash_code(),      [](Atom::Entity e) { e.AddComponent<Atom::BoxColliderComponent>(); } },
             { typeid(ScriptWrappers::SphereColliderComponent).hash_code(),   [](Atom::Entity e) { e.AddComponent<Atom::SphereColliderComponent>(); } },
+            { typeid(ScriptWrappers::CapsuleColliderComponent).hash_code(),  [](Atom::Entity e) { e.AddComponent<Atom::CapsuleColliderComponent>(); } },
 
         };
 
@@ -132,6 +134,7 @@ namespace Atom
         template RigidbodyComponent Entity::AddComponent<RigidbodyComponent>();
         template BoxColliderComponent Entity::AddComponent<BoxColliderComponent>();
         template SphereColliderComponent Entity::AddComponent<SphereColliderComponent>();
+        template CapsuleColliderComponent Entity::AddComponent<CapsuleColliderComponent>();
 
         // -----------------------------------------------------------------------------------------------------------------------------
         template<typename T>
@@ -154,6 +157,7 @@ namespace Atom
         template bool Entity::HasComponent<RigidbodyComponent>() const;
         template bool Entity::HasComponent<BoxColliderComponent>() const;
         template bool Entity::HasComponent<SphereColliderComponent>() const;
+        template bool Entity::HasComponent<CapsuleColliderComponent>() const;
 
         // -----------------------------------------------------------------------------------------------------------------------------
         template<typename T>
@@ -177,6 +181,7 @@ namespace Atom
         template RigidbodyComponent Entity::GetComponent<RigidbodyComponent>() const;
         template BoxColliderComponent Entity::GetComponent<BoxColliderComponent>() const;
         template SphereColliderComponent Entity::GetComponent<SphereColliderComponent>() const;
+        template CapsuleColliderComponent Entity::GetComponent<CapsuleColliderComponent>() const;
 
         // -----------------------------------------------------------------------------------------------------------------------------
         Entity Entity::FindEntityByName(const String& name)

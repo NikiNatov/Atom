@@ -205,5 +205,25 @@ namespace Atom
             f32 GetStaticFriction();
             f32 GetDynamicFriction();
         };
+
+        class CapsuleColliderComponent : public Component
+        {
+        public:
+            CapsuleColliderComponent() = default;
+            CapsuleColliderComponent(Entity entity);
+
+            void SetCenter(const glm::vec3& center);
+            void SetRadius(f32 radius);
+            void SetHeight(f32 height);
+            void SetRestitution(f32 restitution);
+            void SetStaticFriction(f32 staticFriction);
+            void SetDynamicFriction(f32 dynamicFriction);
+            const glm::vec3& GetCenter();
+            f32 GetRadius();
+            f32 GetHeight();
+            f32 GetRestitution();
+            f32 GetStaticFriction();
+            f32 GetDynamicFriction();
+        };
     }
 }

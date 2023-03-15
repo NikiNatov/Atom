@@ -77,6 +77,7 @@ namespace Atom
     {
         ms_BoxColliders.clear();
         ms_SphereColliders.clear();
+        ms_CapsuleColliders.clear();
         ms_Rigidbodies.clear();
         ms_PhysXMaterials.clear();
         ms_RunningScene = nullptr;
@@ -173,6 +174,27 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void PhysicsEngine::CreateCapsuleCollider(Entity entity)
+    {
+        ATOM_ENGINE_ASSERT(ms_RunningPhysXScene);
+        auto& ccc = entity.GetComponent<CapsuleColliderComponent>();
+
+        if (physx::PxRigidActor* rb = GetRigidBody(entity))
+        {
+            physx::PxMaterial* material = ms_PhysX->createMaterial(ccc.StaticFriction, ccc.DynamicFriction, ccc.Restitution);
+            ms_PhysXMaterials[entity.GetUUID()] = material;
+
+            auto& tc = entity.GetComponent<TransformComponent>();
+            physx::PxShape* collider = ms_PhysX->createShape(physx::PxCapsuleGeometry(ccc.Radius * glm::max(tc.Scale.x, tc.Scale.z), ccc.Height / 2.0f * tc.Scale.y), *material);
+            // Rotation is needed to make capsule colliders Y-axis aligned (they are X-aligned by default)
+            glm::quat rotation(glm::vec3(0.0f, 0.0f, glm::radians(90.0f)));
+            collider->setLocalPose(physx::PxTransform(ccc.Center.x, ccc.Center.y, ccc.Center.z, physx::PxQuat(rotation.x, rotation.y, rotation.z, rotation.w)));
+            rb->attachShape(*collider);
+            ms_CapsuleColliders[entity.GetUUID()] = collider;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     physx::PxRigidActor* PhysicsEngine::GetRigidBody(Entity entity)
     {
         ATOM_ENGINE_ASSERT(entity);
@@ -221,6 +243,24 @@ namespace Atom
         auto it = ms_SphereColliders.find(uuid);
 
         if (it == ms_SphereColliders.end())
+            return nullptr;
+
+        return it->second;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    physx::PxShape* PhysicsEngine::GetCapsuleCollider(Entity entity)
+    {
+        ATOM_ENGINE_ASSERT(entity);
+        return GetCapsuleCollider(entity.GetUUID());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    physx::PxShape* PhysicsEngine::GetCapsuleCollider(UUID uuid)
+    {
+        auto it = ms_CapsuleColliders.find(uuid);
+
+        if (it == ms_CapsuleColliders.end())
             return nullptr;
 
         return it->second;

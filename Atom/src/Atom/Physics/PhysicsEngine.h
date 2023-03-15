@@ -32,6 +32,7 @@ namespace Atom
         static void CreateRigidbody(Entity entity);
         static void CreateBoxCollider(Entity entity);
         static void CreateSphereCollider(Entity entity);
+        static void CreateCapsuleCollider(Entity entity);
 
         static physx::PxRigidActor* GetRigidBody(Entity entity);
         static physx::PxRigidActor* GetRigidBody(UUID uuid);
@@ -39,6 +40,8 @@ namespace Atom
         static physx::PxShape* GetBoxCollider(UUID uuid);
         static physx::PxShape* GetShepreCollider(Entity entity);
         static physx::PxShape* GetShepreCollider(UUID uuid);
+        static physx::PxShape* GetCapsuleCollider(Entity entity);
+        static physx::PxShape* GetCapsuleCollider(UUID uuid);
         static physx::PxMaterial* GetPhysicsMaterial(Entity entity);
         static physx::PxMaterial* GetPhysicsMaterial(UUID uuid);
     private:
@@ -51,6 +54,7 @@ namespace Atom
         inline static HashMap<UUID, physx::PxRigidActor*> ms_Rigidbodies;
         inline static HashMap<UUID, physx::PxShape*>      ms_BoxColliders;
         inline static HashMap<UUID, physx::PxShape*>      ms_SphereColliders;
+        inline static HashMap<UUID, physx::PxShape*>      ms_CapsuleColliders;
         inline static HashMap<UUID, physx::PxMaterial*>   ms_PhysXMaterials;
     };
 }

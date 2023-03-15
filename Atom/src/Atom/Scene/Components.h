@@ -201,4 +201,17 @@ namespace Atom
 		SphereColliderComponent() = default;
 		SphereColliderComponent(const SphereColliderComponent& other) = default;
 	};
+
+	struct CapsuleColliderComponent
+	{
+		glm::vec3 Center = { 0.0f, 0.0f, 0.0f };
+		f32		  Radius = 0.5f;
+		f32		  Height = 1.0f;
+		f32		  Restitution = 0.0f;
+		f32		  StaticFriction = 0.5f;
+		f32		  DynamicFriction = 0.5f;
+
+		CapsuleColliderComponent() = default;
+		CapsuleColliderComponent(const CapsuleColliderComponent& other) = default;
+	};
 }
