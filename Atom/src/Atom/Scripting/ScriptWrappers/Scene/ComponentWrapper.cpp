@@ -94,9 +94,7 @@ namespace Atom::ScriptWrappers
         Scene* scene = ScriptEngine::GetRunningScene();
         Atom::Entity entity = scene->FindEntityByUUID(m_Entity.GetUUID());
         auto& tc = entity.GetComponent<Atom::TransformComponent>();
-
-        return glm::normalize(glm::angleAxis(tc.Rotation.y, glm::vec3(0.0f, 1.0f, 0.0f)) *
-                              glm::angleAxis(tc.Rotation.x, glm::vec3(1.0f, 0.0f, 0.0f)));
+        return glm::normalize(glm::quat(tc.Rotation));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -142,6 +140,33 @@ namespace Atom::ScriptWrappers
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void RigidbodyComponent::SetTranslation(const glm::vec3& translation)
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            physx::PxTransform rbTransform = actor->getGlobalPose();
+            rbTransform.p = physx::PxVec3(translation.x, translation.y, translation.z);
+            actor->setGlobalPose(rbTransform);
+        }
+        else
+            ATOM_ERROR("Entity {} has missing or invalid RigidbodyComponent", m_Entity.GetTag());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void RigidbodyComponent::SetRotation(const glm::vec3& rotation)
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            glm::quat rotationQuat(rotation);
+            physx::PxTransform rbTransform = actor->getGlobalPose();
+            rbTransform.q = physx::PxQuat(rotationQuat.x, rotationQuat.y, rotationQuat.z, rotationQuat.w);
+            actor->setGlobalPose(rbTransform);
+        }
+        else
+            ATOM_ERROR("Entity {} has missing or invalid RigidbodyComponent", m_Entity.GetTag());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Atom::RigidbodyComponent::RigidbodyType RigidbodyComponent::GetType()
     {
         Scene* scene = ScriptEngine::GetRunningScene();
@@ -175,7 +200,62 @@ namespace Atom::ScriptWrappers
                 physx::PxVec3 velocity = rb->getLinearVelocity();
                 return { velocity.x, velocity.y, velocity.z };
             }
+
+            return glm::vec3(0.0f);
         }
+
+        ATOM_ERROR("Entity {} has missing or invalid RigidbodyComponent", m_Entity.GetTag());
+        return glm::vec3(0.0f);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetTranslation()
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            physx::PxTransform rbTransform = actor->getGlobalPose();
+            return glm::vec3(rbTransform.p.x, rbTransform.p.y, rbTransform.p.z);
+        }
+
+        ATOM_ERROR("Entity {} has missing or invalid RigidbodyComponent", m_Entity.GetTag());
+        return glm::vec3(0.0f);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetRotation()
+    {
+        if (physx::PxRigidActor* actor = PhysicsEngine::GetRigidBody(m_Entity.GetUUID()))
+        {
+            physx::PxTransform rbTransform = actor->getGlobalPose();
+            return glm::eulerAngles(glm::quat(rbTransform.q.w, rbTransform.q.x, rbTransform.q.y, rbTransform.q.z));
+        }
+
+        ATOM_ERROR("Entity {} has missing or invalid RigidbodyComponent", m_Entity.GetTag());
+        return glm::vec3(0.0f);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetUpVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetRightVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(1.0f, 0.0f, 0.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::vec3 RigidbodyComponent::GetForwardVector()
+    {
+        return glm::normalize(GetOrientation() * glm::vec3(0.0f, 0.0f, -1.0f));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    glm::quat RigidbodyComponent::GetOrientation()
+    {
+        return glm::normalize(glm::quat(GetRotation()));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
