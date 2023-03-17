@@ -184,6 +184,22 @@ namespace Atom
             .def_readwrite("z", &glm::bvec4::z)
             .def_readwrite("w", &glm::bvec4::y);
 
+        py::class_<glm::quat>(m, "Quaternion")
+            .def(py::init<>())
+            .def(py::init<f32, f32, f32, f32>())
+            .def(py::init<const glm::vec3&>())
+            .def(py::self += py::self)
+            .def(py::self -= py::self)
+            .def(py::self *= py::self)
+            .def(py::self + py::self)
+            .def(py::self - py::self)
+            .def(py::self * py::self)
+            .def(-py::self)
+            .def_readwrite("x", &glm::quat::x)
+            .def_readwrite("y", &glm::quat::y)
+            .def_readwrite("z", &glm::quat::z)
+            .def_readwrite("w", &glm::quat::y);
+
         py::class_<wrappers::Math>(m, "Math")
             .def_static("abs", &wrappers::Math::Abs<f32>)
             .def_static("clamp", &wrappers::Math::Clamp<f32>)
@@ -207,6 +223,7 @@ namespace Atom
             .def_static("dot", &wrappers::Math::Dot<glm::vec2>)
             .def_static("dot", &wrappers::Math::Dot<glm::vec3>)
             .def_static("dot", &wrappers::Math::Dot<glm::vec4>)
+            .def_static("dot", &wrappers::Math::Dot<glm::quat>)
             .def_static("distance", &wrappers::Math::Distance<glm::vec2>)
             .def_static("distance", &wrappers::Math::Distance<glm::vec3>)
             .def_static("distance", &wrappers::Math::Distance<glm::vec4>)
@@ -216,6 +233,7 @@ namespace Atom
             .def_static("normalize", &wrappers::Math::Normalize<glm::vec2>)
             .def_static("normalize", &wrappers::Math::Normalize<glm::vec3>)
             .def_static("normalize", &wrappers::Math::Normalize<glm::vec4>)
+            .def_static("normalize", &wrappers::Math::Normalize<glm::quat>)
             .def_static("reflect", &wrappers::Math::Reflect<glm::vec2>)
             .def_static("reflect", &wrappers::Math::Reflect<glm::vec3>)
             .def_static("reflect", &wrappers::Math::Reflect<glm::vec4>)
@@ -245,7 +263,11 @@ namespace Atom
             .def_static("lerp", &wrappers::Math::Lerp<f32>)
             .def_static("lerp", &wrappers::Math::Lerp<glm::vec2>)
             .def_static("lerp", &wrappers::Math::Lerp<glm::vec3>)
-            .def_static("lerp", &wrappers::Math::Lerp<glm::vec4>);
+            .def_static("lerp", &wrappers::Math::Lerp<glm::vec4>)
+            .def_static("lerp", &wrappers::Math::Lerp<glm::quat>)
+            .def_static("euler_angles", &wrappers::Math::EulerAngles)
+            .def_static("angle_axis", &wrappers::Math::AngleAxis)
+            .def_static("inverse_quaternion", &wrappers::Math::InverseQuaternion);
 
         // --------------------------------------------------- Core ------------------------------------------------------------
         py::class_<Atom::Logger>(m, "Log")
@@ -431,6 +453,7 @@ namespace Atom
             .def_property_readonly("forward_vector", &wrappers::TransformComponent::GetForwardVector)
             .def_property("translation", &wrappers::TransformComponent::GetTranslation, &wrappers::TransformComponent::SetTranslation)
             .def_property("rotation", &wrappers::TransformComponent::GetRotation, &wrappers::TransformComponent::SetRotation)
+            .def_property("euler_angles", &wrappers::TransformComponent::GetEulerAngles, &wrappers::TransformComponent::SetEulerAngles)
             .def_property("scale", &wrappers::TransformComponent::GetScale, &wrappers::TransformComponent::SetScale);
 
         py::class_<wrappers::CameraComponent>(m, "CameraComponent")
@@ -513,6 +536,7 @@ namespace Atom
             .def_property("velocity", &wrappers::RigidbodyComponent::GetVelocity, &wrappers::RigidbodyComponent::SetVelocity)
             .def_property("translation", &wrappers::RigidbodyComponent::GetTranslation, &wrappers::RigidbodyComponent::SetTranslation)
             .def_property("rotation", &wrappers::RigidbodyComponent::GetRotation, &wrappers::RigidbodyComponent::SetRotation)
+            .def_property("euler_angles", &wrappers::RigidbodyComponent::GetEulerAngles, &wrappers::RigidbodyComponent::SetEulerAngles)
             .def_property_readonly("up_vector", &wrappers::RigidbodyComponent::GetUpVector)
             .def_property_readonly("right_vector", &wrappers::RigidbodyComponent::GetRightVector)
             .def_property_readonly("forward_vector", &wrappers::RigidbodyComponent::GetForwardVector);

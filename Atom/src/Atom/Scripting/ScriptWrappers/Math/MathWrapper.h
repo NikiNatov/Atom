@@ -127,6 +127,12 @@ namespace Atom
 
             template<typename Type>
             static Type Lerp(const Type& a, const Type& b, f32 t) { return glm::lerp(a, b, t); }
+
+            static glm::vec3 EulerAngles(const glm::quat& quaternion) { return glm::eulerAngles(quaternion); }
+
+            static glm::quat AngleAxis(f32 angle, const glm::vec3& axis) { return glm::angleAxis(angle, axis); }
+
+            static glm::quat InverseQuaternion(const glm::quat& quaternion) { return glm::conjugate(quaternion); }
         };
     }
 }

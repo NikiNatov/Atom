@@ -37,16 +37,16 @@ namespace Atom
             TransformComponent(Entity entity);
 
             void SetTranslation(const glm::vec3& translation);
-            void SetRotation(const glm::vec3& rotation);
+            void SetRotation(const glm::quat& rotation);
+            void SetEulerAngles(const glm::vec3& eulerAngles);
             void SetScale(const glm::vec3& scale);
             const glm::vec3& GetTranslation();
-            const glm::vec3& GetRotation();
+            glm::quat GetRotation();
+            const glm::vec3& GetEulerAngles();
             const glm::vec3& GetScale();
             glm::vec3 GetUpVector();
             glm::vec3 GetRightVector();
             glm::vec3 GetForwardVector();
-        private:
-            glm::quat GetOrientation();
         };
 
         class CameraComponent : public Component
@@ -162,22 +162,21 @@ namespace Atom
             void SetFixedRotation(const glm::bvec3& fixedRotation);
             void SetVelocity(const glm::vec3& velocity);
             void SetTranslation(const glm::vec3& translation);
-            void SetRotation(const glm::vec3& rotation);
+            void SetRotation(const glm::quat& rotation);
+            void SetEulerAngles(const glm::vec3& eulerAngles);
             Atom::RigidbodyComponent::RigidbodyType GetType();
             f32 GetMass();
             const glm::bvec3& GetFixedRotation();
             glm::vec3 GetVelocity();
             glm::vec3 GetTranslation();
-            glm::vec3 GetRotation();
+            glm::quat GetRotation();
+            glm::vec3 GetEulerAngles();
             glm::vec3 GetUpVector();
             glm::vec3 GetRightVector();
             glm::vec3 GetForwardVector();
 
             void AddForce(const glm::vec3& force, bool awake = true);
             void AddImpulse(const glm::vec3& impulse, bool awake = true);
-
-        private:
-            glm::quat GetOrientation();
         };
 
         class BoxColliderComponent : public Component
