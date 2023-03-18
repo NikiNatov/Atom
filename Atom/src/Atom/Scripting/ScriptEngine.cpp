@@ -174,6 +174,19 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptEngine::FixedUpdateEntityScript(Entity entity, Timestep ts)
+    {
+        if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
+        {
+            instance->OnFixedUpdate(ts);
+        }
+        else
+        {
+            ATOM_ERROR("Entity with ID {} has no script instantiated", entity.GetUUID());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void ScriptEngine::LateUpdateEntityScript(Entity entity, Timestep ts)
     {
         if (Ref<ScriptInstance> instance = GetScriptInstance(entity))
@@ -447,6 +460,8 @@ namespace Atom
                 m_OnCreateFn = m_PythonInstance.attr("on_create");
             if (py::hasattr(m_PythonInstance, "on_update"))
                 m_OnUpdateFn = m_PythonInstance.attr("on_update");
+            if (py::hasattr(m_PythonInstance, "on_fixed_update"))
+                m_OnFixedUpdateFn = m_PythonInstance.attr("on_fixed_update");
             if (py::hasattr(m_PythonInstance, "on_late_update"))
                 m_OnLateUpdateFn = m_PythonInstance.attr("on_late_update");
             if (py::hasattr(m_PythonInstance, "on_destroy"))
@@ -483,6 +498,20 @@ namespace Atom
         {
             if (!m_OnUpdateFn.is_none())
                 m_OnUpdateFn(ts);
+        }
+        catch (std::exception& e)
+        {
+            ATOM_ERROR(e.what());
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ScriptInstance::OnFixedUpdate(Timestep ts)
+    {
+        try
+        {
+            if (!m_OnFixedUpdateFn.is_none())
+                m_OnFixedUpdateFn(ts);
         }
         catch (std::exception& e)
         {

@@ -1,15 +1,16 @@
 import Atom
+import math
 
-class Player(Atom.Entity):
+class PlayerRigidbody(Atom.Entity):
     jump_force: float
     movement_speed: float
     rotation_speed: float
     camera_holder: Atom.Entity
-    _vertical_force: float
-    _is_in_air: bool
-    _velocity: Atom.Vec3
+    _movement_input: Atom.Vec3
+    _mouse_delta: Atom.Vec2
     _prev_mouse_pos: Atom.Vec2
     _animation_controller: Atom.AnimationController
+    _rigidbody: Atom.RigidbodyComponent
 
     def __init__(self, entity_id: int) -> None:
         super().__init__(entity_id)
@@ -17,89 +18,85 @@ class Player(Atom.Entity):
         self.movement_speed = 7.0
         self.rotation_speed = 7.0
         self.camera_holder = Atom.Entity(0)
-        self._vertical_force = 0.0
-        self._is_in_air = False
-        self._velocity = Atom.Vec3(0.0, 0.0, 0.0)
+        self._movement_input = Atom.Vec3(0.0, 0.0, 0.0)
+        self._mouse_delta = Atom.Vec2(0.0, 0.0)
         self._prev_mouse_pos = Atom.Vec2(0.0, 0.0)
+        self._rigidbody = Atom.RigidbodyComponent()
 
     def on_create(self) -> None:
         self._prev_mouse_pos = Atom.Input.get_mouse_position()
         self._animation_controller = self.get_animator_component().animation_controller
+        self._rigidbody = self.get_rigidbody_component()
         Atom.Input.set_mouse_cursor(False)
+
+    def on_fixed_update(self, ts: Atom.Timestep) -> None:
+        # Rotate player
+        yRotationAngle: float = Atom.Math.radians(-self._mouse_delta.x * self.rotation_speed * ts.get_seconds())
+        self._rigidbody.rotation *= Atom.Math.angle_axis(yRotationAngle, Atom.Vec3(0.0, 1.0, 0.0))
+
+        # Move player
+        velocity: Atom.Vec3 = Atom.Vec3(0.0, 0.0, 0.0)
+
+        velocity += self._rigidbody.forward_vector * self._movement_input.z * self.movement_speed * ts.get_seconds()
+        velocity += self._rigidbody.right_vector * self._movement_input.x * self.movement_speed * ts.get_seconds()
+
+        self._rigidbody.translation += velocity
+
+        # Set animation state
+        if self._movement_input.z == 1 and self._movement_input.x == 1:
+            # Forward Right
+            self._animation_controller.transition_to_state(1)
+        elif self._movement_input.z == 1 and self._movement_input.x == 0:
+            # Forward
+            self._animation_controller.transition_to_state(2)
+        elif self._movement_input.z == 1 and self._movement_input.x == -1:
+            # Forward Left
+            self._animation_controller.transition_to_state(3)
+        elif self._movement_input.z == 0 and self._movement_input.x == -1:
+            # Left
+            self._animation_controller.transition_to_state(4)
+        elif self._movement_input.z == -1 and self._movement_input.x == -1:
+            # Backwards Left
+            self._animation_controller.transition_to_state(5)
+        elif self._movement_input.z == -1 and self._movement_input.x == 0:
+            # Backwards
+            self._animation_controller.transition_to_state(6)
+        elif self._movement_input.z == -1 and self._movement_input.x == 1:
+            # Backwards Right
+            self._animation_controller.transition_to_state(7)
+        elif self._movement_input.z == 0 and self._movement_input.x == 1:
+            # Right
+            self._animation_controller.transition_to_state(8)
+        else:
+            # Idle
+            self._animation_controller.transition_to_state(0)
 
     def on_update(self, ts: Atom.Timestep) -> None:
         if Atom.Input.is_cursor_enabled():
             return
         
-        # Compute rotations
+        # Get mouse inputs
         current_mouse_pos: Atom.Vec2 = Atom.Input.get_mouse_position()
-        mouse_delta: Atom.Vec2 = current_mouse_pos - self._prev_mouse_pos
+        self._mouse_delta = current_mouse_pos - self._prev_mouse_pos
         Atom.Input.set_mouse_position(self._prev_mouse_pos)
         
-        self.camera_holder.transform.rotation.x -= Atom.Math.radians(mouse_delta.y * self.rotation_speed * ts.get_seconds())
-        self.camera_holder.transform.rotation.x = Atom.Math.clamp(self.camera_holder.transform.rotation.x, Atom.Math.radians(-80.0), Atom.Math.radians(80.0))
-
-        self.transform.rotation.y -= Atom.Math.radians(mouse_delta.x * self.rotation_speed * ts.get_seconds())
-
-        # Compute directional movement
-        self._velocity = Atom.Vec3(0.0, 0.0, 0.0)
-
-        forward_movement: int = 0
-        side_movement: int = 0
-
+        # Get key inputs
+        self._movement_input = Atom.Vec3(0.0, 0.0, 0.0)
+        
         if Atom.Input.is_key_pressed(Atom.Key.W):
-            self._velocity += self.transform.forward_vector * self.movement_speed * ts.get_seconds()
-            forward_movement = 1
+            self._movement_input.z = 1
         elif Atom.Input.is_key_pressed(Atom.Key.S):
-            self._velocity -= self.transform.forward_vector * self.movement_speed * ts.get_seconds()
-            forward_movement = -1
+            self._movement_input.z = -1
 
         if Atom.Input.is_key_pressed(Atom.Key.A):
-            self._velocity -= self.transform.right_vector * self.movement_speed * ts.get_seconds()
-            side_movement = -1
+            self._movement_input.x = -1
         elif Atom.Input.is_key_pressed(Atom.Key.D):
-            self._velocity += self.transform.right_vector * self.movement_speed * ts.get_seconds()
-            side_movement = 1
+            self._movement_input.x = 1
 
-        if self._vertical_force > -9.8:
-            self._vertical_force += -9.8 * ts.get_seconds()
-            
-        self._velocity += self.transform.up_vector * self._vertical_force * ts.get_seconds()
-        self.transform.translation += self._velocity
-
-        if self.transform.translation.y <= 0.0:
-            self._is_in_air = False
-            self._velocity.y = 0.0
-            self.transform.translation.y = 0.0
-
-        if not self._is_in_air:
-            if forward_movement == 1 and side_movement == 1:
-                # Forward Right
-                self._animation_controller.transition_to_state(1)
-            elif forward_movement == 1 and side_movement == 0:
-                # Forward
-                self._animation_controller.transition_to_state(2)
-            elif forward_movement == 1 and side_movement == -1:
-                # Forward Left
-                self._animation_controller.transition_to_state(3)
-            elif forward_movement == 0 and side_movement == -1:
-                # Left
-                self._animation_controller.transition_to_state(4)
-            elif forward_movement == -1 and side_movement == -1:
-                # Backwards Left
-                self._animation_controller.transition_to_state(5)
-            elif forward_movement == -1 and side_movement == 0:
-                # Backwards
-                self._animation_controller.transition_to_state(6)
-            elif forward_movement == -1 and side_movement == 1:
-                # Backwards Right
-                self._animation_controller.transition_to_state(7)
-            elif forward_movement == 0 and side_movement == 1:
-                # Right
-                self._animation_controller.transition_to_state(8)
-            else:
-                # Idle
-                self._animation_controller.transition_to_state(0)
+        # Camera rotations
+        xRotationAngle: float = Atom.Math.radians(-self._mouse_delta.y * self.rotation_speed * ts.get_seconds())
+        if self.camera_holder.transform.euler_angles.x + xRotationAngle > -math.pi / 2.0 and self.camera_holder.transform.euler_angles.x + xRotationAngle < math.pi / 2.0:
+            self.camera_holder.transform.rotation *= Atom.Math.angle_axis(xRotationAngle, Atom.Vec3(1.0, 0.0, 0.0))
 
     def on_event(self, event: Atom.Event) -> None:
         if isinstance(event, Atom.MouseButtonPressedEvent):
@@ -112,8 +109,6 @@ class Player(Atom.Entity):
                 self.jump()
 
     def jump(self) -> None:
-        if not self._is_in_air:
-            self._is_in_air = True
-            self._vertical_force = self.jump_force
-            self.get_animator_component().current_time = 0.0
-            self._animation_controller.transition_to_state(9)
+        self._rigidbody.add_impulse(Atom.Vec3(0.0, self.jump_force, 0.0), True)
+        self.get_animator_component().current_time = 0.0
+        self._animation_controller.transition_to_state(9)

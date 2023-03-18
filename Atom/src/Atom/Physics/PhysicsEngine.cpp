@@ -17,8 +17,10 @@ namespace Atom
     inline static physx::PxDefaultErrorCallback s_PhysXErrorCallback;
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void PhysicsEngine::Initialize()
+    void PhysicsEngine::Initialize(Timestep fixedTimestep)
     {
+        ms_FixedTimestep = fixedTimestep;
+
         ms_PhysXFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, s_PhysXAllocator, s_PhysXErrorCallback);
         ATOM_ENGINE_ASSERT(ms_PhysXFoundation, "Failed creating PhysX Foundation");
 

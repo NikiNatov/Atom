@@ -79,6 +79,7 @@ namespace Atom
 
         void OnCreate();
         void OnUpdate(Timestep ts);
+        void OnFixedUpdate(Timestep ts);
         void OnLateUpdate(Timestep ts);
         void OnDestroy();
         void OnEvent(Event& event);
@@ -105,6 +106,7 @@ namespace Atom
         pybind11::object m_PythonInstance;
         pybind11::object m_OnCreateFn = pybind11::none();
         pybind11::object m_OnUpdateFn = pybind11::none();
+        pybind11::object m_OnFixedUpdateFn = pybind11::none();
         pybind11::object m_OnLateUpdateFn = pybind11::none();
         pybind11::object m_OnDestroyFn = pybind11::none();
         pybind11::object m_OnEventFn = pybind11::none();
@@ -123,6 +125,7 @@ namespace Atom
 
         static void CreateEntityScript(Entity entity);
         static void UpdateEntityScript(Entity entity, Timestep ts);
+        static void FixedUpdateEntityScript(Entity entity, Timestep ts);
         static void LateUpdateEntityScript(Entity entity, Timestep ts);
         static void DestroyEntityScript(Entity entity);
         static void UpdateEntityGUI(Entity entity);

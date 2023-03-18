@@ -211,6 +211,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnStart()
     {
+        m_PhysicsUpdateTime = 0.0f;
         m_State = SceneState::Running;
 
         // Create physics objects
@@ -248,14 +249,38 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Scene::OnUpdate(Timestep ts)
     {
-        // Update scripts
+        m_PhysicsUpdateTime += ts.GetSeconds();
+        Timestep fixedTimestep = PhysicsEngine::GetFixedTimestep();
+
+        // Update scripts and physics
         {
             auto view = m_Registry.view<ScriptComponent>();
+
+            // FixedUpdate and Physics
+            while(m_PhysicsUpdateTime >= fixedTimestep)
+            {
+                for (auto entity : view)
+                {
+                    ScriptEngine::FixedUpdateEntityScript(Entity(entity, this), fixedTimestep);
+                }
+
+                PhysicsEngine::Simulate(fixedTimestep);
+
+                for (auto entity : m_Registry.view<RigidbodyComponent>())
+                {
+                    PhysicsEngine::UpdateEntity(Entity(entity, this));
+                }
+
+                m_PhysicsUpdateTime -= fixedTimestep;
+            }
+
+            // Update
             for (auto entity : view)
             {
                 ScriptEngine::UpdateEntityScript(Entity(entity, this), ts);
             }
 
+            // LateUpdate
             for (auto entity : view)
             {
                 ScriptEngine::LateUpdateEntityScript(Entity(entity, this), ts);
@@ -300,13 +325,6 @@ namespace Atom
                     }
                 }
             }
-        }
-
-        // Simulate physics and update transforms
-        PhysicsEngine::Simulate(ts);
-        for (auto entity : m_Registry.view<RigidbodyComponent>())
-        {
-            PhysicsEngine::UpdateEntity(Entity(entity, this));
         }
     }
 

@@ -53,6 +53,7 @@ namespace Atom
         inline EditorCamera& GetEditorCamera() { return m_EditorCamera; }
         inline SceneState GetSceneState() const { return m_State; }
     private:
+        f32                   m_PhysicsUpdateTime = 0.0f;
         String                m_Name;
         entt::registry        m_Registry;
         EditorCamera          m_EditorCamera;

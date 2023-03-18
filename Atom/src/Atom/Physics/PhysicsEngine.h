@@ -20,8 +20,11 @@ namespace Atom
     class PhysicsEngine
     {
     public:
-        static void Initialize();
+        static void Initialize(Timestep fixedTimestep = 20.0f);
         static void Shutdown();
+
+        inline static void SetFixedTimestep(Timestep ts) { ms_FixedTimestep = ts; }
+        inline static Timestep GetFixedTimestep() { return ms_FixedTimestep; }
 
         static void OnSceneStart(Scene* scene);
         static void Simulate(Timestep ts);
@@ -45,6 +48,7 @@ namespace Atom
         static physx::PxMaterial* GetPhysicsMaterial(Entity entity);
         static physx::PxMaterial* GetPhysicsMaterial(UUID uuid);
     private:
+        inline static Timestep                            ms_FixedTimestep;
         inline static Scene*                              ms_RunningScene = nullptr;
         inline static physx::PxScene*                     ms_RunningPhysXScene = nullptr;
         inline static physx::PxFoundation*                ms_PhysXFoundation = nullptr;
