@@ -4,6 +4,7 @@
 #include "Atom/Scene/Components.h"
 #include "Atom/Core/Input.h"
 #include "Atom/Core/Timer.h"
+#include "Atom/Physics/PhysicsEngine.h"
 
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/ComponentWrapper.h"
@@ -774,5 +775,20 @@ namespace Atom
             .def_static("image", py::overload_cast<wrappers::Texture2D, const glm::vec2&, const glm::vec2&, const glm::vec2&, const glm::vec2&>(&wrappers::GUI::Image))
             .def_static("begin_child_window", &wrappers::GUI::BeginChildWindow)
             .def_static("end_child_window", &wrappers::GUI::EndChildWindow);
+
+        // --------------------------------------------------- Physics ------------------------------------------------------------
+        py::class_<Atom::RaycastHitResult>(m, "RaycastHitResult")
+            .def(py::init<>())
+            .def_readwrite("is_valid", &Atom::RaycastHitResult::IsValid)
+            .def_readwrite("position", &Atom::RaycastHitResult::Position)
+            .def_readwrite("normal", &Atom::RaycastHitResult::Normal)
+            .def_readwrite("uv", &Atom::RaycastHitResult::UV)
+            .def_readwrite("face_index", &Atom::RaycastHitResult::FaceIndex)
+            .def_readwrite("distance", &Atom::RaycastHitResult::Distance);
+
+        py::class_<Atom::PhysicsEngine>(m, "Physics")
+            .def_static("ray_cast", &Atom::PhysicsEngine::RayCast)
+            .def_static("sphere_cast", &Atom::PhysicsEngine::SphereCast)
+            .def_static("box_cast", &Atom::PhysicsEngine::BoxCast);
     }
 }

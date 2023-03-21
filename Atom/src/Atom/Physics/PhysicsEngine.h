@@ -17,6 +17,16 @@ namespace physx
 
 namespace Atom
 {
+    struct RaycastHitResult
+    {
+        bool IsValid = false;
+        glm::vec3 Position;
+        glm::vec3 Normal;
+        glm::vec2 UV;
+        u32 FaceIndex;
+        f32 Distance;
+    };
+
     class PhysicsEngine
     {
     public:
@@ -29,6 +39,10 @@ namespace Atom
         static void OnSceneStart(Scene* scene);
         static void Simulate(Timestep ts);
         static void OnSceneStop();
+
+        static bool RayCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, RaycastHitResult* outHitResult);
+        static bool SphereCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, f32 radius, RaycastHitResult* outHitResult);
+        static bool BoxCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, const glm::vec3& boxSize, RaycastHitResult* outHitResult);
 
         static void UpdateEntity(Entity entity);
 

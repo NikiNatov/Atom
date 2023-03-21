@@ -89,6 +89,75 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    bool PhysicsEngine::RayCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, RaycastHitResult* outHitResult)
+    {
+        physx::PxHitFlags flags = physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eUV;
+        physx::PxRaycastBuffer hitBuffer;
+        bool result = ms_RunningPhysXScene->raycast(physx::PxVec3(origin.x, origin.y, origin.z), physx::PxVec3(direction.x, direction.y, direction.z), maxDistance, hitBuffer, flags);
+
+        if (!result)
+            return false;
+
+        if (outHitResult)
+        {
+            outHitResult->IsValid = true;
+            outHitResult->Position = { hitBuffer.block.position.x, hitBuffer.block.position.y, hitBuffer.block.position.z };
+            outHitResult->Normal = { hitBuffer.block.normal.x, hitBuffer.block.normal.y, hitBuffer.block.normal.z };
+            outHitResult->UV = { hitBuffer.block.u, hitBuffer.block.v };
+            outHitResult->FaceIndex = hitBuffer.block.faceIndex;
+            outHitResult->Distance = hitBuffer.block.distance;
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool PhysicsEngine::SphereCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, f32 radius, RaycastHitResult* outHitResult)
+    {
+        physx::PxSphereGeometry sphereGeo(radius);
+        physx::PxTransform startTransform(origin.x, origin.y, origin.z);
+        physx::PxSweepBuffer hitBuffer;
+        bool result = ms_RunningPhysXScene->sweep(sphereGeo, startTransform, physx::PxVec3(direction.x, direction.y, direction.z), maxDistance, hitBuffer);
+
+        if (!result)
+            return false;
+
+        if (outHitResult)
+        {
+            outHitResult->IsValid = true;
+            outHitResult->Position = { hitBuffer.block.position.x, hitBuffer.block.position.y, hitBuffer.block.position.z };
+            outHitResult->Normal = { hitBuffer.block.normal.x, hitBuffer.block.normal.y, hitBuffer.block.normal.z };
+            outHitResult->FaceIndex = hitBuffer.block.faceIndex;
+            outHitResult->Distance = hitBuffer.block.distance;
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool PhysicsEngine::BoxCast(const glm::vec3& origin, const glm::vec3& direction, f32 maxDistance, const glm::vec3& boxSize, RaycastHitResult* outHitResult)
+    {
+        physx::PxBoxGeometry boxGeo(boxSize.x / 2.0f, boxSize.y / 2.0f, boxSize.z / 2.0f);
+        physx::PxTransform startTransform(origin.x, origin.y, origin.z);
+        physx::PxSweepBuffer hitBuffer;
+        bool result = ms_RunningPhysXScene->sweep(boxGeo, startTransform, physx::PxVec3(direction.x, direction.y, direction.z), maxDistance, hitBuffer);
+
+        if (!result)
+            return false;
+
+        if (outHitResult)
+        {
+            outHitResult->IsValid = true;
+            outHitResult->Position = { hitBuffer.block.position.x, hitBuffer.block.position.y, hitBuffer.block.position.z };
+            outHitResult->Normal = { hitBuffer.block.normal.x, hitBuffer.block.normal.y, hitBuffer.block.normal.z };
+            outHitResult->FaceIndex = hitBuffer.block.faceIndex;
+            outHitResult->Distance = hitBuffer.block.distance;
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void PhysicsEngine::UpdateEntity(Entity entity)
     {
         ATOM_ENGINE_ASSERT(ms_RunningPhysXScene);

@@ -43,33 +43,36 @@ class PlayerRigidbody(Atom.Entity):
         self._rigidbody.translation += velocity
 
         # Set animation state
-        if self._movement_input.z == 1 and self._movement_input.x == 1:
-            # Forward Right
-            self._animation_controller.transition_to_state(1)
-        elif self._movement_input.z == 1 and self._movement_input.x == 0:
-            # Forward
-            self._animation_controller.transition_to_state(2)
-        elif self._movement_input.z == 1 and self._movement_input.x == -1:
-            # Forward Left
-            self._animation_controller.transition_to_state(3)
-        elif self._movement_input.z == 0 and self._movement_input.x == -1:
-            # Left
-            self._animation_controller.transition_to_state(4)
-        elif self._movement_input.z == -1 and self._movement_input.x == -1:
-            # Backwards Left
-            self._animation_controller.transition_to_state(5)
-        elif self._movement_input.z == -1 and self._movement_input.x == 0:
-            # Backwards
-            self._animation_controller.transition_to_state(6)
-        elif self._movement_input.z == -1 and self._movement_input.x == 1:
-            # Backwards Right
-            self._animation_controller.transition_to_state(7)
-        elif self._movement_input.z == 0 and self._movement_input.x == 1:
-            # Right
-            self._animation_controller.transition_to_state(8)
+        if self._is_grounded():
+            if self._movement_input.z == 1 and self._movement_input.x == 1:
+                # Forward Right
+                self._animation_controller.transition_to_state(1)
+            elif self._movement_input.z == 1 and self._movement_input.x == 0:
+                # Forward
+                self._animation_controller.transition_to_state(2)
+            elif self._movement_input.z == 1 and self._movement_input.x == -1:
+                # Forward Left
+                self._animation_controller.transition_to_state(3)
+            elif self._movement_input.z == 0 and self._movement_input.x == -1:
+                # Left
+                self._animation_controller.transition_to_state(4)
+            elif self._movement_input.z == -1 and self._movement_input.x == -1:
+                # Backwards Left
+                self._animation_controller.transition_to_state(5)
+            elif self._movement_input.z == -1 and self._movement_input.x == 0:
+                # Backwards
+                self._animation_controller.transition_to_state(6)
+            elif self._movement_input.z == -1 and self._movement_input.x == 1:
+                # Backwards Right
+                self._animation_controller.transition_to_state(7)
+            elif self._movement_input.z == 0 and self._movement_input.x == 1:
+                # Right
+                self._animation_controller.transition_to_state(8)
+            else:
+                # Idle
+                self._animation_controller.transition_to_state(0)
         else:
-            # Idle
-            self._animation_controller.transition_to_state(0)
+            self._animation_controller.transition_to_state(9)
 
     def on_update(self, ts: Atom.Timestep) -> None:
         if Atom.Input.is_cursor_enabled():
@@ -109,6 +112,12 @@ class PlayerRigidbody(Atom.Entity):
                 self.jump()
 
     def jump(self) -> None:
-        self._rigidbody.add_impulse(Atom.Vec3(0.0, self.jump_force, 0.0), True)
-        self.get_animator_component().current_time = 0.0
-        self._animation_controller.transition_to_state(9)
+        if self._is_grounded():
+            self._rigidbody.add_impulse(Atom.Vec3(0.0, self.jump_force, 0.0), True)
+            self.get_animator_component().current_time = 0.0
+
+    def _is_grounded(self) -> bool:
+        collider: Atom.BoxColliderComponent = self.get_box_collider_component()
+        size: Atom.Vec3 = Atom.Vec3(collider.size.x, 0.05, collider.size.z)
+        origin: Atom.Vec3 = self._rigidbody.translation + collider.center - Atom.Vec3(0.0, collider.size.y / 2.0, 0.0)
+        return Atom.Physics.box_cast(origin - Atom.Vec3(0.0, size.y / 2.0 + 0.01, 0.0), Atom.Vec3(0.0, -1.0, 0.0), 0.05, size, None)
