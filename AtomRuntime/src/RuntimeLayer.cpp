@@ -55,6 +55,7 @@ namespace Atom
         CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
         Ref<CommandBuffer> cmdBuffer = gfxQueue->GetCommandBuffer();
         cmdBuffer->Begin();
+        cmdBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
         Renderer::BeginRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
         Renderer::RenderFullscreenQuad(cmdBuffer, m_SwapChainPipeline, nullptr, m_SwapChainMaterial);
         Renderer::EndRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());

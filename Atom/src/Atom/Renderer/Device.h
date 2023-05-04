@@ -21,11 +21,13 @@ namespace Atom
         Device(GPUPreference gpuPreference, const char* debugName = "Unnamed Device");
         ~Device();
 
+        void CopyDescriptors(const DescriptorAllocation& destination, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType);
         void WaitIdle() const;
         void ReleaseResource(ID3D12Resource* resource, bool deferredRelease);
         void ProcessDeferredReleases(u32 frameIndex);
         CommandQueue* GetCommandQueue(CommandQueueType type) const;
         CPUDescriptorHeap* GetCPUDescriptorHeap(DescriptorHeapType type) const;
+        GPUDescriptorHeap* GetGPUDescriptorHeap(DescriptorHeapType type) const;
         bool IsRayTracingSupported() const;
         inline ComPtr<IDXGIFactory7> GetDXGIFactory() const { return m_DXGIFactory; }
         inline ComPtr<IDXGIAdapter4> GetDXGIAdapter() const { return m_DXGIAdapter; }
@@ -49,6 +51,9 @@ namespace Atom
         Scope<CPUDescriptorHeap>          m_RTVHeap;
         Scope<CPUDescriptorHeap>          m_DSVHeap;
         Scope<CPUDescriptorHeap>          m_SamplerHeap;
+
+        Scope<GPUDescriptorHeap>          m_GpuResourceHeap;
+        Scope<GPUDescriptorHeap>          m_GpuSamplerHeap;
 
         // Resource release
         Vector<Vector<ID3D12Resource*>>   m_DeferredReleaseResources;

@@ -24,6 +24,11 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     ImGuiLayer::~ImGuiLayer()
     {
+        for(u32 i = 0; i < Renderer::GetFramesInFlight(); i++)
+            for (auto& [_, descriptor] : m_TextureCache[i])
+                Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(descriptor), true);
+
+        Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerDescriptor), true);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -129,13 +134,14 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    D3D12_GPU_DESCRIPTOR_HANDLE ImGuiLayer::GetTextureHandle(const Texture* texture)
+    DescriptorAllocation ImGuiLayer::GetTextureHandle(const Texture* texture)
     {
         u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
 
         if (m_TextureCache[currentFrameIndex].find(texture) == m_TextureCache[currentFrameIndex].end())
         {
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptor = m_GPUDescriptorHeaps[currentFrameIndex]->CopyDescriptor(texture->GetSRV());
+            DescriptorAllocation gpuDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(1);
+            Device::Get().CopyDescriptors(gpuDescriptor, 1, &texture->GetSRV(), DescriptorHeapType::ShaderResource);
             m_TextureCache[currentFrameIndex].emplace(texture, gpuDescriptor);
             return gpuDescriptor;
         }
@@ -171,7 +177,7 @@ namespace Atom
         commandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
         commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
         commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
-        commandBuffer->SetDescriptorHeaps(m_GPUDescriptorHeaps[currentFrameIndex].get(), m_SamplerDescriptorHeap.get());
+        commandBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
         commandBuffer->SetGraphicsRootConstants(0, &transformCB, 16);
     }
 
@@ -189,8 +195,9 @@ namespace Atom
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
 
-            // Reset descriptor heap and texture cache for current frame
-            m_GPUDescriptorHeaps[currentFrameIndex]->Reset();
+            // Reset the texture cache for current frame
+            for (auto& [_, descriptor] : m_TextureCache[currentFrameIndex])
+                Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(descriptor), true);
             m_TextureCache[currentFrameIndex].clear();
 
             // Create and grow vertex/index buffers if needed
@@ -271,8 +278,8 @@ namespace Atom
                         Texture* texture = (Texture*)pcmd->GetTexID();
                         commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
                         commandBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ);
-                        commandBuffer->SetGraphicsDescriptorTable(1, GetTextureHandle(texture));
-                        commandBuffer->SetGraphicsDescriptorTable(2, m_SamplerDescriptorHeap->GetGPUStartHandle());
+                        commandBuffer->SetGraphicsDescriptorTable(1, GetTextureHandle(texture).GetBaseGpuDescriptor());
+                        commandBuffer->SetGraphicsDescriptorTable(2, m_SamplerDescriptor.GetBaseGpuDescriptor());
                         commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
@@ -291,18 +298,9 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ImGuiLayer::CreateGraphicsObjects()
     {
-        // Create descriptor heaps
         u32 numFramesInFlight = Renderer::GetFramesInFlight();
-        m_GPUDescriptorHeaps.resize(numFramesInFlight);
 
-        for (u32 i = 0; i < numFramesInFlight; i++)
-        {
-            m_GPUDescriptorHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, true, 
-                                                                    fmt::format("ImGuiResourceDescriptorHeap[{}]", i).c_str());
-        }
-
-        m_SamplerDescriptorHeap = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, 1, true, "ImGuiSamplerDescriptorHeap");
-
+        // Create sampler
         D3D12_SAMPLER_DESC defaultSamplerDesc = {};
         defaultSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
         defaultSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -314,7 +312,8 @@ namespace Atom
         defaultSamplerDesc.MinLOD = 0.f;
         defaultSamplerDesc.MaxLOD = 0.f;
 
-        Device::Get().GetD3DDevice()->CreateSampler(&defaultSamplerDesc, m_SamplerDescriptorHeap->GetCPUStartHandle());
+        m_SamplerDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(1);
+        Device::Get().GetD3DDevice()->CreateSampler(&defaultSamplerDesc, m_SamplerDescriptor.GetBaseCpuDescriptor());
 
         // Create vertex and index buffers;
         m_VertexBuffers.resize(numFramesInFlight, nullptr);

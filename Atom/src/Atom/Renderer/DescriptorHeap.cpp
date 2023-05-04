@@ -50,32 +50,154 @@ namespace Atom
     {
     }
 
+    // ------------------------------------------------ DescriptorAllocator --------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptors(D3D12_CPU_DESCRIPTOR_HANDLE* descriptors, u32 descriptorCount)
+    DescriptorAllocator::DescriptorAllocator(DescriptorAllocationType type, DescriptorHeap& heap, u32 heapOffset, u32 capacity)
+        : m_Type(type), m_HeapOffset(heapOffset), m_Capacity(capacity), m_AllocatedDescriptorCount(0), m_Heap(heap)
     {
-        ATOM_ENGINE_ASSERT(IsShaderVisible() && m_Size + descriptorCount <= m_Capacity);
+        // Add the hole rage of descriptors as free block
+        AddBlock(0, m_Capacity);
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE destDescriptorCPUStart = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUStartHandle, m_Size, m_DescriptorSize);
-        CD3DX12_GPU_DESCRIPTOR_HANDLE destDescriptorGPUStart = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_GPUStartHandle, m_Size, m_DescriptorSize);
-
-        Device::Get().GetD3DDevice()->CopyDescriptors(1, &destDescriptorCPUStart, &descriptorCount, descriptorCount, descriptors, nullptr, Utils::AtomDescriptorHeapTypeToD3D12(m_Type));
-        m_Size += descriptorCount;
-
-        return destDescriptorGPUStart;
+        // Create deferred release allocation array for each frame in flight
+        m_DeferredReleaseAllocations.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void DescriptorHeap::Reset()
+    DescriptorAllocation DescriptorAllocator::Allocate(u32 descriptorCount)
     {
-        m_Size = 0;
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        ATOM_ENGINE_ASSERT(m_AllocatedDescriptorCount + descriptorCount <= m_Capacity, "Allocator has no space");
+
+        auto firstSuitableBlockIt = m_FreeBlocksBySize.lower_bound(descriptorCount);
+        ATOM_ENGINE_ASSERT(firstSuitableBlockIt != m_FreeBlocksBySize.end());
+
+        u32 blockSize = firstSuitableBlockIt->first;
+        u32 blockOffset = firstSuitableBlockIt->second.FreeBlocksByOffsetIt->first;
+
+        // Erase the current block and create a new one with adjusted offset and size
+        m_FreeBlocksByOffset.erase(firstSuitableBlockIt->second.FreeBlocksByOffsetIt);
+        m_FreeBlocksBySize.erase(firstSuitableBlockIt);
+
+        u32 newOffset = blockOffset + descriptorCount;
+        u32 newSize = blockSize - descriptorCount;
+
+        if (newSize > 0)
+            AddBlock(newOffset, newSize);
+
+        m_AllocatedDescriptorCount += descriptorCount;
+
+        return DescriptorAllocation(m_Type, descriptorCount, m_HeapOffset + blockOffset, &m_Heap);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::CopyDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor)
+    void DescriptorAllocator::Release(DescriptorAllocation&& allocation, bool deferredRelease)
     {
-        return CopyDescriptors(&descriptor, 1);
+        // Only persistent allocations get queued for deferred release, transient ones get released every frame
+        if (m_Type == DescriptorAllocationType::Persistent)
+        {
+            std::lock_guard<std::mutex> lock(m_Mutex);
+            m_DeferredReleaseAllocations[Renderer::GetCurrentFrameIndex()].emplace_back(allocation);
+        }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DescriptorAllocator::ProcessDeferredReleases(u32 frameIndex)
+    {
+        // Only persistent allocations get queued for deferred release, transient ones get released every frame
+        if (m_Type == DescriptorAllocationType::Persistent)
+        {
+            std::lock_guard<std::mutex> lock(m_Mutex);
+
+            for (auto& allocation : m_DeferredReleaseAllocations[frameIndex])
+            {
+                u32 size = allocation.GetSize();
+                u32 offset = allocation.GetHeapOffset() - m_HeapOffset;
+                FreeBlock(offset, size);
+            }
+
+            m_DeferredReleaseAllocations[frameIndex].clear();
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DescriptorAllocator::Reset()
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        m_AllocatedDescriptorCount = 0;
+        m_FreeBlocksByOffset.clear();
+        m_FreeBlocksBySize.clear();
+
+        AddBlock(0, m_Capacity);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DescriptorAllocator::AddBlock(u32 offset, u32 size)
+    {
+        auto freeBlocksByOffsetIt = m_FreeBlocksByOffset.emplace(offset, size).first;
+        auto freeBlocksBySizeIt = m_FreeBlocksBySize.emplace(size, freeBlocksByOffsetIt);
+        freeBlocksByOffsetIt->second.FreeBlocksBySizeIt = freeBlocksBySizeIt;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void DescriptorAllocator::FreeBlock(u32 offset, u32 size)
+    {
+        // Find the first free block that appears after the one we are freeing
+        auto nextFreeBlockIt = m_FreeBlocksByOffset.upper_bound(offset);
+
+        // Find the first free block that appears before the one we are freeing
+        auto prevFreeBlockIt = nextFreeBlockIt;
+        if (nextFreeBlockIt != m_FreeBlocksByOffset.begin())
+        {
+            --prevFreeBlockIt;
+        }
+        else
+        {
+            // No free blocks exist before the one we are freeing
+            prevFreeBlockIt = m_FreeBlocksByOffset.end();
+        }
+
+        u32 newFreeBlockSize = size;
+        u32 newFreeBlockOffset = offset;
+
+        if (prevFreeBlockIt != m_FreeBlocksByOffset.end())
+        {
+            u32 prevFreeBlockOffset = prevFreeBlockIt->first;
+            u32 prevFreeBlockSize = prevFreeBlockIt->second.BlockSize;
+
+            // The offset of the block we are freeing is right at the end of the previous free block so we can merge them
+            if (newFreeBlockOffset == prevFreeBlockOffset + prevFreeBlockSize)
+            {
+                newFreeBlockOffset = prevFreeBlockOffset;
+                newFreeBlockSize += prevFreeBlockSize;
+
+                m_FreeBlocksBySize.erase(prevFreeBlockIt->second.FreeBlocksBySizeIt);
+                m_FreeBlocksByOffset.erase(prevFreeBlockIt);
+            }
+        }
+
+        if (nextFreeBlockIt != m_FreeBlocksByOffset.end())
+        {
+            u32 nextFreeBlockOffset = nextFreeBlockIt->first;
+            u32 nextFreeBlockSize = nextFreeBlockIt->second.BlockSize;
+
+            // The end of the block we are freeing is right at the beginning of the next free block so we can merge them
+            if (nextFreeBlockOffset == newFreeBlockOffset + newFreeBlockSize)
+            {
+                newFreeBlockSize += nextFreeBlockSize;
+
+                m_FreeBlocksBySize.erase(nextFreeBlockIt->second.FreeBlocksBySizeIt);
+                m_FreeBlocksByOffset.erase(nextFreeBlockIt);
+            }
+        }
+
+        AddBlock(newFreeBlockOffset, newFreeBlockSize);
+
+        m_AllocatedDescriptorCount -= size;
+    }
+
+    // -------------------------------------------------- CPUDescriptorHeap --------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     CPUDescriptorHeap::CPUDescriptorHeap(DescriptorHeapType type, u32 capacity, const char* debugName)
         : DescriptorHeap(type, capacity, false, debugName)
@@ -117,8 +239,8 @@ namespace Atom
             std::lock_guard<std::mutex> lock(m_Mutex);
 
             ATOM_ENGINE_ASSERT((descriptor.ptr - m_CPUStartHandle.ptr) % m_DescriptorSize == 0, "Descriptor has different type than the heap!");
-            ATOM_ENGINE_ASSERT(descriptor.ptr >= m_CPUStartHandle.ptr && 
-                               descriptor.ptr < m_CPUStartHandle.ptr + m_DescriptorSize * m_Capacity, "Descriptor does not belong to this heap!");
+            ATOM_ENGINE_ASSERT(descriptor.ptr >= m_CPUStartHandle.ptr &&
+                descriptor.ptr < m_CPUStartHandle.ptr + m_DescriptorSize * m_Capacity, "Descriptor does not belong to this heap!");
 
             // Return the index back to the free slots array
             u32 descriptorIndex = (descriptor.ptr - m_CPUStartHandle.ptr) / m_DescriptorSize;
@@ -151,5 +273,53 @@ namespace Atom
 
             m_DeferredReleaseDescriptors[frameIndex].clear();
         }
+    }
+
+    // -------------------------------------------------- GPUDescriptorHeap --------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------------------
+    GPUDescriptorHeap::GPUDescriptorHeap(DescriptorHeapType type, u32 persistentBlockSize, u32 transientBlockSize, const char* debugName)
+        : DescriptorHeap(type, persistentBlockSize + transientBlockSize * Renderer::GetFramesInFlight(), true, debugName)
+    {
+        u32 numFramesInFlight = Renderer::GetFramesInFlight();
+
+        m_PersistentAllocator = CreateScope<DescriptorAllocator>(DescriptorAllocationType::Persistent, *this, 0, persistentBlockSize);
+        m_TransientAllocators.resize(numFramesInFlight);
+
+        for (u32 i = 0; i < numFramesInFlight; i++)
+            m_TransientAllocators[i] = CreateScope<DescriptorAllocator>(DescriptorAllocationType::Transient, *this, persistentBlockSize + transientBlockSize * i, transientBlockSize);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    DescriptorAllocation GPUDescriptorHeap::AllocatePersistent(u32 descriptorCount)
+    {
+        return m_PersistentAllocator->Allocate(descriptorCount);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    DescriptorAllocation GPUDescriptorHeap::AllocateTransient(u32 descriptorCount)
+    {
+        return m_TransientAllocators[Renderer::GetCurrentFrameIndex()]->Allocate(descriptorCount);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void GPUDescriptorHeap::Release(DescriptorAllocation&& allocation, bool deferredRelease)
+    {
+        if (!allocation.IsValid() || allocation.GetType() == DescriptorAllocationType::Transient)
+            return;
+
+        ATOM_ENGINE_ASSERT((allocation.GetBaseCpuDescriptor().ptr - m_CPUStartHandle.ptr) % m_DescriptorSize == 0, "Descriptor allocation has different type than the heap!");
+        ATOM_ENGINE_ASSERT(allocation.GetBaseCpuDescriptor().ptr >= m_CPUStartHandle.ptr &&
+            allocation.GetBaseCpuDescriptor().ptr < m_CPUStartHandle.ptr + m_DescriptorSize * m_Capacity, "Descriptor allocation does not belong to this heap!");
+        ATOM_ENGINE_ASSERT(allocation.IsShaderVisible());
+
+        if (allocation.GetHeapOffset() < m_PersistentAllocator->GetCapacity())
+            m_PersistentAllocator->Release(std::move(allocation), deferredRelease);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void GPUDescriptorHeap::ProcessDeferredReleases(u32 frameIndex)
+    {
+        m_PersistentAllocator->ProcessDeferredReleases(frameIndex);
+        m_TransientAllocators[frameIndex]->Reset();
     }
 }

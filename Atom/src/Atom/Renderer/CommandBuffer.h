@@ -17,7 +17,7 @@ namespace Atom
     class ConstantBuffer;
     class StructuredBuffer;
     class ReadbackBuffer;
-    class DescriptorHeap;
+    class GPUDescriptorHeap;
     class ComputeShader;
     enum class CommandQueueType;
 
@@ -45,7 +45,7 @@ namespace Atom
         void SetComputeRootConstants(u32 rootParamIndex, const void* data, u32 numConstants);
         void SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);
         void SetComputeDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);
-        void SetDescriptorHeaps(const DescriptorHeap* resourceHeap, const DescriptorHeap* samplerHeap);
+        void SetDescriptorHeaps(const GPUDescriptorHeap* resourceHeap, const GPUDescriptorHeap* samplerHeap);
         void UploadBufferData(const void* data, const Buffer* buffer);
         void UploadTextureData(const void* data, const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
         Ref<ReadbackBuffer> ReadbackTextureData(const Texture* texture, u32 mip = 0, u32 arraySlice = 0);

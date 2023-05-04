@@ -127,6 +127,9 @@ namespace Atom
     using Map = std::map<Key, Val>;
 
     template<typename Key, typename Val>
+    using MultiMap = std::multimap<Key, Val>;
+
+    template<typename Key, typename Val>
     using HashMap = std::unordered_map<Key, Val>;
 
     template<typename T>

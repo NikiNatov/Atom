@@ -42,6 +42,7 @@ namespace Atom
         static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material);
         static Ref<TextureCube> CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize);
         static Ref<TextureCube> CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize);
+        static Ref<Texture2D> CreateBRDFTexture();
         static void GenerateMips(Ref<Texture2D> texture);
         static void UploadBufferData(const void* srcData, const Buffer* buffer);
         static void UploadTextureData(const void* srcData, const Texture* texture, u32 mip = 0, u32 slice = 0);
@@ -61,12 +62,8 @@ namespace Atom
         static Ref<Material> GetDefaultMaterialAnimated();
         static Ref<Material> GetErrorMaterial();
         static Ref<Material> GetErrorMaterialAnimated();
-        static Ref<DescriptorHeap> GetCurrentResourceHeap();
-        static Ref<DescriptorHeap> GetCurrentSamplerHeap();
     private:
         inline static RendererConfig              ms_Config;
-        inline static Vector<Ref<DescriptorHeap>> ms_ResourceHeaps;
-        inline static Vector<Ref<DescriptorHeap>> ms_SamplerHeaps;
         inline static ShaderLibrary               ms_ShaderLibrary;
         inline static PipelineLibrary             ms_PipelineLibrary;
         inline static Ref<VertexBuffer>           ms_FullscreenQuadVB;

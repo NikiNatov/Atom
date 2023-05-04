@@ -21,21 +21,6 @@ namespace Atom
     void Renderer::Initialize(const RendererConfig& config)
     {
         ms_Config = config;
-        ms_ResourceHeaps.resize(ms_Config.FramesInFlight);
-        ms_SamplerHeaps.resize(ms_Config.FramesInFlight);
-
-        // Create descriptor heaps
-        for (u32 i = 0; i < ms_Config.FramesInFlight; i++)
-        {
-            ms_ResourceHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::ShaderResource, ms_Config.MaxDescriptorsPerHeap, true,
-                fmt::format("ResourceDescriptorHeap[{}]", i).c_str());
-        }
-
-        for (u32 i = 0; i < ms_Config.FramesInFlight; i++)
-        {
-            ms_SamplerHeaps[i] = CreateRef<DescriptorHeap>(DescriptorHeapType::Sampler, ms_Config.MaxDescriptorsPerHeap, true,
-                fmt::format("SamplerDescriptorHeap[{}]", i).c_str());
-        }
 
         // Load shaders
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRShader.hlsl");
@@ -317,33 +302,7 @@ namespace Atom
         ms_BlackTextureCube = CreateRef<TextureCube>(blackTextureDesc, blackTextureCubeData, false, "BlackTextureCube(Renderer)");
 
         // Generate BRDF texture
-        TextureDescription brdfDesc;
-        brdfDesc.Width = 256;
-        brdfDesc.Height = 256;
-        brdfDesc.Format = TextureFormat::RG16F;
-        brdfDesc.MipLevels = 1;
-        brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
-        brdfDesc.Wrap = TextureWrap::Clamp;
-
-        Vector<Vector<byte>> emptyData;
-        emptyData.resize(brdfDesc.MipLevels);
-
-        ms_BRDFTexture = CreateRef<Texture2D>(brdfDesc, emptyData, false, "BRDFTexture(Renderer)");
-
-        u32 currentFrameIdx = GetCurrentFrameIndex();
-        D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = ms_ResourceHeaps[currentFrameIdx]->CopyDescriptor(ms_BRDFTexture->GetUAV());
-
-        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
-        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
-        computeCmdBuffer->Begin();
-        computeCmdBuffer->TransitionResource(ms_BRDFTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
-        computeCmdBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIdx].get(), nullptr);
-        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
-        computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
-        computeCmdBuffer->TransitionResource(ms_BRDFTexture.get(), D3D12_RESOURCE_STATE_COMMON);
-        computeCmdBuffer->End();
-        computeQueue->ExecuteCommandList(computeCmdBuffer);
+        ms_BRDFTexture = Renderer::CreateBRDFTexture();
 
         // Create renderer materials
         ms_DefaultMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
@@ -368,7 +327,7 @@ namespace Atom
         ms_ErrorMaterialAnimated->SetUniform("Roughness", 1.0f);
 
         // Wait for all copy/compute operations to complete before we continue
-        computeQueue->Flush();
+        Device::Get().GetCommandQueue(CommandQueueType::Compute)->Flush();
         Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
     }
 
@@ -377,8 +336,6 @@ namespace Atom
     {
         ms_PipelineLibrary.Clear();
         ms_ShaderLibrary.Clear();
-        ms_ResourceHeaps.clear();
-        ms_SamplerHeaps.clear();
         ms_FullscreenQuadVB.reset();
         ms_FullscreenQuadIB.reset();
         ms_BRDFTexture.reset();
@@ -398,9 +355,6 @@ namespace Atom
 
         Device::Get().ProcessDeferredReleases(currentFrameIndex);
         PIXBeginEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get(), 0, "Begin Frame");
-
-        ms_ResourceHeaps[currentFrameIndex]->Reset();
-        ms_SamplerHeaps[currentFrameIndex]->Reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -421,9 +375,6 @@ namespace Atom
         commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
         commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
-
-        u32 currentFrameIndex = GetCurrentFrameIndex();
-        commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
         Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex);
@@ -452,34 +403,17 @@ namespace Atom
             commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, animationSB.get());
         }
 
-        // Set textures and samplers
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
-        textureSRVs.reserve(material->GetTextures().size());
-
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
-        samplers.reserve(material->GetTextures().size());
-
-        for (const auto& [textureSlot, texture] : material->GetTextures())
-        {
-            if (!texture)
-            {
-                commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                textureSRVs.push_back(ms_ErrorTexture->GetSRV());
-                samplers.push_back(ms_ErrorTexture->GetSampler());
-            }
-            else
-            {
+        // Transition textures
+        for (auto& [_, texture] : material->GetTextures())
+            if(texture)
                 commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                textureSRVs.push_back(texture->GetSRV());
-                samplers.push_back(texture->GetSampler());
-            }
-        }
 
-        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+        // Set material descriptor tables
+        if (material->IsDirty())
+            material->UpdateDescriptorTables();
 
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetResourceDescriptorTable().GetBaseGpuDescriptor());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetSamplerDescriptorTable().GetBaseGpuDescriptor());
 
         commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
     }
@@ -490,9 +424,6 @@ namespace Atom
         commandBuffer->SetGraphicsPipeline(pipeline.get());
         commandBuffer->SetVertexBuffer(ms_FullscreenQuadVB.get());
         commandBuffer->SetIndexBuffer(ms_FullscreenQuadIB.get());
-
-        u32 currentFrameIndex = GetCurrentFrameIndex();
-        commandBuffer->SetDescriptorHeaps(ms_ResourceHeaps[currentFrameIndex].get(), ms_SamplerHeaps[currentFrameIndex].get());
 
         u32 currentRootParameter = 0;
 
@@ -508,34 +439,17 @@ namespace Atom
             commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
         }
 
-        // Set textures and samplers
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureSRVs;
-        textureSRVs.reserve(material->GetTextures().size());
-
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplers;
-        samplers.reserve(material->GetTextures().size());
-
-        for (const auto& [textureSlot, texture] : material->GetTextures())
-        {
-            if (!texture)
-            {
-                commandBuffer->TransitionResource(ms_ErrorTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                textureSRVs.push_back(ms_ErrorTexture->GetSRV());
-                samplers.push_back(ms_ErrorTexture->GetSampler());
-            }
-            else
-            {
+        // Transition textures
+        for (auto& [_, texture] : material->GetTextures())
+            if (texture)
                 commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                textureSRVs.push_back(texture->GetSRV());
-                samplers.push_back(texture->GetSampler());
-            }
-        }
 
-        D3D12_GPU_DESCRIPTOR_HANDLE texturesDescriptorTable = ms_ResourceHeaps[currentFrameIndex]->CopyDescriptors(textureSRVs.data(), textureSRVs.size());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, texturesDescriptorTable);
+        // Set material descriptor tables
+        if (material->IsDirty())
+            material->UpdateDescriptorTables();
 
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerDescriptorTable = ms_SamplerHeaps[currentFrameIndex]->CopyDescriptors(samplers.data(), samplers.size());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, samplerDescriptorTable);
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetResourceDescriptorTable().GetBaseGpuDescriptor());
+        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetSamplerDescriptorTable().GetBaseGpuDescriptor());
 
         // Draw
         commandBuffer->DrawIndexed(ms_FullscreenQuadIB->GetElementCount(), 1, 0, 0, 0);
@@ -544,9 +458,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Ref<TextureCube> Renderer::CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize)
     {
-        u32 currentFrameIdx = GetCurrentFrameIndex();
-        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
-        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
 
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
@@ -572,23 +485,28 @@ namespace Atom
         {
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
 
-            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(equirectTexture->GetSampler());
+            auto& d3dDevice = Device::Get().GetD3DDevice();
+
+            DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
+            Device::Get().CopyDescriptors(samplerTable, 1, &equirectTexture->GetSampler(), DescriptorHeapType::Sampler);
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(equirectTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
-            computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
-            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+            computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
                 D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV(), envMapUnfiltered->GetArrayUAV(mip) };
-                D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+                DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
+                Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
                 computeCmdBuffer->SetComputeRootConstants(0, &mip, 1);
-                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
                 computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
             }
 
@@ -625,15 +543,16 @@ namespace Atom
         {
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "CubeMapPreFilter");
 
-            D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(envMapUnfiltered->GetSampler());
+            DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
+            Device::Get().CopyDescriptors(samplerTable, 1, &envMapUnfiltered->GetSampler(), DescriptorHeapType::Sampler);
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
             computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapPrefilterPipeline").get());
-            computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
-            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+            computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
             u32 width = glm::max(envMapDesc.Width / 2, 1u);
             u32 height = glm::max(envMapDesc.Height / 2, 1u);
@@ -641,11 +560,13 @@ namespace Atom
             for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
             {
                 D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV(), envMap->GetArrayUAV(mip) };
-                D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+                DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
+                Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
                 f32 roughness = mip / glm::max(envMapDesc.MipLevels - 1.0f, 1.0f);
                 computeCmdBuffer->SetComputeRootConstants(0, &roughness, 1);
-                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
                 computeCmdBuffer->Dispatch(glm::max(width / 32, 1u), glm::max(height / 32, 1u), 6);
 
                 width = glm::max(width / 2, 1u);
@@ -688,9 +609,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     Ref<TextureCube> Renderer::CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize)
     {
-        u32 currentFrameIdx = GetCurrentFrameIndex();
-        Ref<DescriptorHeap> currentResourceHeap = ms_ResourceHeaps[currentFrameIdx];
-        Ref<DescriptorHeap> currentSamplerHeap = ms_SamplerHeaps[currentFrameIdx];
+        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
 
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
@@ -717,8 +637,12 @@ namespace Atom
         Ref<TextureCube> irradianceMap = CreateRef<TextureCube>(irradianceMapDesc, emptyCubeData, false, fmt::format("{}(IrradianceMap)", environmentMap->GetAssetFilepath().stem().string()).c_str());
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV(), irradianceMap->GetArrayUAV() };
-        D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(environmentMap->GetSampler());
+
+        DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
+        Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
+
+        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
+        Device::Get().CopyDescriptors(samplerTable, 1, &environmentMap->GetSampler(), DescriptorHeapType::Sampler);
 
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateIrradianceMap");
 
@@ -726,9 +650,9 @@ namespace Atom
         computeCmdBuffer->Begin();
         computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
-        computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
-        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable);
-        computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable);
+        computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable.GetBaseGpuDescriptor());
+        computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable.GetBaseGpuDescriptor());
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
         computeCmdBuffer->TransitionResource(environmentMap.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_COMMON);
@@ -744,13 +668,48 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<Texture2D> Renderer::CreateBRDFTexture()
+    {
+        TextureDescription brdfDesc;
+        brdfDesc.Width = 256;
+        brdfDesc.Height = 256;
+        brdfDesc.Format = TextureFormat::RG16F;
+        brdfDesc.MipLevels = 1;
+        brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+        brdfDesc.Wrap = TextureWrap::Clamp;
+
+        Vector<Vector<byte>> emptyData;
+        emptyData.resize(brdfDesc.MipLevels);
+
+        Ref<Texture2D> brdfTexture = CreateRef<Texture2D>(brdfDesc, emptyData, false, "BRDFTexture(Renderer)");
+
+        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(1);
+        Device::Get().CopyDescriptors(resourceTable, 1, &brdfTexture->GetUAV(), DescriptorHeapType::ShaderResource);
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+        computeCmdBuffer->Begin();
+        computeCmdBuffer->TransitionResource(brdfTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
+        computeCmdBuffer->SetDescriptorHeaps(resourceHeap, nullptr);
+        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable.GetBaseGpuDescriptor());
+        computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
+        computeCmdBuffer->TransitionResource(brdfTexture.get(), D3D12_RESOURCE_STATE_COMMON);
+        computeCmdBuffer->End();
+        computeQueue->ExecuteCommandList(computeCmdBuffer);
+
+        return brdfTexture;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::GenerateMips(Ref<Texture2D> texture)
     {
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
 
-        Ref<DescriptorHeap> currentResourceHeap = Renderer::GetCurrentResourceHeap();
-        Ref<DescriptorHeap> currentSamplerHeap = Renderer::GetCurrentSamplerHeap();
+        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
 
         // Create bilinear clamp sampler to use for mip generation
         D3D12_SAMPLER_DESC samplerDesc = {};
@@ -764,19 +723,15 @@ namespace Atom
         samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
         samplerDesc.MaxAnisotropy = 0;
 
-        auto& dx12Device = Device::Get();
-        D3D12_CPU_DESCRIPTOR_HANDLE sampler = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateDescriptor();
-        dx12Device.GetD3DDevice()->CreateSampler(&samplerDesc, sampler);
-
-        // Copy the sampler CPU descriptor into the GPU visible heap
-        D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = currentSamplerHeap->CopyDescriptor(sampler);
+        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
+        Device::Get().GetD3DDevice()->CreateSampler(&samplerDesc, samplerTable.GetBaseCpuDescriptor());
 
         // Run compute shader for each mip
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
         computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("GenerateMipsPipeline").get());
-        computeCmdBuffer->SetDescriptorHeaps(currentResourceHeap.get(), currentSamplerHeap.get());
-        computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable);
+        computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+        computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
         u32 width = glm::max(texture->GetWidth() / 2, 1u);
         u32 height = glm::max(texture->GetHeight() / 2, 1u);
@@ -790,7 +745,9 @@ namespace Atom
         for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
         {
             D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV(), texture->GetUAV(mip) };
-            D3D12_GPU_DESCRIPTOR_HANDLE resourceTable = currentResourceHeap->CopyDescriptors(cpuDescriptors, _countof(cpuDescriptors));
+
+            DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
+            Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
             GenerateMipCB constants;
             constants.TexelSize = { 1.0f / width, 1.0f / height };
@@ -799,7 +756,7 @@ namespace Atom
             computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, mip - 1);
             computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, mip);
             computeCmdBuffer->SetComputeRootConstants(0, &constants, 3);
-            computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable);
+            computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
             computeCmdBuffer->AddUAVBarrier(texture.get());
@@ -817,8 +774,6 @@ namespace Atom
         computeQueue->WaitForQueue(Device::Get().GetCommandQueue(CommandQueueType::Copy));
         computeQueue->ExecuteCommandList(computeCmdBuffer);
         computeQueue->Flush();
-
-        dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(sampler, true);
 
         if (texture->IsReadable())
         {
@@ -956,17 +911,5 @@ namespace Atom
     Ref<Material> Renderer::GetErrorMaterialAnimated()
     {
         return ms_ErrorMaterialAnimated;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<DescriptorHeap> Renderer::GetCurrentResourceHeap()
-    {
-        return ms_ResourceHeaps[GetCurrentFrameIndex()];
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<DescriptorHeap> Renderer::GetCurrentSamplerHeap()
-    {
-        return ms_SamplerHeaps[GetCurrentFrameIndex()];
     }
 }

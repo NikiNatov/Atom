@@ -177,6 +177,7 @@ namespace Atom
         CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
         Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
         gfxCmdBuffer->Begin();
+        gfxCmdBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
 
         PreRender();
         GeometryPass(gfxCmdBuffer);

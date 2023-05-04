@@ -119,6 +119,9 @@ namespace Atom
         m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
         m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
 
+        m_GpuResourceHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::ShaderResource, 10000, 5000, "ShaderResourceGPUHeap");
+        m_GpuSamplerHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::Sampler, 1048, 300, "ShaderResourceGPUHeap");
+
         m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
 
@@ -158,6 +161,9 @@ namespace Atom
         m_DSVHeap.reset();
         m_SamplerHeap.reset();
 
+        m_GpuResourceHeap.reset();
+        m_GpuSamplerHeap.reset();
+
         m_D3DDevice.Reset();
         m_DXGIAdapter.Reset();
         m_DXGIFactory.Reset();
@@ -169,6 +175,12 @@ namespace Atom
         DXCall(dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL)));
 
 #endif // ATOM_DEBUG
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Device::CopyDescriptors(const DescriptorAllocation& destination, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType)
+    {
+        m_D3DDevice->CopyDescriptors(1, &destination.GetBaseCpuDescriptor(), &descriptorCount, descriptorCount, srcDescriptors, nullptr, Utils::AtomDescriptorHeapTypeToD3D12(heapType));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -213,6 +225,9 @@ namespace Atom
         m_DSVHeap->ProcessDeferredReleases(frameIndex);
         m_SamplerHeap->ProcessDeferredReleases(frameIndex);
 
+        m_GpuResourceHeap->ProcessDeferredReleases(frameIndex);
+        m_GpuSamplerHeap->ProcessDeferredReleases(frameIndex);
+
         // Release resources
         for (auto resource : m_DeferredReleaseResources[frameIndex])
         {
@@ -250,5 +265,18 @@ namespace Atom
 
         ATOM_ENGINE_ASSERT(false, "Unknown heap type!");
         return m_SRVHeap.get();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    GPUDescriptorHeap* Device::GetGPUDescriptorHeap(DescriptorHeapType type) const
+    {
+        switch (type)
+        {
+            case DescriptorHeapType::ShaderResource: return m_GpuResourceHeap.get();
+            case DescriptorHeapType::Sampler:        return m_GpuSamplerHeap.get();
+        }
+
+        ATOM_ENGINE_ASSERT(false, "Invalid type!");
+        return nullptr;
     }
 }

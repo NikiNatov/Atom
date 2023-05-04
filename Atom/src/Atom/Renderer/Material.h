@@ -24,13 +24,15 @@ namespace Atom
         using Resource = ShaderResourceLayout::ShaderResource;
     public:
         Material(const Ref<GraphicsShader>& shader, MaterialFlags flags);
-        ~Material() = default;
+        ~Material();
 
         Material(const Material& rhs) = delete;
         Material& operator=(const Material& rhs) = delete;
 
         Material(Material&& rhs) noexcept;
         Material& operator=(Material&& rhs) noexcept;
+
+        void UpdateDescriptorTables();
 
         void SetTexture(const char* uniformName, const Ref<Texture>& texture);
         Ref<Texture> GetTexture(const char* uniformName);
@@ -67,6 +69,9 @@ namespace Atom
         inline MaterialFlags GetFlags() const { return m_Flags; }
         inline const Map<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
         inline const Map<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
+        inline const DescriptorAllocation& GetResourceDescriptorTable() const { return m_ResourceDescriptorTable; }
+        inline const DescriptorAllocation& GetSamplerDescriptorTable() const { return m_SamplerDescriptorTable; }
+        inline bool IsDirty() const { return m_Dirty; }
     private:
         const Uniform* FindUniformDeclaration(const char* name);
         const Resource* FindResourceDeclaration(const char* name);
@@ -75,6 +80,9 @@ namespace Atom
         MaterialFlags          m_Flags;
         Map<u32, Vector<byte>> m_UniformBuffersData;
         Map<u32, Ref<Texture>> m_Textures;
+        DescriptorAllocation   m_ResourceDescriptorTable;
+        DescriptorAllocation   m_SamplerDescriptorTable;
+        bool                   m_Dirty = false;
     };
 
     class MaterialTable

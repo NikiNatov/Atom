@@ -2,6 +2,7 @@
 #include "Material.h"
 
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/Device.h"
 #include "Atom/Asset/AssetManager.h"
 
 namespace Atom
@@ -27,12 +28,21 @@ namespace Atom
             if(resource.Type == ShaderResourceType::Texture2D || resource.Type == ShaderResourceType::TextureCube)
                 m_Textures[resource.Register] = nullptr;
         }
+
+        UpdateDescriptorTables();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Material::Material(Material&& rhs) noexcept
         : Asset(AssetType::Material), m_Shader(std::move(rhs.m_Shader)), m_UniformBuffersData(std::move(rhs.m_UniformBuffersData)), m_Textures(std::move(rhs.m_Textures)), m_Flags(rhs.m_Flags)
     {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Material::~Material()
+    {
+        Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(m_ResourceDescriptorTable), true);
+        Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerDescriptorTable), true);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -50,12 +60,58 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    void Material::UpdateDescriptorTables()
+    {
+        m_Dirty = false;
+
+        GPUDescriptorHeap* resourceDescriptorHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        GPUDescriptorHeap* samplerDescriptorHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
+
+        if (!m_ResourceDescriptorTable.IsValid() || m_ResourceDescriptorTable.GetSize() < m_Textures.size())
+        {
+            resourceDescriptorHeap->Release(std::move(m_ResourceDescriptorTable), true);
+            m_ResourceDescriptorTable = resourceDescriptorHeap->AllocatePersistent(m_Textures.size());
+        }
+
+        if (!m_SamplerDescriptorTable.IsValid() || m_SamplerDescriptorTable.GetSize() < m_Textures.size())
+        {
+            samplerDescriptorHeap->Release(std::move(m_SamplerDescriptorTable), true);
+            m_SamplerDescriptorTable = samplerDescriptorHeap->AllocatePersistent(m_Textures.size());
+        }
+
+        // Gather and copy the texture and sampler descriptors to the GPU descriptor heap
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureDescriptors;
+        textureDescriptors.reserve(m_Textures.size());
+
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplerDescriptors;
+        samplerDescriptors.reserve(m_Textures.size());
+
+        for (const auto& [textureSlot, texture] : m_Textures)
+        {
+            if (!texture)
+            {
+                textureDescriptors.push_back(Renderer::GetErrorTexture()->GetSRV());
+                samplerDescriptors.push_back(Renderer::GetErrorTexture()->GetSampler());
+            }
+            else
+            {
+                textureDescriptors.push_back(texture->GetSRV());
+                samplerDescriptors.push_back(texture->GetSampler());
+            }
+        }
+
+        Device::Get().CopyDescriptors(m_ResourceDescriptorTable, textureDescriptors.size(), textureDescriptors.data(), DescriptorHeapType::ShaderResource);
+        Device::Get().CopyDescriptors(m_SamplerDescriptorTable, samplerDescriptors.size(), samplerDescriptors.data(), DescriptorHeapType::Sampler);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     void Material::SetTexture(const char* uniformName, const Ref<Texture>& texture)
     {
         const Resource* resource = FindResourceDeclaration(uniformName);
         ATOM_ENGINE_ASSERT(resource, fmt::format("Resource with name \"{}\" does not exist!", uniformName));
         ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube, fmt::format("Resource with name \"{}\" is not a texture!", uniformName));
         m_Textures[resource->Register] = texture;
+        m_Dirty = true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
