@@ -18,7 +18,8 @@ namespace Atom
     private:
         void DrawEntityNode(Entity entity);
     private:
-        Ref<Scene> m_Scene;
-        Entity     m_SelectedEntity = {};
+        Ref<Scene>     m_Scene;
+        Entity         m_SelectedEntity = {};
+        Vector<Entity> m_EntitiesToDelete;
     };
 }

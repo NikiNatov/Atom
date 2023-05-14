@@ -48,7 +48,12 @@ namespace Atom
         if (ImGui::IsMouseClicked(0) && ImGui::IsWindowHovered())
             m_SelectedEntity = {};
 
-        ImGui::End();
+		for (auto entity : m_EntitiesToDelete)
+			m_Scene->DeleteEntity(entity);
+
+		m_EntitiesToDelete.clear();
+
+		ImGui::End();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -148,7 +153,7 @@ namespace Atom
 			if (m_SelectedEntity == entity)
 				m_SelectedEntity = {};
 
-			m_Scene->DeleteEntity(entity);
+			m_EntitiesToDelete.push_back(entity);
 		}
 	}
 }
