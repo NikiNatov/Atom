@@ -38,8 +38,8 @@ namespace Atom
         static void BeginFrame();
         static void BeginRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer, bool clear = true);
         static void EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer);
-        static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> cameraCB, Ref<StructuredBuffer> animationSB, Ref<StructuredBuffer> lightsSB);
-        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material);
+        static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial);
+        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<Texture> texture);
         static Ref<TextureCube> CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize);
         static Ref<TextureCube> CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize);
         static Ref<Texture2D> CreateBRDFTexture();

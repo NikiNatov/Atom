@@ -3,6 +3,8 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 
+#include "Atom/Renderer/ShaderLayout.h"
+
 #include "ResourceStateTracker.h"
 
 namespace Atom
@@ -37,14 +39,12 @@ namespace Atom
         void SetIndexBuffer(const IndexBuffer* indexBuffer);
         void SetGraphicsPipeline(const GraphicsPipeline* pipeline);
         void SetComputePipeline(const ComputePipeline* pipeline);
-        void SetGraphicsConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer);
-        void SetGraphicsStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer);
-        void SetComputeConstantBuffer(u32 rootParamIndex, const ConstantBuffer* constantBuffer);
-        void SetComputeStructuredBuffer(u32 rootParamIndex, const StructuredBuffer* structuredBuffer);
-        void SetGraphicsRootConstants(u32 rootParamIndex, const void* data, u32 numConstants);
-        void SetComputeRootConstants(u32 rootParamIndex, const void* data, u32 numConstants);
-        void SetGraphicsDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);
-        void SetComputeDescriptorTable(u32 rootParamIndex, D3D12_GPU_DESCRIPTOR_HANDLE tableStart);
+        void SetGraphicsConstants(ShaderBindPoint bindPoint, const ConstantBuffer* constantBuffer);
+        void SetComputeConstants(ShaderBindPoint bindPoint, const ConstantBuffer* constantBuffer);
+        void SetGraphicsConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants);
+        void SetComputeConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants);
+        void SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = D3D12_GPU_DESCRIPTOR_HANDLE{ 0 });
+        void SetComputeDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = D3D12_GPU_DESCRIPTOR_HANDLE{ 0 });
         void SetDescriptorHeaps(const GPUDescriptorHeap* resourceHeap, const GPUDescriptorHeap* samplerHeap);
         void UploadBufferData(const void* data, const Buffer* buffer);
         void UploadTextureData(const void* data, const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
@@ -63,6 +63,8 @@ namespace Atom
         ComPtr<ID3D12GraphicsCommandList6> m_PendingCommandList;
         ResourceStateTracker               m_ResourceStateTracker;
         Vector<ComPtr<ID3D12Resource>>     m_UploadBuffers;
+        const GraphicsPipeline*            m_CurrentGraphicsPipeline = nullptr;
+        const ComputePipeline*             m_CurrentComputePipeline = nullptr;
         bool                               m_IsRecording = false;
     };
 }

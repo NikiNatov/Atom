@@ -37,8 +37,8 @@ namespace Atom
 
 			if (ImGui::CollapsingHeader("Textures", flags))
 			{
-				const auto& resources = m_Material->GetShader()->GetResourceLayout().GetResources();
-				for (auto& resource : resources)
+				const auto& resourceTable = m_Material->GetShader()->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
+				for (auto& resource : resourceTable.Resources)
 				{
 					if (resource.Name[0] == '_')
 						continue;
@@ -78,212 +78,209 @@ namespace Atom
 
 			if (ImGui::CollapsingHeader("Uniforms", flags))
 			{
-				const auto& constantBuffers = m_Material->GetShader()->GetResourceLayout().GetRootConstants();
-				for (auto& cb : constantBuffers)
+				const auto& constants = m_Material->GetShader()->GetShaderLayout().GetConstants(ShaderBindPoint::Material);
+				for (auto& uniform : constants.Uniforms)
 				{
-					for (auto& uniform : cb.Uniforms)
+					if (uniform.Name[0] == '_')
+						continue;
+
+					ImGui::PushID(uniform.Name.c_str());
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 150.0f);
+					ImGui::Text(uniform.Name.c_str());
+					ImGui::NextColumn();
+					ImGui::PushItemWidth(-1);
+
+					switch (uniform.Type)
 					{
-						if (uniform.Name[0] == '_')
-							continue;
-
-						ImGui::PushID(uniform.Name.c_str());
-						ImGui::Columns(2);
-						ImGui::SetColumnWidth(0, 150.0f);
-						ImGui::Text(uniform.Name.c_str());
-						ImGui::NextColumn();
-						ImGui::PushItemWidth(-1);
-
-						switch (uniform.Type)
+						case ShaderDataType::Int:
 						{
-							case ShaderDataType::Int:
+							s32 value = m_Material->GetUniform<s32>(uniform.Name.c_str());
+
+							if (ImGui::DragInt("", &value))
 							{
-								s32 value = m_Material->GetUniform<s32>(uniform.Name.c_str());
-
-								if (ImGui::DragInt("", &value))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
 							}
-							case ShaderDataType::Int2:
-							{
-								glm::ivec2 value = m_Material->GetUniform<glm::ivec2>(uniform.Name.c_str());
 
-								if (ImGui::DragInt2("", glm::value_ptr(value)))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Int3:
-							{
-								glm::ivec3 value = m_Material->GetUniform<glm::ivec3>(uniform.Name.c_str());
-
-								if (ImGui::DragInt3("", glm::value_ptr(value)))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Int4:
-							{
-								glm::ivec4 value = m_Material->GetUniform<glm::ivec4>(uniform.Name.c_str());
-
-								if (ImGui::DragInt4("", glm::value_ptr(value)))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Float:
-							{
-								f32 value = m_Material->GetUniform<f32>(uniform.Name.c_str());
-
-								if (ImGui::DragFloat("", &value, 0.05f))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Float2:
-							{
-								glm::vec2 value = m_Material->GetUniform<glm::vec2>(uniform.Name.c_str());
-
-								if (ImGui::DragFloat2("", glm::value_ptr(value), 0.05f))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Float3:
-							{
-								glm::vec3 value = m_Material->GetUniform<glm::vec3>(uniform.Name.c_str());
-
-								if (uniform.Name.find("Color") != std::string::npos)
-								{
-									if (ImGui::ColorEdit3("", glm::value_ptr(value)))
-									{
-										m_Material->SetUniform(uniform.Name.c_str(), value);
-										AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-									}
-								}
-								else
-								{
-									if (ImGui::DragFloat3("", glm::value_ptr(value), 0.05f))
-									{
-										m_Material->SetUniform(uniform.Name.c_str(), value);
-										AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-									}
-								}
-
-								break;
-							}
-							case ShaderDataType::Float4:
-							{
-								glm::vec4 value = m_Material->GetUniform<glm::vec4>(uniform.Name.c_str());
-
-								if (uniform.Name.find("Color") != std::string::npos)
-								{
-									if (ImGui::ColorEdit4("", glm::value_ptr(value)))
-									{
-										m_Material->SetUniform(uniform.Name.c_str(), value);
-										AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-									}
-								}
-								else
-								{
-									if (ImGui::DragFloat4("", glm::value_ptr(value), 0.05f))
-									{
-										m_Material->SetUniform(uniform.Name.c_str(), value);
-										AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-									}
-								}
-
-								break;
-							}
-							case ShaderDataType::Bool:
-							{
-								bool value = m_Material->GetUniform<bool>(uniform.Name.c_str());
-
-								if (ImGui::Checkbox("", &value))
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), value);
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Mat2:
-							{
-								glm::mat2 value = glm::transpose(m_Material->GetUniform<glm::mat2>(uniform.Name.c_str()));
-								bool valueChanged = false;
-
-								valueChanged |= ImGui::DragFloat2("##Mat2x2Row1", glm::value_ptr(value[0]), 0.05f);
-								valueChanged |= ImGui::DragFloat2("##Mat2x2Row2", glm::value_ptr(value[1]), 0.05f);
-
-								if(valueChanged)
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Mat3:
-							{
-								glm::mat3 value = glm::transpose(m_Material->GetUniform<glm::mat3>(uniform.Name.c_str()));
-								bool valueChanged = false;
-
-								valueChanged |= ImGui::DragFloat3("##Mat3x3Row1", glm::value_ptr(value[0]), 0.05f);
-								valueChanged |= ImGui::DragFloat3("##Mat3x3Row2", glm::value_ptr(value[1]), 0.05f);
-								valueChanged |= ImGui::DragFloat3("##Mat3x3Row3", glm::value_ptr(value[2]), 0.05f);
-
-								if (valueChanged)
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
-							case ShaderDataType::Mat4:
-							{
-								glm::mat4 value = glm::transpose(m_Material->GetUniform<glm::mat4>(uniform.Name.c_str()));
-								bool valueChanged = false;
-
-								valueChanged |= ImGui::DragFloat4("##Mat4x4Row1", glm::value_ptr(value[0]), 0.05f);
-								valueChanged |= ImGui::DragFloat4("##Mat4x4Row2", glm::value_ptr(value[1]), 0.05f);
-								valueChanged |= ImGui::DragFloat4("##Mat4x4Row3", glm::value_ptr(value[2]), 0.05f);
-								valueChanged |= ImGui::DragFloat4("##Mat4x4Row4", glm::value_ptr(value[3]), 0.05f);
-
-								if (valueChanged)
-								{
-									m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
-									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
-								}
-
-								break;
-							}
+							break;
 						}
+						case ShaderDataType::Int2:
+						{
+							glm::ivec2 value = m_Material->GetUniform<glm::ivec2>(uniform.Name.c_str());
 
-						ImGui::PopItemWidth();
-						ImGui::Columns(1);
-						ImGui::PopID();
+							if (ImGui::DragInt2("", glm::value_ptr(value)))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
 
-						ImGui::Separator();
+							break;
+						}
+						case ShaderDataType::Int3:
+						{
+							glm::ivec3 value = m_Material->GetUniform<glm::ivec3>(uniform.Name.c_str());
+
+							if (ImGui::DragInt3("", glm::value_ptr(value)))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Int4:
+						{
+							glm::ivec4 value = m_Material->GetUniform<glm::ivec4>(uniform.Name.c_str());
+
+							if (ImGui::DragInt4("", glm::value_ptr(value)))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Float:
+						{
+							f32 value = m_Material->GetUniform<f32>(uniform.Name.c_str());
+
+							if (ImGui::DragFloat("", &value, 0.05f))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Float2:
+						{
+							glm::vec2 value = m_Material->GetUniform<glm::vec2>(uniform.Name.c_str());
+
+							if (ImGui::DragFloat2("", glm::value_ptr(value), 0.05f))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Float3:
+						{
+							glm::vec3 value = m_Material->GetUniform<glm::vec3>(uniform.Name.c_str());
+
+							if (uniform.Name.find("Color") != std::string::npos)
+							{
+								if (ImGui::ColorEdit3("", glm::value_ptr(value)))
+								{
+									m_Material->SetUniform(uniform.Name.c_str(), value);
+									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+								}
+							}
+							else
+							{
+								if (ImGui::DragFloat3("", glm::value_ptr(value), 0.05f))
+								{
+									m_Material->SetUniform(uniform.Name.c_str(), value);
+									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+								}
+							}
+
+							break;
+						}
+						case ShaderDataType::Float4:
+						{
+							glm::vec4 value = m_Material->GetUniform<glm::vec4>(uniform.Name.c_str());
+
+							if (uniform.Name.find("Color") != std::string::npos)
+							{
+								if (ImGui::ColorEdit4("", glm::value_ptr(value)))
+								{
+									m_Material->SetUniform(uniform.Name.c_str(), value);
+									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+								}
+							}
+							else
+							{
+								if (ImGui::DragFloat4("", glm::value_ptr(value), 0.05f))
+								{
+									m_Material->SetUniform(uniform.Name.c_str(), value);
+									AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+								}
+							}
+
+							break;
+						}
+						case ShaderDataType::Bool:
+						{
+							bool value = m_Material->GetUniform<bool>(uniform.Name.c_str());
+
+							if (ImGui::Checkbox("", &value))
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), value);
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Mat2:
+						{
+							glm::mat2 value = glm::transpose(m_Material->GetUniform<glm::mat2>(uniform.Name.c_str()));
+							bool valueChanged = false;
+
+							valueChanged |= ImGui::DragFloat2("##Mat2x2Row1", glm::value_ptr(value[0]), 0.05f);
+							valueChanged |= ImGui::DragFloat2("##Mat2x2Row2", glm::value_ptr(value[1]), 0.05f);
+
+							if(valueChanged)
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Mat3:
+						{
+							glm::mat3 value = glm::transpose(m_Material->GetUniform<glm::mat3>(uniform.Name.c_str()));
+							bool valueChanged = false;
+
+							valueChanged |= ImGui::DragFloat3("##Mat3x3Row1", glm::value_ptr(value[0]), 0.05f);
+							valueChanged |= ImGui::DragFloat3("##Mat3x3Row2", glm::value_ptr(value[1]), 0.05f);
+							valueChanged |= ImGui::DragFloat3("##Mat3x3Row3", glm::value_ptr(value[2]), 0.05f);
+
+							if (valueChanged)
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
+						case ShaderDataType::Mat4:
+						{
+							glm::mat4 value = glm::transpose(m_Material->GetUniform<glm::mat4>(uniform.Name.c_str()));
+							bool valueChanged = false;
+
+							valueChanged |= ImGui::DragFloat4("##Mat4x4Row1", glm::value_ptr(value[0]), 0.05f);
+							valueChanged |= ImGui::DragFloat4("##Mat4x4Row2", glm::value_ptr(value[1]), 0.05f);
+							valueChanged |= ImGui::DragFloat4("##Mat4x4Row3", glm::value_ptr(value[2]), 0.05f);
+							valueChanged |= ImGui::DragFloat4("##Mat4x4Row4", glm::value_ptr(value[3]), 0.05f);
+
+							if (valueChanged)
+							{
+								m_Material->SetUniform(uniform.Name.c_str(), glm::transpose(value));
+								AssetSerializer::Serialize(m_Material->GetAssetFilepath(), m_Material);
+							}
+
+							break;
+						}
 					}
+
+					ImGui::PopItemWidth();
+					ImGui::Columns(1);
+					ImGui::PopID();
+
+					ImGui::Separator();
 				}
 			}
 

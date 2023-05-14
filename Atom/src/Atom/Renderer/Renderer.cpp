@@ -370,38 +370,10 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial, Ref<ConstantBuffer> cameraCB, Ref<StructuredBuffer> animationSB, Ref<StructuredBuffer> lightsSB)
+    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial)
     {
-        commandBuffer->SetGraphicsPipeline(pipeline.get());
-        commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
-        commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
-
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
         Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex);
-
-        u32 currentRootParameter = 0;
-
-        // Set root constants
-        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
-        {
-            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
-        }
-
-        // Set constant buffers and structured buffers
-        if (cameraCB)
-        {
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, cameraCB.get());
-        }
-
-        if (lightsSB)
-        {
-            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, lightsSB.get());
-        }
-
-        if (animationSB)
-        {
-            commandBuffer->SetGraphicsStructuredBuffer(currentRootParameter++, animationSB.get());
-        }
 
         // Transition textures
         for (auto& [_, texture] : material->GetTextures())
@@ -412,46 +384,30 @@ namespace Atom
         if (material->IsDirty())
             material->UpdateDescriptorTables();
 
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetResourceDescriptorTable().GetBaseGpuDescriptor());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetSamplerDescriptorTable().GetBaseGpuDescriptor());
-
+        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Material, material->GetConstantsData().data(), material->GetConstantsData().size() / 4);
+        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Material, material->GetResourceTable().GetBaseGpuDescriptor(), material->GetSamplerTable().GetBaseGpuDescriptor());
+        commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
+        commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
         commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<GraphicsPipeline> pipeline, Ref<ConstantBuffer> constantBuffer, Ref<Material> material)
+    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<Texture> texture)
     {
-        commandBuffer->SetGraphicsPipeline(pipeline.get());
+        if (texture)
+        {
+            DescriptorAllocation resourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(1);
+            Device::Get().CopyDescriptors(resourceTable, 1, &texture->GetSRV(), DescriptorHeapType::ShaderResource);
+
+            DescriptorAllocation samplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(1);
+            Device::Get().CopyDescriptors(samplerTable, 1, &texture->GetSampler(), DescriptorHeapType::Sampler);
+
+            commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
+        }
+
         commandBuffer->SetVertexBuffer(ms_FullscreenQuadVB.get());
         commandBuffer->SetIndexBuffer(ms_FullscreenQuadIB.get());
-
-        u32 currentRootParameter = 0;
-
-        // Set root constants
-        for (const auto& [bufferSlot, data] : material->GetUniformBuffersData())
-        {
-            commandBuffer->SetGraphicsRootConstants(currentRootParameter++, data.data(), data.size() / 4);
-        }
-
-        // Set constant buffers and structured buffers
-        if(constantBuffer)
-        {
-            commandBuffer->SetGraphicsConstantBuffer(currentRootParameter++, constantBuffer.get());
-        }
-
-        // Transition textures
-        for (auto& [_, texture] : material->GetTextures())
-            if (texture)
-                commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-        // Set material descriptor tables
-        if (material->IsDirty())
-            material->UpdateDescriptorTables();
-
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetResourceDescriptorTable().GetBaseGpuDescriptor());
-        commandBuffer->SetGraphicsDescriptorTable(currentRootParameter++, material->GetSamplerDescriptorTable().GetBaseGpuDescriptor());
-
-        // Draw
         commandBuffer->DrawIndexed(ms_FullscreenQuadIB->GetElementCount(), 1, 0, 0, 0);
     }
 
@@ -496,7 +452,6 @@ namespace Atom
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
             computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
@@ -505,8 +460,8 @@ namespace Atom
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
-                computeCmdBuffer->SetComputeRootConstants(0, &mip, 1);
-                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
+                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &mip, 1);
+                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
                 computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
             }
 
@@ -552,7 +507,6 @@ namespace Atom
             computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapPrefilterPipeline").get());
             computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-            computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
             u32 width = glm::max(envMapDesc.Width / 2, 1u);
             u32 height = glm::max(envMapDesc.Height / 2, 1u);
@@ -565,8 +519,8 @@ namespace Atom
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
                 f32 roughness = mip / glm::max(envMapDesc.MipLevels - 1.0f, 1.0f);
-                computeCmdBuffer->SetComputeRootConstants(0, &roughness, 1);
-                computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
+                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &roughness, 1);
+                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
                 computeCmdBuffer->Dispatch(glm::max(width / 32, 1u), glm::max(height / 32, 1u), 6);
 
                 width = glm::max(width / 2, 1u);
@@ -651,8 +605,7 @@ namespace Atom
         computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable.GetBaseGpuDescriptor());
-        computeCmdBuffer->SetComputeDescriptorTable(1, samplerTable.GetBaseGpuDescriptor());
+        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
         computeCmdBuffer->TransitionResource(environmentMap.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->TransitionResource(irradianceMap.get(), D3D12_RESOURCE_STATE_COMMON);
@@ -693,7 +646,7 @@ namespace Atom
         computeCmdBuffer->TransitionResource(brdfTexture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, nullptr);
-        computeCmdBuffer->SetComputeDescriptorTable(0, resourceTable.GetBaseGpuDescriptor());
+        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor());
         computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
         computeCmdBuffer->TransitionResource(brdfTexture.get(), D3D12_RESOURCE_STATE_COMMON);
         computeCmdBuffer->End();
@@ -731,7 +684,6 @@ namespace Atom
         computeCmdBuffer->Begin();
         computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("GenerateMipsPipeline").get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-        computeCmdBuffer->SetComputeDescriptorTable(2, samplerTable.GetBaseGpuDescriptor());
 
         u32 width = glm::max(texture->GetWidth() / 2, 1u);
         u32 height = glm::max(texture->GetHeight() / 2, 1u);
@@ -755,8 +707,8 @@ namespace Atom
 
             computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, mip - 1);
             computeCmdBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, mip);
-            computeCmdBuffer->SetComputeRootConstants(0, &constants, 3);
-            computeCmdBuffer->SetComputeDescriptorTable(1, resourceTable.GetBaseGpuDescriptor());
+            computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &constants, 3);
+            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
             computeCmdBuffer->AddUAVBarrier(texture.get());

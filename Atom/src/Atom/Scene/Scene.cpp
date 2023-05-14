@@ -443,10 +443,10 @@ namespace Atom
                             accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                         }
 
-                        renderer->SubmitMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, true, amc.Skeleton);
+                        renderer->SubmitAnimatedMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, amc.Skeleton);
                     }
                     else
-                        renderer->SubmitMesh(amc.Mesh, tc.GetTransform(), {}, true, amc.Skeleton);
+                        renderer->SubmitAnimatedMesh(amc.Mesh, tc.GetTransform(), {}, amc.Skeleton);
                 }
             }
         }
@@ -591,10 +591,10 @@ namespace Atom
                                 accumulatedTransform = currentParent.GetComponent<TransformComponent>().GetTransform() * accumulatedTransform;
                             }
 
-                            renderer->SubmitMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, true, amc.Skeleton);
+                            renderer->SubmitAnimatedMesh(amc.Mesh, accumulatedTransform * tc.GetTransform(), {}, amc.Skeleton);
                         }
                         else
-                            renderer->SubmitMesh(amc.Mesh, tc.GetTransform(), {}, true, amc.Skeleton);
+                            renderer->SubmitAnimatedMesh(amc.Mesh, tc.GetTransform(), {}, amc.Skeleton);
                     }
                 }
             }

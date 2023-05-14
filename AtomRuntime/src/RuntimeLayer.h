@@ -24,7 +24,6 @@ namespace Atom
         Ref<Scene>            m_ActiveScene = nullptr;
         Ref<SceneRenderer>    m_SceneRenderer = nullptr;
         Ref<GraphicsPipeline> m_SwapChainPipeline = nullptr;
-        Ref<Material>         m_SwapChainMaterial = nullptr;
     };
 
 }

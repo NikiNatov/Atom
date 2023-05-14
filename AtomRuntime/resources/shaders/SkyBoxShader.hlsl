@@ -1,3 +1,5 @@
+#include "include/FrameResources.hlsli"
+
 struct VSInput
 {
 	float3 Position : POSITION;
@@ -11,11 +13,7 @@ struct PSInput
 	float2 UV 		  : TEX_COORD;
 };
 
-cbuffer SkyBoxCB : register(b0)
-{
-	row_major matrix InvViewProjMatrix;
-	float p0;
-}
+static FrameResources g_FrameResources = CreateFrameResources();
 
 PSInput VSMain(in VSInput input)
 {
@@ -23,15 +21,12 @@ PSInput VSMain(in VSInput input)
 	float3 pos = input.Position;
 	pos.z = 1.0f;
 	output.PositionSV = float4(pos, 1.0);
-	output.Position = mul(float4(pos, 1.0), (float4x3)InvViewProjMatrix).xyz;
+	output.Position = mul((float3x4)g_FrameResources.InvViewProjMatrix, float4(pos, 1.0)).xyz;
 	output.UV = input.UV;
 	return output;
 }
 
-TextureCube EnvironmentMap : register(t0);
-SamplerState EnvironmentMapSampler : register(s0);
-
 float4 PSMain(in PSInput input) : SV_TARGET
 {
-	return EnvironmentMap.SampleLevel(EnvironmentMapSampler, input.Position, 0);
+	return g_FrameResources.EnvironmentMap.SampleLevel(g_FrameResources.EnvironmentMapSampler, input.Position, 0);
 }

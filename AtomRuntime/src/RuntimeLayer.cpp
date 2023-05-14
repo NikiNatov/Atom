@@ -27,7 +27,6 @@ namespace Atom
         const ShaderLibrary& shaderLib = Renderer::GetShaderLibrary();
 
         m_SwapChainPipeline = pipelineLib.Get<GraphicsPipeline>("SwapChainPipeline");
-        m_SwapChainMaterial = CreateRef<Material>(m_SwapChainPipeline->GetShader(), MaterialFlags::None);
 
         const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
         OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "../AtomEditor/SandboxProject/SandboxProject.atmproj");
@@ -50,15 +49,16 @@ namespace Atom
         m_ActiveScene->OnUpdate(ts);
         m_ActiveScene->OnRuntimeRender(m_SceneRenderer);
 
-        m_SwapChainMaterial->SetTexture("SceneTexture", m_SceneRenderer->GetFinalImage());
-
         CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
         Ref<CommandBuffer> cmdBuffer = gfxQueue->GetCommandBuffer();
         cmdBuffer->Begin();
         cmdBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
+
         Renderer::BeginRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
-        Renderer::RenderFullscreenQuad(cmdBuffer, m_SwapChainPipeline, nullptr, m_SwapChainMaterial);
+        cmdBuffer->SetGraphicsPipeline(m_SwapChainPipeline.get());
+        Renderer::RenderFullscreenQuad(cmdBuffer, m_SceneRenderer->GetFinalImage());
         Renderer::EndRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
+
         cmdBuffer->End();
         gfxQueue->ExecuteCommandList(cmdBuffer);
     }

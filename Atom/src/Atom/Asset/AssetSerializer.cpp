@@ -178,17 +178,10 @@ namespace Atom
         MaterialFlags flags = asset->GetFlags();
         ofs.write((char*)&flags, sizeof(MaterialFlags));
 
-        // Serialize uniform buffers
-        u32 uniformBufferCount = asset->GetUniformBuffersData().size();
-        ofs.write((char*)&uniformBufferCount, sizeof(u32));
-
-        for (auto& [bufferRegister, bufferData] : asset->GetUniformBuffersData())
-        {
-            u32 bufferSize = bufferData.size();
-            ofs.write((char*)&bufferRegister, sizeof(u32));
-            ofs.write((char*)&bufferSize, sizeof(u32));
-            ofs.write((char*)bufferData.data(), bufferSize);
-        }
+        // Serialize constants data
+        u32 bufferSize = asset->m_ConstantsData.size();
+        ofs.write((char*)&bufferSize, sizeof(u32));
+        ofs.write((char*)asset->m_ConstantsData.data(), bufferSize);
 
         // Serialize textures
         u32 textureCount = asset->GetTextures().size();
@@ -814,22 +807,11 @@ namespace Atom
         asset->SetFlags(flags);
 
         // Deserialize uniform buffers
-        u32 uniformBufferCount;
-        ifs.read((char*)&uniformBufferCount, sizeof(u32));
+        u32 bufferSize;
+        ifs.read((char*)&bufferSize, sizeof(u32));
 
-        for (u32 i = 0; i < uniformBufferCount; i++)
-        {
-            u32 bufferRegister;
-            ifs.read((char*)&bufferRegister, sizeof(u32));
-
-            u32 bufferSize;
-            ifs.read((char*)&bufferSize, sizeof(u32));
-
-            Vector<byte> bufferData(bufferSize, 0);
-            ifs.read((char*)bufferData.data(), bufferSize);
-
-            asset->m_UniformBuffersData[bufferRegister] = bufferData;
-        }
+        asset->m_ConstantsData.resize(bufferSize, 0);
+        ifs.read((char*)asset->m_ConstantsData.data(), bufferSize);
 
         // Deserialize textures
         u32 textureCount;
@@ -846,6 +828,8 @@ namespace Atom
             Ref<Texture> texture = textureHandle != 0 ? AssetManager::GetAsset<Texture>(textureHandle, true) : nullptr;
             asset->m_Textures[textureRegister] = texture;
         }
+
+        asset->UpdateDescriptorTables();
 
         return asset;
     }

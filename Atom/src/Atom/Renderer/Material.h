@@ -20,8 +20,8 @@ namespace Atom
     class Material : public Asset
     {
         friend class AssetSerializer;
-        using Uniform = ShaderResourceLayout::ShaderUniform;
-        using Resource = ShaderResourceLayout::ShaderResource;
+        using Uniform = ShaderLayout::Uniform;
+        using Resource = ShaderLayout::ShaderResource;
     public:
         Material(const Ref<GraphicsShader>& shader, MaterialFlags flags);
         ~Material();
@@ -46,8 +46,7 @@ namespace Atom
             ATOM_ENGINE_ASSERT(uniform, fmt::format("Uniform with name \"{}\" does not exist!", uniformName));
             ATOM_ENGINE_ASSERT(uniform->Size == sizeof(T), "Uniform size mismatch!");
 
-            Vector<byte>& bufferData = m_UniformBuffersData[uniform->BufferRegister];
-            memcpy(bufferData.data() + uniform->Offset, &value, uniform->Size);
+            memcpy(m_ConstantsData.data() + uniform->Offset, &value, uniform->Size);
         }
 
         template<typename T>
@@ -56,8 +55,7 @@ namespace Atom
             const Uniform* uniform = FindUniformDeclaration(uniformName);
             ATOM_ENGINE_ASSERT(uniform, fmt::format("Uniform with name \"{}\" does not exist!", uniformName));
 
-            Vector<byte>& bufferData = m_UniformBuffersData[uniform->BufferRegister];
-            return *(T*)(&bufferData[uniform->Offset]);
+            return *(T*)(&m_ConstantsData[uniform->Offset]);
         }
 
         bool HasUniform(const char* name, ShaderDataType type);
@@ -67,10 +65,10 @@ namespace Atom
         inline bool GetFlag(MaterialFlags flag) const { return (m_Flags & flag) != MaterialFlags::None; }
         inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline MaterialFlags GetFlags() const { return m_Flags; }
-        inline const Map<u32, Vector<byte>>& GetUniformBuffersData() const { return m_UniformBuffersData; }
+        inline const Vector<byte>& GetConstantsData() const { return m_ConstantsData; }
         inline const Map<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
-        inline const DescriptorAllocation& GetResourceDescriptorTable() const { return m_ResourceDescriptorTable; }
-        inline const DescriptorAllocation& GetSamplerDescriptorTable() const { return m_SamplerDescriptorTable; }
+        inline const DescriptorAllocation& GetResourceTable() const { return m_ResourceDescriptorTable; }
+        inline const DescriptorAllocation& GetSamplerTable() const { return m_SamplerDescriptorTable; }
         inline bool IsDirty() const { return m_Dirty; }
     private:
         const Uniform* FindUniformDeclaration(const char* name);
@@ -78,7 +76,7 @@ namespace Atom
     private:
         Ref<GraphicsShader>    m_Shader;
         MaterialFlags          m_Flags;
-        Map<u32, Vector<byte>> m_UniformBuffersData;
+        Vector<byte>           m_ConstantsData;
         Map<u32, Ref<Texture>> m_Textures;
         DescriptorAllocation   m_ResourceDescriptorTable;
         DescriptorAllocation   m_SamplerDescriptorTable;

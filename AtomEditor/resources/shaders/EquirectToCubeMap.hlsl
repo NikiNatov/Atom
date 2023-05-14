@@ -1,21 +1,9 @@
-#include "include/CommonConstants.hlsli"
+#include "include/EquirectToCubeMapResources.hlsli"
 
-cbuffer EquirectToCubeMapCB : register(b0)
+static EquirectToCubeMapResources g_EquirectToCubeMapResources = CreateEquirectToCubeMapResources();
+
+float3 GetSamplingVector(uint3 ThreadID, float outputWidth, float outputHeight)
 {
-	uint MipLevel;
-	float p0;
-}
-
-Texture2D InputTexture : register(t0);
-SamplerState DefaultSampler : register(s0);
-
-RWTexture2DArray<float4> OutputTexture : register(u0);
-
-float3 GetSamplingVector(uint3 ThreadID)
-{
-	float outputWidth, outputHeight, outputDepth;
-	OutputTexture.GetDimensions(outputWidth, outputHeight, outputDepth);
-
 	float2 st = ThreadID.xy / float2(outputWidth, outputHeight);
 	float2 uv = 2.0 * float2(st.x, 1.0 - st.y) - 1.0;
 
@@ -35,12 +23,15 @@ float3 GetSamplingVector(uint3 ThreadID)
 [numthreads(32, 32, 1)]
 void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 {
-	float3 v = GetSamplingVector(ThreadID);
+	float outputWidth, outputHeight, outputDepth;
+	g_EquirectToCubeMapResources.OutputTexture.GetDimensions(outputWidth, outputHeight, outputDepth);
+
+	float3 v = GetSamplingVector(ThreadID, outputWidth, outputHeight);
 
 	float phi = atan2(v.z, v.x);
 	float theta = acos(v.y);
 
-	float4 color = InputTexture.SampleLevel(DefaultSampler, float2(phi / TwoPI, theta / PI), MipLevel);
+	float4 color = g_EquirectToCubeMapResources.InputTexture.SampleLevel(g_EquirectToCubeMapResources.InputTextureSampler, float2(phi / TwoPI, theta / PI), g_EquirectToCubeMapResources.MipLevel);
 
-	OutputTexture[ThreadID] = color;
+	g_EquirectToCubeMapResources.OutputTexture[ThreadID] = color;
 }

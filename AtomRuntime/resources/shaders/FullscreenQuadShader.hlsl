@@ -1,3 +1,5 @@
+#include "include/FullscreenQuadResources.hlsli"
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -10,6 +12,8 @@ struct PSInput
     float2 UV         : TEX_COORD;
 };
 
+static FullscreenQuadResources g_FullscreenQuadResources = CreateFullscreenQuadResources();
+
 PSInput VSMain(in VSInput input)
 {
     PSInput output;
@@ -18,10 +22,7 @@ PSInput VSMain(in VSInput input)
     return output;
 }
 
-Texture2D SceneTexture : register(t0);
-SamplerState Sampler: register(s0);
-
 float4 PSMain(in PSInput input) : SV_Target
 {
-    return SceneTexture.Sample(Sampler, input.UV);
+    return g_FullscreenQuadResources.Texture.Sample(g_FullscreenQuadResources.TextureSampler, input.UV);
 }

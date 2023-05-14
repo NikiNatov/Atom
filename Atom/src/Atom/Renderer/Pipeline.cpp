@@ -124,7 +124,7 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         m_D3DDescription.InputLayout = inputLayoutDesc;
-        m_D3DDescription.pRootSignature = shader->GetResourceLayout().GetRootSignature().Get();
+        m_D3DDescription.pRootSignature = shader->GetShaderLayout().GetRootSignature().Get();
         m_D3DDescription.VS = CD3DX12_SHADER_BYTECODE(shader->GetVSData().Get());
         m_D3DDescription.PS = CD3DX12_SHADER_BYTECODE(shader->GetPSData().Get());
         m_D3DDescription.RasterizerState = rasterizerState;
@@ -219,7 +219,7 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         m_D3DDescription.CS = CD3DX12_SHADER_BYTECODE(m_Description.Shader->GetCSData().Get());
-        m_D3DDescription.pRootSignature = m_Description.Shader->GetResourceLayout().GetRootSignature().Get();
+        m_D3DDescription.pRootSignature = m_Description.Shader->GetShaderLayout().GetRootSignature().Get();
 
         DXCall(d3dDevice->CreateComputePipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
 

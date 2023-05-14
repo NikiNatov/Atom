@@ -1,3 +1,6 @@
+#include "include/CompositeResources.hlsli"
+#include "include/FrameResources.hlsli"
+
 static const float Gamma = 2.2;
 static const float PureWhite = 1.0;
 
@@ -13,6 +16,9 @@ struct PSInput
     float2 UV         : TEX_COORD;
 };
 
+static CompositeResources g_CompositeResources = CreateCompositeResources();
+static FrameResources g_FrameResources = CreateFrameResources();
+
 PSInput VSMain(in VSInput input)
 {
     PSInput output;
@@ -21,18 +27,9 @@ PSInput VSMain(in VSInput input)
     return output;
 }
 
-cbuffer CompositeCB : register(b0)
-{
-    float Exposure;
-    float p0;
-};
-
-Texture2D SceneTexture : register(t0);
-SamplerState SceneTextureSampler: register(s0);
-
 float4 PSMain(in PSInput input) : SV_Target
 {
-    float3 color = SceneTexture.Sample(SceneTextureSampler, input.UV).rgb * Exposure;
+    float3 color = g_CompositeResources.SceneTexture.Sample(g_CompositeResources.SceneTextureSampler, input.UV).rgb * g_FrameResources.CameraExposure;
 
     float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     float mappedLuminance = (luminance * (1.0 + luminance / (PureWhite * PureWhite))) / (1.0 + luminance);

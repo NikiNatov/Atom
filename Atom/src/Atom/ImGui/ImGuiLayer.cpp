@@ -178,7 +178,7 @@ namespace Atom
         commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
         commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
         commandBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
-        commandBuffer->SetGraphicsRootConstants(0, &transformCB, 16);
+        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &transformCB, 16);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -278,8 +278,7 @@ namespace Atom
                         Texture* texture = (Texture*)pcmd->GetTexID();
                         commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
                         commandBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ);
-                        commandBuffer->SetGraphicsDescriptorTable(1, GetTextureHandle(texture).GetBaseGpuDescriptor());
-                        commandBuffer->SetGraphicsDescriptorTable(2, m_SamplerDescriptor.GetBaseGpuDescriptor());
+                        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, GetTextureHandle(texture).GetBaseGpuDescriptor(), m_SamplerDescriptor.GetBaseGpuDescriptor());
                         commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
