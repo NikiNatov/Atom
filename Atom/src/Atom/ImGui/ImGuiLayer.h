@@ -35,13 +35,13 @@ namespace Atom
         void RenderDrawData();
         void CreateGraphicsObjects();
     private:
-        bool                        m_BlockEvents = true;
-        bool                        m_ClearRenderTarget = false;
-        Ref<GraphicsPipeline>       m_Pipeline;
-        Ref<Texture2D>              m_FontTexture;
-        DescriptorAllocation        m_SamplerDescriptor;
-        Vector<Ref<VertexBuffer>>   m_VertexBuffers;
-        Vector<Ref<IndexBuffer>>    m_IndexBuffers;
-        Vector<TextureCache>        m_TextureCache;
+        bool                      m_BlockEvents = true;
+        bool                      m_ClearRenderTarget = false;
+        Ref<GraphicsPipeline>     m_Pipeline;
+        Ref<Texture>              m_FontTexture;
+        DescriptorAllocation      m_SamplerDescriptor;
+        Vector<Ref<VertexBuffer>> m_VertexBuffers;
+        Vector<Ref<IndexBuffer>>  m_IndexBuffers;
+        Vector<TextureCache>      m_TextureCache;
     };
 }

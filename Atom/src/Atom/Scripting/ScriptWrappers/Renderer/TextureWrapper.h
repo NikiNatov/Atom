@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Texture.h"
+#include "Atom/Asset/TextureAsset.h"
 
 namespace Atom
 {
@@ -12,37 +12,39 @@ namespace Atom
         public:
             virtual ~Texture() = default;
 
+            void UpdateGPUData(bool makeNonReadable = false);
+            bool IsCpuReadable() const;
+            bool IsGpuWritable() const;
+
             void SetFilter(TextureFilter filter);
             void SetWrap(TextureWrap wrap);
 
+            TextureFormat GetFormat() const;
             u32 GetWidth() const;
             u32 GetHeight() const;
-            TextureFormat GetFormat() const;
+            u32 GetDepth() const;
+            u32 GetArraySize() const;
             u32 GetMipLevels() const;
             TextureFilter GetFilter() const;
             TextureWrap GetWrap() const;
-            
+            UUID GetUUID() const;
         protected:
-            Texture(TextureType type, u32 width, u32 height, TextureFormat format, s32 mipLevels = -1);
-            Texture(const Ref<Atom::Texture>& texture);
+            Texture(u32 width, u32 height, TextureFormat format, u32 mipCount, bool cpuReadable, bool gpuWritable);
+            Texture(u32 cubeSize, TextureFormat format, u32 mipCount, bool cpuReadable, bool gpuWritable);
+            Texture(const Ref<Atom::TextureAsset>& texture);
         protected:
-            Ref<Atom::Texture> m_Texture = nullptr;
+            Ref<Atom::TextureAsset> m_TextureAsset = nullptr;
         };
 
         class Texture2D : public Texture
         {
         public:
-            Texture2D(u32 width, u32 height, TextureFormat format, s32 mipLevels = -1);
+            Texture2D(u32 width, u32 height, TextureFormat format, u32 mipLevels, bool cpuReadable, bool gpuWritable);
             Texture2D(u64 assetUUID);
             Texture2D(const Ref<Atom::Texture2D>& texture);
 
-            void UpdateGPUData(bool makeNonReadable = false);
-            bool IsReadable() const;
-
             void SetPixels(const Vector<byte>& pixels, u32 mipLevel = 0);
             const Vector<byte>& GetPixels(u32 mipLevel = 0);
-
-            UUID GetUUID() const;
             Ref<Atom::Texture2D> GetTexture() const;
 
             static Texture2D Find(const std::filesystem::path& assetPath);
@@ -51,17 +53,12 @@ namespace Atom
         class TextureCube : public Texture
         {
         public:
-            TextureCube(u32 size, TextureFormat format, s32 mipLevels = -1);
+            TextureCube(u32 size, TextureFormat format, u32 mipLevels, bool cpuReadable, bool gpuWritable);
             TextureCube(u64 assetUUID);
             TextureCube(const Ref<Atom::TextureCube>& texture);
 
-            void UpdateGPUData(bool makeNonReadable = false);
-            bool IsReadable() const;
-
             void SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel = 0);
             const Vector<byte>& GetPixels(u32 cubeFace, u32 mipLevel = 0);
-
-            UUID GetUUID() const;
             Ref<Atom::TextureCube> GetTexture() const;
 
             static TextureCube Find(const std::filesystem::path& assetPath);

@@ -331,15 +331,11 @@ namespace Atom
         fontTextureDesc.Format = TextureFormat::RGBA8;
         fontTextureDesc.Filter = TextureFilter::Anisotropic;
         fontTextureDesc.Wrap = TextureWrap::Repeat;
-        fontTextureDesc.UsageFlags = TextureBindFlags::None;
         fontTextureDesc.Width = width;
         fontTextureDesc.Height = height;
 
-        Vector<Vector<byte>> pixelData;
-        pixelData.resize(fontTextureDesc.MipLevels);
-        pixelData[0].assign(pixels, pixels + width * height * bytesPerPixel);
-
-        m_FontTexture = CreateRef<Texture2D>(fontTextureDesc, pixelData, false, "ImGuiFontTexture");
+        m_FontTexture = CreateRef<Texture>(fontTextureDesc, "ImGuiFontTexture");
+        Renderer::UploadTextureData(pixels, m_FontTexture);
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
 

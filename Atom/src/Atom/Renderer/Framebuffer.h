@@ -2,15 +2,12 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
-#include "Texture.h"
+#include "Atom/Renderer/RenderSurface.h"
 
 #include <glm/glm.hpp>
 
 namespace Atom
 {
-    class TextureViewRT;
-    class TextureViewDS;
-
     enum AttachmentPoint : u8
     {
         Color0,
@@ -31,13 +28,14 @@ namespace Atom
         TextureFormat Format;
         TextureFilter Filter;
         TextureWrap   Wrap;
+        ClearValue    ClearVal;
 
         FramebufferAttachment()
             : Format(TextureFormat::None), Filter(TextureFilter::None), Wrap(TextureWrap::None)
         {}
 
-        FramebufferAttachment(TextureFormat format, TextureFilter filter = TextureFilter::Linear, TextureWrap wrap = TextureWrap::Clamp)
-            : Format(format), Filter(filter), Wrap(wrap)
+        FramebufferAttachment(TextureFormat format, ClearValue clearValue, TextureFilter filter = TextureFilter::Linear, TextureWrap wrap = TextureWrap::Clamp)
+            : Format(format), Filter(filter), Wrap(wrap), ClearVal(clearValue)
         {}
     };
 
@@ -46,7 +44,6 @@ namespace Atom
         u32                   Width = 0;
         u32                   Height = 0;
         bool                  SwapChainFrameBuffer = false;
-        glm::vec4             ClearColor { 0 };
         FramebufferAttachment Attachments[AttachmentPoint::NumAttachments];
         Ref<Texture>          OverrideAttachments[AttachmentPoint::NumAttachments];
     };
@@ -61,10 +58,9 @@ namespace Atom
         const String& GetName() const;
         u32 GetWidth() const;
         u32 GetHeight() const;
-        const glm::vec4& GetClearColor() const;
+        const ClearValue& GetClearValue(AttachmentPoint attachment) const;
         bool IsSwapChainTarget() const;
-        Ref<RenderTexture2D> GetColorAttachment(AttachmentPoint attachment) const;
-        Ref<DepthBuffer> GetDepthAttachment() const;
+        Ref<RenderSurface> GetAttachment(AttachmentPoint attachment) const;
 
         const D3D12_VIEWPORT& GetViewport() const;
         const D3D12_RECT& GetScissorRect() const;
@@ -75,7 +71,6 @@ namespace Atom
         FramebufferDescription m_Description;
         D3D12_VIEWPORT         m_Viewport{};
         D3D12_RECT             m_ScissorRect{};
-        Ref<RenderTexture2D>   m_ColorAttachments[AttachmentPoint::NumColorAttachments]{ nullptr };
-        Ref<DepthBuffer>       m_DepthAttachment;
+        Ref<RenderSurface>     m_Attachments[AttachmentPoint::NumAttachments]{ nullptr };
     };
 }

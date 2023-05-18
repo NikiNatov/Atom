@@ -7,10 +7,9 @@
 
 namespace Atom
 {
-    // -------------------------------------------------------- Material -----------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     Material::Material(const Ref<GraphicsShader>& shader, MaterialFlags flags)
-        : Asset(AssetType::Material), m_Shader(shader), m_Flags(flags)
+        : m_Shader(shader), m_Flags(flags)
     {
         const auto& shaderLayout = m_Shader->GetShaderLayout();
         const auto& constants = shaderLayout.GetConstants(ShaderBindPoint::Material);
@@ -31,7 +30,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Material::Material(Material&& rhs) noexcept
-        : Asset(AssetType::Material), m_Shader(std::move(rhs.m_Shader)), m_ConstantsData(std::move(rhs.m_ConstantsData)), m_Textures(std::move(rhs.m_Textures)), m_Flags(rhs.m_Flags)
+        : m_Shader(std::move(rhs.m_Shader)), m_ConstantsData(std::move(rhs.m_ConstantsData)), m_Textures(std::move(rhs.m_Textures)), m_Flags(rhs.m_Flags)
     {
     }
 
@@ -177,27 +176,5 @@ namespace Atom
         }
 
         return nullptr;
-    }
-
-    // -------------------------------------------------- MaterialTable ------------------------------------------------------------
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialTable::SetMaterial(u32 submeshIdx, Ref<Material> material)
-    {
-        m_Materials[submeshIdx] = material;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    bool MaterialTable::HasMaterial(u32 submeshIdx) const
-    {
-        return m_Materials.find(submeshIdx) != m_Materials.end();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> MaterialTable::GetMaterial(u32 submeshIdx) const
-    {
-        if (!HasMaterial(submeshIdx))
-            return nullptr;
-
-        return m_Materials.at(submeshIdx);
     }
 }

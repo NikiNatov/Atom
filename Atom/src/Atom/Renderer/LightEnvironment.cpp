@@ -8,8 +8,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     LightEnvironment::LightEnvironment()
     {
-        m_EnvironmentMap = Renderer::GetBlackTextureCube();
-        m_IrradianceMap = Renderer::GetBlackTextureCube();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -18,7 +16,7 @@ namespace Atom
         if (!m_EnvironmentMap || m_EnvironmentMap->GetUUID() != environmentMap->GetUUID())
         {
             m_EnvironmentMap = environmentMap;
-            m_IrradianceMap = Renderer::CreateIrradianceMap(m_EnvironmentMap, 32);
+            m_IrradianceMap = Renderer::CreateIrradianceMap(m_EnvironmentMap->GetResource(), 32, environmentMap->GetAssetFilepath().stem().string().c_str());
         }
     }
 

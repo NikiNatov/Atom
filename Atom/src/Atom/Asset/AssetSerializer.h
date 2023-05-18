@@ -4,8 +4,6 @@
 #include "Atom/Asset/Asset.h"
 #include "Atom/Asset/AssetManager.h"
 
-#include "Atom/Renderer/Texture.h"
-
 namespace Atom
 {
     class AssetSerializer

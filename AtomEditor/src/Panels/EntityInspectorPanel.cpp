@@ -753,7 +753,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Material)
 								{
 									ScriptWrappers::Material data = scriptInstance->GetMemberValue<ScriptWrappers::Material>(name);
-									Ref<Material> material = data.GetMaterial();
+									Ref<MaterialAsset> material = data.GetMaterial();
 
 									ImGui::InputText(imguiID.c_str(), material ? (char*)material->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
 

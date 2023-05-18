@@ -43,6 +43,32 @@ namespace Atom { namespace Utils {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    static D3D12_RESOURCE_DIMENSION AtomTextureTypeToD3D12(TextureType type)
+    {
+        switch (type)
+        {
+            case TextureType::Texture2D: return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+            case TextureType::Texture3D: return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+        }
+
+        ATOM_ASSERT(false, "Unknown texture type!");
+        return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static TextureType D3D12TextureTypeAtom(D3D12_RESOURCE_DIMENSION type)
+    {
+        switch (type)
+        {
+            case D3D12_RESOURCE_DIMENSION_TEXTURE2D: return TextureType::Texture2D;
+            case D3D12_RESOURCE_DIMENSION_TEXTURE3D: return TextureType::Texture3D;
+        }
+
+        ATOM_ASSERT(false, "Unknown texture type!");
+        return TextureType::None;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     static DXGI_FORMAT AtomTextureFormatToD3D12(TextureFormat format)
     {
         switch (format)

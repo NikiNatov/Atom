@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Material.h"
+#include "Atom/Asset/MaterialAsset.h"
 
 namespace Atom
 {
@@ -11,8 +11,8 @@ namespace Atom
 		MaterialEditorPanel() = default;
 
 		void OnImGuiRender();
-		void SetMaterial(const Ref<Material>& material);
+		void SetMaterial(const Ref<MaterialAsset>& material);
 	private:
-		Ref<Material> m_Material;
+		Ref<MaterialAsset> m_Material;
 	};
 }

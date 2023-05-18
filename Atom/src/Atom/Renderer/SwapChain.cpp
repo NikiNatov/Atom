@@ -85,7 +85,7 @@ namespace Atom
 
             for (u32 i = 0; i < m_BackBuffers.size(); i++)
             {
-                ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetD3DResource().Get());
+                ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetTexture()->GetD3DResource().Get());
                 m_BackBuffers[i].reset();
             }
 
@@ -122,7 +122,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<RenderTexture2D> SwapChain::GetBackBuffer() const
+    Ref<RenderSurface> SwapChain::GetBackBuffer() const
     {
         return m_BackBuffers[m_BackBufferIndex];
     }
@@ -136,7 +136,9 @@ namespace Atom
             // Get the back buffer resource
             ComPtr<ID3D12Resource2> backBuffer = nullptr;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
-            m_BackBuffers[i] = CreateRef<RenderTexture2D>(backBuffer.Detach(), true, fmt::format("SwapChainBackBuffer[{}]", i).c_str());
+
+            Ref<Texture> backBufferTexture = CreateRef<Texture>(backBuffer.Detach(), TextureFlags::SwapChainBuffer, fmt::format("SwapChainBackBuffer[{}]", i).c_str());
+            m_BackBuffers[i] = CreateRef<RenderSurface>(backBufferTexture, 0, 0);
         }
 
         // Recreate viewport

@@ -11,42 +11,20 @@ namespace Atom
         DrawUI("Texture Import Settings", "Texture Files (*.png, *.hdr)\0*.png;*.hdr\0", 
             [this](auto path) { ContentTools::ImportTextureAsset(path, AssetManager::GetAssetsFolder() / "Textures", m_ImportSettings); }, [this]()
         {
-            // Texture type 
+            // IsCubeMap 
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("Type");
+                ImGui::Text("IsCubeMap");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::PushItemWidth(-1);
-
-                const char* textureTypeStr[] = { "Texture2D", "Cubemap" };
-                const char* currentType = textureTypeStr[(s32)m_ImportSettings.Type - 1];
-
-                if (ImGui::BeginCombo("##TextureType", currentType))
-                {
-                    for (u32 i = 0; i < _countof(textureTypeStr); i++)
-                    {
-                        bool isSelected = currentType == textureTypeStr[i];
-                        if (ImGui::Selectable(textureTypeStr[i], isSelected))
-                        {
-                            currentType = textureTypeStr[i];
-                            m_ImportSettings.Type = (TextureType)(i + 1);
-                        }
-
-                        if (isSelected)
-                            ImGui::SetItemDefaultFocus();
-                    }
-
-                    ImGui::EndCombo();
-                }
-
+                ImGui::Checkbox("##IsCubeMap", &m_ImportSettings.IsCubeMap);
                 ImGui::PopItemWidth();
-                ImGui::Columns(1); 
-
+                ImGui::Columns(1);
             }
 
             // Cubemap size
-            if (m_ImportSettings.Type == TextureType::TextureCube)
+            if (m_ImportSettings.IsCubeMap)
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

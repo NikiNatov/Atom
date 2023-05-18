@@ -30,7 +30,7 @@ namespace Atom
         inline Ref<Framebuffer> GetGeometryPassTarget() const { return m_GeometryPipeline->GetFramebuffer(); }
         inline Ref<Framebuffer> GetFinalPassTarget() const { return m_CompositePipeline->GetFramebuffer(); }
 
-        inline Ref<RenderTexture2D> GetFinalImage() const { return GetFinalPassTarget()->GetColorAttachment(AttachmentPoint::Color0); }
+        inline Ref<RenderSurface> GetFinalImage() const { return GetFinalPassTarget()->GetAttachment(AttachmentPoint::Color0); }
     private:
         void PreRender(Ref<CommandBuffer> commandBuffer);
         void GeometryPass(Ref<CommandBuffer> commandBuffer);

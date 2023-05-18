@@ -81,7 +81,7 @@ namespace Atom
                     f32 textHeight = ImGui::CalcTextSize(msg.GetMessageString().c_str()).y + ImGui::GetStyle().FramePadding.y * 2.0f;
 
                     ImColor color(0xFFFFFFFF);
-                    Texture2D* currentIcon = nullptr;
+                    Texture* currentIcon = nullptr;
 
                     switch (msg.GetSeverity())
                     {

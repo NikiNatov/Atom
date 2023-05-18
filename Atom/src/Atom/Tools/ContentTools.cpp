@@ -93,7 +93,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::ImportTextureAsset(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationFolder, const TextureImportSettings& importSettings)
     {
-        const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
+        const char* extension = Asset::AssetFileExtensions[importSettings.IsCubeMap ? (u32)AssetType::TextureCube : (u32)AssetType::Texture2D];
         String assetFilename = sourcePath.stem().string() + extension;
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(destinationFolder / assetFilename);
 
@@ -106,68 +106,78 @@ namespace Atom
         if (!std::filesystem::exists(assetFullPath.parent_path()))
             std::filesystem::create_directories(assetFullPath.parent_path());
 
-        s32 width, height;
-        Vector<byte> decodedData;
-        TextureFormat format = importSettings.Format;
-
-        if (!DecodeImage(sourcePath, format, width, height, decodedData))
+        Ref<Texture> texture = ContentTools::ImportTexture(sourcePath, importSettings);
+        if (!texture)
         {
             ATOM_ERROR("Failed creating texture asset {}", assetFullPath);
             return 0;
         }
 
-        TextureDescription textureDesc;
-        textureDesc.Format = format;
-        textureDesc.Width = width;
-        textureDesc.Height = height;
-        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
-        textureDesc.Filter = importSettings.Filter;
-        textureDesc.Wrap = importSettings.Wrap;
-        textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
+        Ref<Asset> asset = nullptr;
+        if (importSettings.IsCubeMap)
+            asset = CreateRef<TextureCube>(texture, importSettings.IsReadable);
+        else
+            asset = CreateRef<Texture2D>(texture, importSettings.IsReadable);
 
-        Vector<Vector<byte>> tex2DData;
-        tex2DData.resize(textureDesc.MipLevels);
-        tex2DData[0] = decodedData;
+        asset->m_MetaData.SourceFilepath = sourcePath;
 
-        if (importSettings.Type == TextureType::Texture2D)
+        if (importSettings.IsReadable)
         {
-            Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
-            Renderer::GenerateMips(asset);
-            asset->m_MetaData.SourceFilepath = sourcePath;
-
-            if (!AssetSerializer::Serialize(assetFullPath, asset))
+            if (importSettings.IsCubeMap)
             {
-                ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
-                return 0;
-            }
+                Ref<TextureCube> textureCube = std::static_pointer_cast<TextureCube>(asset);
+                for (u32 face = 0; face < 6; face++)
+                {
+                    for (u32 mip = 0; mip < textureCube->GetMipLevels(); mip++)
+                    {
+                        Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(textureCube->GetResource(), mip, face);
 
-            AssetManager::RegisterAsset(asset->m_MetaData);
-            return asset->m_MetaData.UUID;
+                        Vector<byte> pixelData(buffer->GetSize(), 0);
+                        void* mappedData = buffer->Map(0, 0);
+                        memcpy(pixelData.data(), mappedData, pixelData.size());
+                        buffer->Unmap();
+
+                        textureCube->SetPixels(pixelData, face, mip);
+                    }
+                }
+            }
+            else
+            {
+                Ref<Texture2D> texture2D = std::static_pointer_cast<Texture2D>(asset);
+                for (u32 mip = 0; mip < texture2D->GetMipLevels(); mip++)
+                {
+                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture2D->GetResource(), mip);
+
+                    Vector<byte> pixelData(buffer->GetSize(), 0);
+                    void* mappedData = buffer->Map(0, 0);
+                    memcpy(pixelData.data(), mappedData, pixelData.size());
+                    buffer->Unmap();
+
+                    texture2D->SetPixels(pixelData, mip);
+                }
+            }
         }
-        else if (importSettings.Type == TextureType::TextureCube)
+
+        bool result = false;
+        if (importSettings.IsCubeMap)
+            result = AssetSerializer::Serialize(assetFullPath, std::static_pointer_cast<TextureCube>(asset));
+        else
+            result = AssetSerializer::Serialize(assetFullPath, std::static_pointer_cast<Texture2D>(asset));
+
+        if (!result)
         {
-            Ref<Texture2D> tex2D = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
-            Renderer::GenerateMips(tex2D);
-            Ref<TextureCube> asset = Renderer::CreateEnvironmentMap(tex2D, importSettings.CubemapSize);
-            asset->m_MetaData.SourceFilepath = sourcePath;
-
-            if (!AssetSerializer::Serialize(assetFullPath, asset))
-            {
-                ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
-                return 0;
-            }
-
-            AssetManager::RegisterAsset(asset->m_MetaData);
-            return asset->m_MetaData.UUID;
+            ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
+            return 0;
         }
 
-        return 0;
+        AssetManager::RegisterAsset(asset->m_MetaData);
+        return asset->m_MetaData.UUID;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::ImportTextureAsset(const byte* compressedData, u32 dataSize, const String& assetName, const std::filesystem::path& destinationFolder, const TextureImportSettings& importSettings)
     {
-        const char* extension = Asset::AssetFileExtensions[importSettings.Type == TextureType::Texture2D ? (u32)AssetType::Texture2D : (u32)AssetType::TextureCube];
+        const char* extension = Asset::AssetFileExtensions[importSettings.IsCubeMap ? (u32)AssetType::TextureCube : (u32)AssetType::Texture2D];
         String assetFilename = assetName + extension;
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(destinationFolder / assetFilename);
 
@@ -180,33 +190,63 @@ namespace Atom
         if (!std::filesystem::exists(assetFullPath.parent_path()))
             std::filesystem::create_directories(assetFullPath.parent_path());
 
-        s32 width, height;
-        Vector<byte> decodedData;
-        TextureFormat format = importSettings.Format;
-
-        if (!DecodeImage(compressedData, dataSize, format, width, height, decodedData))
+        Ref<Texture> texture = ContentTools::ImportTexture(compressedData, dataSize, assetName, importSettings);
+        if (!texture)
         {
             ATOM_ERROR("Failed creating texture asset {}", assetFullPath);
             return 0;
         }
 
-        TextureDescription textureDesc;
-        textureDesc.Format = format;
-        textureDesc.Width = width;
-        textureDesc.Height = height;
-        textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
-        textureDesc.Filter = importSettings.Filter;
-        textureDesc.Wrap = importSettings.Wrap;
-        textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
+        Ref<Asset> asset = nullptr;
+        if (importSettings.IsCubeMap)
+            asset = CreateRef<TextureCube>(texture, importSettings.IsReadable);
+        else
+            asset = CreateRef<Texture2D>(texture, importSettings.IsReadable);
 
-        Vector<Vector<byte>> tex2DData;
-        tex2DData.resize(textureDesc.MipLevels);
-        tex2DData[0] = decodedData;
+        if (importSettings.IsReadable)
+        {
+            if (importSettings.IsCubeMap)
+            {
+                Ref<TextureCube> textureCube = std::static_pointer_cast<TextureCube>(asset);
+                for (u32 face = 0; face < 6; face++)
+                {
+                    for (u32 mip = 0; mip < textureCube->GetMipLevels(); mip++)
+                    {
+                        Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(textureCube->GetResource(), mip, face);
 
-        Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, assetName.c_str());
-        Renderer::GenerateMips(asset);
+                        Vector<byte> pixelData(buffer->GetSize(), 0);
+                        void* mappedData = buffer->Map(0, 0);
+                        memcpy(pixelData.data(), mappedData, pixelData.size());
+                        buffer->Unmap();
 
-        if (!AssetSerializer::Serialize(assetFullPath, asset))
+                        textureCube->SetPixels(pixelData, face, mip);
+                    }
+                }
+            }
+            else
+            {
+                Ref<Texture2D> texture2D = std::static_pointer_cast<Texture2D>(asset);
+                for (u32 mip = 0; mip < texture2D->GetMipLevels(); mip++)
+                {
+                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture2D->GetResource(), mip);
+
+                    Vector<byte> pixelData(buffer->GetSize(), 0);
+                    void* mappedData = buffer->Map(0, 0);
+                    memcpy(pixelData.data(), mappedData, pixelData.size());
+                    buffer->Unmap();
+
+                    texture2D->SetPixels(pixelData, mip);
+                }
+            }
+        }
+
+        bool result = false;
+        if (importSettings.IsCubeMap)
+            result = AssetSerializer::Serialize(assetFullPath, std::static_pointer_cast<TextureCube>(asset));
+        else
+            result = AssetSerializer::Serialize(assetFullPath, std::static_pointer_cast<Texture2D>(asset));
+
+        if (!result)
         {
             ATOM_ERROR("Failed serializing texture asset {}", assetFullPath);
             return 0;
@@ -462,7 +502,7 @@ namespace Atom
 
             String shaderName = importSettings.ImportAnimations && scene->mNumAnimations > 0 ? "MeshPBRAnimatedShader" : "MeshPBRShader";
             UUID materialUUID = ContentTools::CreateMaterialAsset(shaderName, std::filesystem::path("Materials") / materialName.C_Str());
-            Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
+            Ref<MaterialAsset> materialAsset = AssetManager::GetAsset<MaterialAsset>(materialUUID, true);
 
             // Set albedo color
             aiColor4D albedo;
@@ -566,7 +606,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> ContentTools::ImportTexture(const std::filesystem::path& sourcePath, const TextureImportSettings& importSettings)
+    Ref<Texture> ContentTools::ImportTexture(const std::filesystem::path& sourcePath, const TextureImportSettings& importSettings)
     {
         s32 width, height;
         Vector<byte> decodedData;
@@ -582,17 +622,20 @@ namespace Atom
         textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
-        textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
+        textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
-        Vector<Vector<byte>> tex2DData;
-        tex2DData.resize(textureDesc.MipLevels);
-        tex2DData[0] = decodedData;
+        Ref<Texture> texture = CreateRef<Texture>(textureDesc, sourcePath.stem().string().c_str());
+        Renderer::UploadTextureData(decodedData.data(), texture);
+        Renderer::GenerateMips(texture);
 
-        return CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, sourcePath.stem().string().c_str());
+        if (!importSettings.IsCubeMap)
+            return texture;
+
+        return Renderer::CreateEnvironmentMap(texture, importSettings.CubemapSize, sourcePath.stem().string().c_str());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> ContentTools::ImportTexture(const byte* compressedData, u32 dataSize, const String& name, const TextureImportSettings& importSettings)
+    Ref<Texture> ContentTools::ImportTexture(const byte* compressedData, u32 dataSize, const String& name, const TextureImportSettings& importSettings)
     {
         s32 width, height;
         Vector<byte> decodedData;
@@ -608,13 +651,16 @@ namespace Atom
         textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
         textureDesc.Filter = importSettings.Filter;
         textureDesc.Wrap = importSettings.Wrap;
-        textureDesc.UsageFlags |= TextureBindFlags::UnorderedAccess;
+        textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
-        Vector<Vector<byte>> tex2DData;
-        tex2DData.resize(textureDesc.MipLevels);
-        tex2DData[0] = decodedData;
+        Ref<Texture> texture = CreateRef<Texture>(textureDesc, name.c_str());
+        Renderer::UploadTextureData(decodedData.data(), texture);
+        Renderer::GenerateMips(texture);
 
-        return CreateRef<Texture2D>(textureDesc, tex2DData, importSettings.IsReadable, name.c_str());
+        if (!importSettings.IsCubeMap)
+            return texture;
+
+        return Renderer::CreateEnvironmentMap(texture, importSettings.CubemapSize, name.c_str());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -698,7 +744,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::CreateMaterialAsset(const String& shaderName, const std::filesystem::path& filepath)
     {
-        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);
+        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())

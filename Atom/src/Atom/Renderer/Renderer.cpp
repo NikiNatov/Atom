@@ -41,9 +41,8 @@ namespace Atom
             fbDesc.SwapChainFrameBuffer = false;
             fbDesc.Width = 1980;
             fbDesc.Height = 1080;
-            fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
-            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA16F, TextureFilter::Linear, TextureWrap::Clamp };
-            fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, TextureFilter::Linear, TextureWrap::Clamp };
+            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA16F, ClearValue(0.2f, 0.2f, 0.2f, 1.0f), TextureFilter::Linear, TextureWrap::Clamp };
+            fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, ClearValue(1.0f, 0), TextureFilter::Linear, TextureWrap::Clamp };
 
             Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "GeometryFramebuffer");
 
@@ -112,8 +111,7 @@ namespace Atom
             fbDesc.SwapChainFrameBuffer = false;
             fbDesc.Width = 1980;
             fbDesc.Height = 1080;
-            fbDesc.ClearColor = { 0.2f, 0.2f, 0.2f, 1.0 };
-            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, TextureFilter::Linear, TextureWrap::Clamp };
+            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, ClearValue(0.2f, 0.2f, 0.2f, 1.0f), TextureFilter::Linear, TextureWrap::Clamp };
 
             Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "CompositeFramebuffer");
 
@@ -265,41 +263,40 @@ namespace Atom
         UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
 
         // Create error texture
-        TextureDescription errorTextureDesc;
-        errorTextureDesc.Width = 1;
-        errorTextureDesc.Height = 1;
-        errorTextureDesc.Format = TextureFormat::RGBA8;
-        errorTextureDesc.MipLevels = 1;
+        {
+            TextureDescription errorTextureDesc;
+            errorTextureDesc.Width = 1;
+            errorTextureDesc.Height = 1;
+            errorTextureDesc.Format = TextureFormat::RGBA8;
+            errorTextureDesc.MipLevels = 1;
 
-        Vector<Vector<byte>> errorTextureData;
-        errorTextureData.resize(errorTextureDesc.MipLevels);
-        errorTextureData[0] = { 0xFF, 0x00, 0xFF, 0xFF }; // Just 1 pixel of pink color
+            ms_ErrorTexture = CreateRef<Texture>(errorTextureDesc, "ErrorTexture(Renderer)");
 
-        ms_ErrorTexture = CreateRef<Texture2D>(errorTextureDesc, errorTextureData, false, "ErrorTexture(Renderer)");
+            const byte errorTextureData[] = { 0xFF, 0x00, 0xFF, 0xFF };
+            UploadTextureData(errorTextureData, ms_ErrorTexture);
+        }
 
         // Create black texture and black texture cube
-        TextureDescription blackTextureDesc;
-        blackTextureDesc.Width = 1;
-        blackTextureDesc.Height = 1;
-        blackTextureDesc.Format = TextureFormat::RGBA8;
-        blackTextureDesc.MipLevels = 1;
+        {
+            TextureDescription blackTextureDesc;
+            blackTextureDesc.Width = 1;
+            blackTextureDesc.Height = 1;
+            blackTextureDesc.Format = TextureFormat::RGBA8;
+            blackTextureDesc.MipLevels = 1;
 
-        Vector<Vector<byte>> blackTextureData;
-        blackTextureData.resize(blackTextureDesc.MipLevels);
-        blackTextureData[0] = { 0x00, 0x00, 0x00, 0xFF }; // Just 1 pixel of black color
+            ms_BlackTexture = CreateRef<Texture>(blackTextureDesc, "BlackTexture(Renderer)");
 
-        ms_BlackTexture = CreateRef<Texture2D>(blackTextureDesc, blackTextureData, false, "BlackTexture(Renderer)");
+            blackTextureDesc.ArraySize = 6;
+            blackTextureDesc.Flags |= TextureFlags::CubeMap;
 
-        Vector<Vector<byte>> blackTextureCubeData[6] = { 
-            { blackTextureData }, 
-            { blackTextureData }, 
-            { blackTextureData }, 
-            { blackTextureData }, 
-            { blackTextureData }, 
-            { blackTextureData } 
-        };
+            ms_BlackTextureCube = CreateRef<Texture>(blackTextureDesc, "BlackTextureCube(Renderer)");
 
-        ms_BlackTextureCube = CreateRef<TextureCube>(blackTextureDesc, blackTextureCubeData, false, "BlackTextureCube(Renderer)");
+            const byte blackTextureData[] = { 0x00, 0x00, 0x00, 0xFF }; // Just 1 pixel of black color
+            UploadTextureData(blackTextureData, ms_BlackTexture);
+
+            for(u32 face = 0; face < 6; face++)
+                UploadTextureData(blackTextureData, ms_BlackTextureCube, 0, face);
+        }
 
         // Generate BRDF texture
         ms_BRDFTexture = Renderer::CreateBRDFTexture();
@@ -373,7 +370,7 @@ namespace Atom
     void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial)
     {
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
-        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex);
+        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex)->GetResource();
 
         // Transition textures
         for (auto& [_, texture] : material->GetTextures())
@@ -412,7 +409,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<TextureCube> Renderer::CreateEnvironmentMap(Ref<Texture2D> equirectTexture, u32 mapSize)
+    Ref<Texture> Renderer::CreateEnvironmentMap(Ref<Texture> equirectTexture, u32 mapSize, const char* debugName)
     {
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
@@ -425,18 +422,14 @@ namespace Atom
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
         TextureDescription envMapDesc;
+        envMapDesc.Format = equirectTexture->GetFormat();
         envMapDesc.Width = mapSize;
         envMapDesc.Height = mapSize;
-        envMapDesc.Format = equirectTexture->GetFormat();
+        envMapDesc.ArraySize = 6;
         envMapDesc.MipLevels = (u32)glm::log2((f32)mapSize) + 1;
-        envMapDesc.UsageFlags = equirectTexture->GetBindFlags();
+        envMapDesc.Flags = TextureFlags::ShaderResource | TextureFlags::UnorderedAccess | TextureFlags::CubeMap;
 
-        Vector<Vector<byte>> emptyCubeData[6];
-
-        for (u32 face = 0; face < 6; face++)
-            emptyCubeData[face].resize(envMapDesc.MipLevels);
-
-        Ref<TextureCube> envMapUnfiltered = CreateRef<TextureCube>(envMapDesc, emptyCubeData, false, fmt::format("{}(Unfiltered)", equirectTexture->GetAssetFilepath().stem().string()).c_str());
+        Ref<Texture> envMapUnfiltered = CreateRef<Texture>(envMapDesc, fmt::format("{}(Unfiltered)", debugName).c_str());
 
         {
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
@@ -455,7 +448,8 @@ namespace Atom
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV(), envMapUnfiltered->GetArrayUAV(mip) };
+                Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX, fmt::format("{}(Unfiltered)_Mip{}", debugName, mip).c_str());
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV(), mipView->GetUAV()};
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -477,7 +471,7 @@ namespace Atom
         //                                    Phase 2: Pre-filtering                                   //
         /////////////////////////////////////////////////////////////////////////////////////////////////
 
-        Ref<TextureCube> envMap = CreateRef<TextureCube>(envMapDesc, emptyCubeData, equirectTexture->IsReadable(), fmt::format("{}", equirectTexture->GetAssetFilepath().stem().string()).c_str());
+        Ref<Texture> envMap = CreateRef<Texture>(envMapDesc, fmt::format("{}", debugName).c_str());
 
         // Copy the first mip of every face from the unfiltered map
         {
@@ -513,7 +507,8 @@ namespace Atom
 
             for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
             {
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV(), envMap->GetArrayUAV(mip) };
+                Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX, fmt::format("{}_Mip{}", debugName, mip).c_str());
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV(), mipView->GetUAV() };
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -538,30 +533,11 @@ namespace Atom
         // Wait for all compute operations to complete
         computeQueue->Flush();
 
-        if (envMap->IsReadable())
-        {
-            // If the cubemap is readable, get generated data from the GPU and copy it to the CPU
-            for (u32 face = 0; face < 6; face++)
-            {
-                for (u32 mip = 0; mip < envMap->GetMipLevels(); mip++)
-                {
-                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(envMap.get(), mip, face);
-
-                    Vector<byte> pixelData(buffer->GetSize(), 0);
-                    void* mappedData = buffer->Map(0, 0);
-                    memcpy(pixelData.data(), mappedData, pixelData.size());
-                    buffer->Unmap();
-
-                    envMap->SetPixels(pixelData, face, mip);
-                }
-            }
-        }
-
         return envMap;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<TextureCube> Renderer::CreateIrradianceMap(Ref<TextureCube> environmentMap, u32 mapSize)
+    Ref<Texture> Renderer::CreateIrradianceMap(Ref<Texture> environmentMap, u32 mapSize, const char* debugName)
     {
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
@@ -577,20 +553,16 @@ namespace Atom
         gfxQueue->ExecuteCommandList(gfxCmdBuffer);
 
         TextureDescription irradianceMapDesc;
+        irradianceMapDesc.Format = TextureFormat::RGBA16F;
         irradianceMapDesc.Width = mapSize;
         irradianceMapDesc.Height = mapSize;
-        irradianceMapDesc.Format = TextureFormat::RGBA16F;
+        irradianceMapDesc.ArraySize = 6;
         irradianceMapDesc.MipLevels = 1;
-        irradianceMapDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+        irradianceMapDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource | TextureFlags::CubeMap;
 
-        Vector<Vector<byte>> emptyCubeData[6];
+        Ref<Texture> irradianceMap = CreateRef<Texture>(irradianceMapDesc, fmt::format("{}(IrradianceMap)", debugName).c_str());
 
-        for (u32 face = 0; face < 6; face++)
-            emptyCubeData[face].resize(irradianceMapDesc.MipLevels);
-
-        Ref<TextureCube> irradianceMap = CreateRef<TextureCube>(irradianceMapDesc, emptyCubeData, false, fmt::format("{}(IrradianceMap)", environmentMap->GetAssetFilepath().stem().string()).c_str());
-
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV(), irradianceMap->GetArrayUAV() };
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV(), irradianceMap->GetUAV() };
 
         DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
         Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -621,20 +593,17 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Renderer::CreateBRDFTexture()
+    Ref<Texture> Renderer::CreateBRDFTexture()
     {
         TextureDescription brdfDesc;
         brdfDesc.Width = 256;
         brdfDesc.Height = 256;
         brdfDesc.Format = TextureFormat::RG16F;
         brdfDesc.MipLevels = 1;
-        brdfDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
+        brdfDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
         brdfDesc.Wrap = TextureWrap::Clamp;
 
-        Vector<Vector<byte>> emptyData;
-        emptyData.resize(brdfDesc.MipLevels);
-
-        Ref<Texture2D> brdfTexture = CreateRef<Texture2D>(brdfDesc, emptyData, false, "BRDFTexture(Renderer)");
+        Ref<Texture> brdfTexture = CreateRef<Texture>(brdfDesc, "BRDFTexture(Renderer)");
 
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(1);
@@ -656,7 +625,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::GenerateMips(Ref<Texture2D> texture)
+    void Renderer::GenerateMips(Ref<Texture> texture)
     {
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
@@ -696,7 +665,8 @@ namespace Atom
 
         for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
         {
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV(), texture->GetUAV(mip) };
+            Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX, "MipView");
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV(), mipView->GetUAV() };
 
             DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
             Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -727,22 +697,6 @@ namespace Atom
         computeQueue->ExecuteCommandList(computeCmdBuffer);
         computeQueue->Flush();
 
-        if (texture->IsReadable())
-        {
-            // If the texture is readable, get generated data from the GPU and copy it to the CPU
-            for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
-            {
-                Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture.get(), mip);
-
-                Vector<byte> pixelData(buffer->GetSize(), 0);
-                void* mappedData = buffer->Map(0, 0);
-                memcpy(pixelData.data(), mappedData, pixelData.size());
-                buffer->Unmap();
-
-                texture->SetPixels(pixelData, mip);
-            }
-        }
-
         PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
     }
 
@@ -758,23 +712,23 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::UploadTextureData(const void* srcData, const Texture* texture, u32 mip, u32 slice)
+    void Renderer::UploadTextureData(const void* srcData, Ref<Texture> texture, u32 mip, u32 slice)
     {
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
         Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadTextureData(srcData, texture, mip, slice);
+        copyCommandBuffer->UploadTextureData(srcData, texture.get(), mip, slice);
         copyCommandBuffer->End();
         copyQueue->ExecuteCommandList(copyCommandBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<ReadbackBuffer> Renderer::ReadbackTextureData(const Texture* texture, u32 mip, u32 slice)
+    Ref<ReadbackBuffer> Renderer::ReadbackTextureData(Ref<Texture> texture, u32 mip, u32 slice)
     {
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
         Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
-        Ref<ReadbackBuffer> readbackBuffer = copyCommandBuffer->ReadbackTextureData(texture, mip, slice);
+        Ref<ReadbackBuffer> readbackBuffer = copyCommandBuffer->ReadbackTextureData(texture.get(), mip, slice);
         copyCommandBuffer->End();
         copyQueue->ExecuteCommandList(copyCommandBuffer);
         copyQueue->Flush();
@@ -818,25 +772,25 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Renderer::GetBRDF()
+    Ref<Texture> Renderer::GetBRDF()
     {
         return ms_BRDFTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Renderer::GetErrorTexture()
+    Ref<Texture> Renderer::GetErrorTexture()
     {
         return ms_ErrorTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture2D> Renderer::GetBlackTexture()
+    Ref<Texture> Renderer::GetBlackTexture()
     {
         return ms_BlackTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<TextureCube> Renderer::GetBlackTextureCube()
+    Ref<Texture> Renderer::GetBlackTextureCube()
     {
         return ms_BlackTextureCube;
     }

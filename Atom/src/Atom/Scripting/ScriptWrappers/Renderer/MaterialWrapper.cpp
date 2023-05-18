@@ -12,7 +12,7 @@ namespace Atom
         Material::Material()
         {
             Ref<GraphicsShader> shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader");
-            m_Material = CreateRef<Atom::Material>(shader, MaterialFlags::DepthTested);
+            m_Material = CreateRef<Atom::MaterialAsset>(shader, MaterialFlags::DepthTested);
             AssetManager::RegisterAsset(m_Material);
         }
 
@@ -21,11 +21,11 @@ namespace Atom
             : m_Material(nullptr)
         {
             if (assetUUID != 0)
-                m_Material = AssetManager::GetAsset<Atom::Material>(assetUUID, true);
+                m_Material = AssetManager::GetAsset<Atom::MaterialAsset>(assetUUID, true);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Material::Material(const Ref<Atom::Material>& material)
+        Material::Material(const Ref<Atom::MaterialAsset>& material)
             : m_Material(material)
         {
         }
@@ -106,28 +106,13 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void Material::SetTexture2D(const String& uniformName, Texture2D texture)
+        void Material::SetTexture(const String& uniformName, Texture2D texture)
         {
             if (m_Material)
             {
-                if (!HasTexture2D(uniformName))
+                if (!HasTexture(uniformName))
                 {
                     ATOM_ERROR("Texture2D with name \"{}\" doesn't exist", uniformName);
-                    return;
-                }
-
-                m_Material->SetTexture(uniformName.c_str(), texture.GetTexture());
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        void Material::SetTextureCube(const String& uniformName, TextureCube texture)
-        {
-            if (m_Material)
-            {
-                if (!HasTextureCube(uniformName))
-                {
-                    ATOM_ERROR("TextureCube with name \"{}\" doesn't exist", uniformName);
                     return;
                 }
 
@@ -235,13 +220,13 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Texture2D Material::GetTexture2D(const String& uniformName) const
+        Texture2D Material::GetTexture(const String& uniformName) const
         {
             if (m_Material)
             {
-                if (HasTexture2D(uniformName))
+                if (HasTexture(uniformName))
                 {
-                    Ref<Atom::Texture> texture = m_Material->GetTexture(uniformName.c_str());
+                    Ref<Atom::TextureAsset> texture = m_Material->GetTexture(uniformName.c_str());
                     return Texture2D(std::dynamic_pointer_cast<Atom::Texture2D>(texture));
                 }
                 else
@@ -251,25 +236,6 @@ namespace Atom
             }
 
             return Texture2D(nullptr);
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        TextureCube Material::GetTextureCube(const String& uniformName) const
-        {
-            if (m_Material)
-            {
-                if (HasTextureCube(uniformName))
-                {
-                    Ref<Atom::Texture> texture = m_Material->GetTexture(uniformName.c_str());
-                    return TextureCube(std::dynamic_pointer_cast<Atom::TextureCube>(texture));
-                }
-                else
-                {
-                    ATOM_ERROR("TextureCube with name \"{}\" doesn't exist", uniformName);
-                }
-            }
-
-            return TextureCube(nullptr);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -328,22 +294,11 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        bool Material::HasTexture2D(const String& uniformName) const
+        bool Material::HasTexture(const String& uniformName) const
         {
             if (m_Material)
             {
-                return m_Material->HasResource(uniformName.c_str(), ShaderResourceType::Texture2D);
-            }
-
-            return false;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        bool Material::HasTextureCube(const String& uniformName) const
-        {
-            if (m_Material)
-            {
-                return m_Material->HasResource(uniformName.c_str(), ShaderResourceType::TextureCube);
+                return m_Material->HasTexture(uniformName.c_str());
             }
 
             return false;
@@ -367,7 +322,7 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Ref<Atom::Material> Material::GetMaterial() const
+        Ref<Atom::MaterialAsset> Material::GetMaterial() const
         {
             return m_Material;
         }
@@ -380,7 +335,7 @@ namespace Atom
             if (uuid == 0)
                 return Material(nullptr);
 
-            return Material(AssetManager::GetAsset<Atom::Material>(uuid, true));
+            return Material(AssetManager::GetAsset<Atom::MaterialAsset>(uuid, true));
         }
     }
 }

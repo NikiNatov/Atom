@@ -56,7 +56,7 @@ namespace Atom
 
         Renderer::BeginRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
         cmdBuffer->SetGraphicsPipeline(m_SwapChainPipeline.get());
-        Renderer::RenderFullscreenQuad(cmdBuffer, m_SceneRenderer->GetFinalImage());
+        Renderer::RenderFullscreenQuad(cmdBuffer, m_SceneRenderer->GetFinalImage()->GetTexture());
         Renderer::EndRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
 
         cmdBuffer->End();

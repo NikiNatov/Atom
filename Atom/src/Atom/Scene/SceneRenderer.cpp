@@ -123,13 +123,13 @@ namespace Atom
         {
             const Submesh& submesh = submeshes[submeshIdx];
             const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
-            Ref<Material> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
+            Ref<MaterialAsset> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
             DrawCommand& drawCommand = m_DrawList.emplace_back();
             drawCommand.Mesh = mesh;
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
-            drawCommand.Material = material ? material : Renderer::GetErrorMaterial();
+            drawCommand.Material = material ? material->GetResource() : Renderer::GetErrorMaterial();
         }
     }
 
@@ -147,13 +147,13 @@ namespace Atom
         {
             const Submesh& submesh = submeshes[submeshIdx];
             const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
-            Ref<Material> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
+            Ref<MaterialAsset> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
             AnimatedDrawCommand& drawCommand = m_DrawListAnimated.emplace_back();
             drawCommand.Mesh = mesh;
             drawCommand.SubmeshIndex = submeshIdx;
             drawCommand.Transform = transform;
-            drawCommand.Material = material ? material : Renderer::GetErrorMaterialAnimated();
+            drawCommand.Material = material ? material->GetResource() : Renderer::GetErrorMaterialAnimated();
             drawCommand.BoneTransformIndex = m_BoneTransforms[currentFrameIdx].size();
         }
 
@@ -219,18 +219,20 @@ namespace Atom
         
         // Create descriptor tables for the frame
         auto& device = Device::Get();
+        Ref<TextureCube> envMap = m_Lights[currentFrameIdx]->GetEnvironmentMap();
+        Ref<Texture> irradianceMap = m_Lights[currentFrameIdx]->GetIrradianceMap();
 
         D3D12_CPU_DESCRIPTOR_HANDLE frameResourceDescriptors[] = { 
-            m_Lights[currentFrameIdx]->GetEnvironmentMap()->GetSRV(),
-            m_Lights[currentFrameIdx]->GetIrradianceMap()->GetSRV(),
+            envMap ? envMap->GetResource()->GetSRV() : Renderer::GetBlackTextureCube()->GetSRV(),
+            irradianceMap ? irradianceMap->GetSRV() : Renderer::GetBlackTextureCube()->GetSRV(),
             Renderer::GetBRDF()->GetSRV(),
             m_LightsSBs[currentFrameIdx]->GetSRV(),
             m_BoneTransformsSBs[currentFrameIdx]->GetSRV()
         };
 
         D3D12_CPU_DESCRIPTOR_HANDLE frameSamplerDescriptors[] = {
-            m_Lights[currentFrameIdx]->GetEnvironmentMap()->GetSampler(),
-            m_Lights[currentFrameIdx]->GetIrradianceMap()->GetSampler(),
+            envMap ? envMap->GetResource()->GetSampler() : Renderer::GetBlackTextureCube()->GetSampler(),
+            irradianceMap ? irradianceMap->GetSampler() : Renderer::GetBlackTextureCube()->GetSampler(),
             Renderer::GetBRDF()->GetSampler()
         };
 
@@ -311,7 +313,7 @@ namespace Atom
         Renderer::BeginRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
         commandBuffer->SetGraphicsPipeline(m_CompositePipeline.get());
         commandBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, m_FrameCBs[currentFrameIdx].get());
-        Renderer::RenderFullscreenQuad(commandBuffer, m_GeometryPipeline->GetFramebuffer()->GetColorAttachment(AttachmentPoint::Color0));
+        Renderer::RenderFullscreenQuad(commandBuffer, m_GeometryPipeline->GetFramebuffer()->GetAttachment(AttachmentPoint::Color0)->GetTexture());
         Renderer::EndRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
     }
 }

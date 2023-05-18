@@ -4,16 +4,7 @@
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/CommandBuffer.h"
-#include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Renderer.h"
-
-#include "Atom/Tools/ContentTools.h"
-#include "Atom/Asset/AssetManager.h"
-#include "Atom/Asset/AssetSerializer.h"
-
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
 
 #include <filesystem>
 

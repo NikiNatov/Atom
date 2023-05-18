@@ -9,131 +9,113 @@ namespace Atom
     {
         // -------------------------------------------------------- Texture ------------------------------------------------------------
         // -----------------------------------------------------------------------------------------------------------------------------
-        Texture::Texture(TextureType type, u32 width, u32 height, TextureFormat format, s32 mipLevels)
+        Texture::Texture(u32 width, u32 height, TextureFormat format, u32 mipCount, bool cpuReadable, bool gpuWritable)
         {
-            TextureDescription textureDesc;
-            textureDesc.Width = width;
-            textureDesc.Height = height;
-            textureDesc.Format = format;
-            textureDesc.MipLevels = mipLevels == -1 ? Atom::Texture::CalculateMaxMipCount(width, height) : mipLevels;
-            textureDesc.UsageFlags = TextureBindFlags::UnorderedAccess;
-
-            if (type == TextureType::Texture2D)
-            {
-                Vector<Vector<byte>> emptyData;
-                emptyData.resize(textureDesc.MipLevels);
-
-                Ref<Atom::Texture2D> texture = CreateRef<Atom::Texture2D>(textureDesc, emptyData, true);
-                AssetManager::RegisterAsset(texture);
-                m_Texture = texture;
-            }
-            else if (type == TextureType::TextureCube)
-            {
-                Vector<Vector<byte>> emptyCubeData[6];
-
-                for (u32 face = 0; face < 6; face++)
-                    emptyCubeData[face].resize(textureDesc.MipLevels);
-
-                Ref<Atom::TextureCube> texture = CreateRef<Atom::TextureCube>(textureDesc, emptyCubeData, true);
-                AssetManager::RegisterAsset(texture);
-                m_Texture = texture;
-            }
+            m_TextureAsset = CreateRef<Atom::Texture2D>(width, height, format, mipCount, cpuReadable, gpuWritable);
+            AssetManager::RegisterAsset(m_TextureAsset);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Texture::Texture(const Ref<Atom::Texture>& texture)
-            : m_Texture(texture)
+        Texture::Texture(u32 cubeSize, TextureFormat format, u32 mipCount, bool cpuReadable, bool gpuWritable)
         {
+            m_TextureAsset = CreateRef<Atom::TextureCube>(cubeSize, format, mipCount, cpuReadable, gpuWritable);
+            AssetManager::RegisterAsset(m_TextureAsset);
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        Texture::Texture(const Ref<Atom::TextureAsset>& texture)
+            : m_TextureAsset(texture)
+        {
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        void Texture::UpdateGPUData(bool makeNonReadable)
+        {
+            m_TextureAsset->UpdateGPUData(makeNonReadable);
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        bool Texture::IsCpuReadable() const
+        {
+            return m_TextureAsset->IsCpuReadable();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        bool Texture::IsGpuWritable() const
+        {
+            return m_TextureAsset->IsGpuWritable();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         void Texture::SetFilter(TextureFilter filter)
         {
-            if (m_Texture)
-            {
-                m_Texture->SetFilter(filter);
-            }
+            m_TextureAsset->SetFilter(filter);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         void Texture::SetWrap(TextureWrap wrap)
         {
-            if (m_Texture)
-            {
-                m_Texture->SetWrap(wrap);
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        u32 Texture::GetWidth() const
-        {
-            if (m_Texture)
-            {
-                return m_Texture->GetWidth();
-            }
-
-            return 0;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        u32 Texture::GetHeight() const
-        {
-            if (m_Texture)
-            {
-                return m_Texture->GetHeight();
-            }
-
-            return 0;
+            m_TextureAsset->SetWrap(wrap);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         TextureFormat Texture::GetFormat() const
         {
-            if (m_Texture)
-            {
-                return m_Texture->GetFormat();
-            }
+            return m_TextureAsset->GetFormat();
+        }
 
-            return TextureFormat::None;
+        // -----------------------------------------------------------------------------------------------------------------------------
+        u32 Texture::GetWidth() const
+        {
+            return m_TextureAsset->GetWidth();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        u32 Texture::GetHeight() const
+        {
+            return m_TextureAsset->GetHeight();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        u32 Texture::GetDepth() const
+        {
+            return m_TextureAsset->GetDepth();
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------------------
+        u32 Texture::GetArraySize() const
+        {
+            return m_TextureAsset->GetArraySize();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         u32 Texture::GetMipLevels() const
         {
-            if (m_Texture)
-            {
-                return m_Texture->GetMipLevels();
-            }
-
-            return 0;
+            return m_TextureAsset->GetMipLevels();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         TextureFilter Texture::GetFilter() const
         {
-            if (m_Texture)
-            {
-                return m_Texture->GetFilter();
-            }
-
-            return TextureFilter::None;
+            return m_TextureAsset->GetFilter();
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         TextureWrap Texture::GetWrap() const
         {
-            if (m_Texture)
-            {
-                return m_Texture->GetWrap();
-            }
+            return m_TextureAsset->GetWrap();
+        }
 
-            return TextureWrap::None;
+        // -----------------------------------------------------------------------------------------------------------------------------
+        UUID Texture::GetUUID() const
+        {
+            return m_TextureAsset->GetUUID();
         }
 
         // -------------------------------------------------------- Texture2D ----------------------------------------------------------
         // -----------------------------------------------------------------------------------------------------------------------------
-        Texture2D::Texture2D(u32 width, u32 height, TextureFormat format, s32 mipLevels)
-            : Texture(TextureType::Texture2D, width, height, format, mipLevels)
+        Texture2D::Texture2D(u32 width, u32 height, TextureFormat format, u32 mipLevels, bool cpuReadable, bool gpuWritable)
+            : Texture(width, height, format, mipLevels, cpuReadable, gpuWritable)
         {
         }
 
@@ -142,7 +124,7 @@ namespace Atom
             : Texture(nullptr)
         {
             if(assetUUID != 0)
-                m_Texture = AssetManager::GetAsset<Atom::Texture2D>(assetUUID, true);
+                m_TextureAsset = AssetManager::GetAsset<Atom::Texture2D>(assetUUID, true);
         }
         
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -152,55 +134,21 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void Texture2D::UpdateGPUData(bool makeNonReadable)
-        {
-            if (m_Texture)
-            {
-                GetTexture()->UpdateGPUData(makeNonReadable);
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        bool Texture2D::IsReadable() const
-        {
-            if (m_Texture)
-            {
-                return GetTexture()->IsReadable();
-            }
-
-            return false;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
         void Texture2D::SetPixels(const Vector<byte>& pixels, u32 mipLevel)
         {
-            if (m_Texture)
-            {
-                GetTexture()->SetPixels(pixels, mipLevel);
-            }
+            GetTexture()->SetPixels(pixels, mipLevel);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         const Vector<byte>& Texture2D::GetPixels(u32 mipLevel)
         {
-            if (m_Texture)
-            {
-                return GetTexture()->GetPixels(mipLevel);
-            }
-
-            return {};
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        UUID Texture2D::GetUUID() const
-        {
-            return m_Texture ? GetTexture()->GetUUID() : 0;
+            return GetTexture()->GetPixels(mipLevel);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         Ref<Atom::Texture2D> Texture2D::GetTexture() const
         {
-            return std::dynamic_pointer_cast<Atom::Texture2D>(m_Texture);
+            return std::static_pointer_cast<Atom::Texture2D>(m_TextureAsset);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -216,8 +164,8 @@ namespace Atom
 
         // ------------------------------------------------------- TextureCube ---------------------------------------------------------
         // -----------------------------------------------------------------------------------------------------------------------------
-        TextureCube::TextureCube(u32 size, TextureFormat format, s32 mipLevels)
-            : Texture(TextureType::TextureCube, size, size, format, mipLevels)
+        TextureCube::TextureCube(u32 size, TextureFormat format, u32 mipLevels, bool cpuReadable, bool gpuWritable)
+            : Texture(size, format, mipLevels, cpuReadable, gpuWritable)
         {
         }
 
@@ -226,7 +174,7 @@ namespace Atom
             : Texture(nullptr)
         {
             if (assetUUID != 0)
-                m_Texture = AssetManager::GetAsset<Atom::TextureCube>(assetUUID, true);
+                m_TextureAsset = AssetManager::GetAsset<Atom::TextureCube>(assetUUID, true);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
@@ -236,55 +184,21 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        void TextureCube::UpdateGPUData(bool makeNonReadable)
-        {
-            if (m_Texture)
-            {
-                GetTexture()->UpdateGPUData(makeNonReadable);
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        bool TextureCube::IsReadable() const
-        {
-            if (m_Texture)
-            {
-                return GetTexture()->IsReadable();
-            }
-
-            return false;
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
         void TextureCube::SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel)
         {
-            if (m_Texture)
-            {
-                GetTexture()->SetPixels(pixels, cubeFace, mipLevel);
-            }
+            GetTexture()->SetPixels(pixels, cubeFace, mipLevel);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         const Vector<byte>& TextureCube::GetPixels(u32 cubeFace, u32 mipLevel)
         {
-            if (m_Texture)
-            {
-                return GetTexture()->GetPixels(cubeFace, mipLevel);
-            }
-
-            return {};
-        }
-
-        // -----------------------------------------------------------------------------------------------------------------------------
-        UUID TextureCube::GetUUID() const
-        {
-            return m_Texture ? GetTexture()->GetUUID() : 0;
+            return GetTexture()->GetPixels(cubeFace, mipLevel);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         Ref<Atom::TextureCube> TextureCube::GetTexture() const
         {
-            return std::dynamic_pointer_cast<Atom::TextureCube>(m_Texture);
+            return std::static_pointer_cast<Atom::TextureCube>(m_TextureAsset);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------

@@ -1,8 +1,10 @@
 #include "atompch.h"
 #include "AssetSerializer.h"
 
+#include "Atom/Asset/TextureAsset.h"
+#include "Atom/Asset/MaterialAsset.h"
+
 #include "Atom/Renderer/Renderer.h"
-#include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Animation.h"
@@ -38,19 +40,20 @@ namespace Atom
             SerializeMetaData(ofs, asset->m_MetaData);
         }
 
-        u32 pixelDataSize = asset->m_PixelData.size();
-        ofs.write((char*)&asset->m_Description.Format, sizeof(TextureFormat));
-        ofs.write((char*)&asset->m_Description.Width, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.Height, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.MipLevels, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.Filter, sizeof(TextureFilter));
-        ofs.write((char*)&asset->m_Description.Wrap, sizeof(TextureWrap));
-        ofs.write((char*)&asset->m_Description.UsageFlags, sizeof(TextureBindFlags));
-        ofs.write((char*)&asset->m_IsReadable, sizeof(bool));
+        const TextureDescription& desc = asset->m_TextureResource->GetDescription();
+        bool isGpuWritable = asset->IsGpuWritable();
+        ofs.write((char*)&desc.Format, sizeof(TextureFormat));
+        ofs.write((char*)&desc.Width, sizeof(u32));
+        ofs.write((char*)&desc.Height, sizeof(u32));
+        ofs.write((char*)&desc.MipLevels, sizeof(u32));
+        ofs.write((char*)&desc.Filter, sizeof(TextureFilter));
+        ofs.write((char*)&desc.Wrap, sizeof(TextureWrap));
+        ofs.write((char*)&asset->m_CpuReadable, sizeof(bool));
+        ofs.write((char*)&isGpuWritable, sizeof(bool));
 
-        if (asset->m_IsReadable)
+        if (asset->m_CpuReadable)
         {
-            for (u32 mip = 0; mip < asset->m_Description.MipLevels; mip++)
+            for (u32 mip = 0; mip < asset->GetMipLevels(); mip++)
             {
                 u32 pixelDataSize = asset->m_PixelData[mip].size();
                 ofs.write((char*)&pixelDataSize, sizeof(u32));
@@ -59,9 +62,9 @@ namespace Atom
         }
         else
         {
-            for (u32 mip = 0; mip < asset->m_Description.MipLevels; mip++)
+            for (u32 mip = 0; mip < asset->GetMipLevels(); mip++)
             {
-                Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(asset.get(), mip);
+                Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(asset->GetResource(), mip);
                 void* mappedData = buffer->Map(0, 0);
 
                 u32 pixelDataSize = buffer->GetSize();
@@ -101,24 +104,26 @@ namespace Atom
             SerializeMetaData(ofs, asset->m_MetaData);
         }
 
-        ofs.write((char*)&asset->m_Description.Format, sizeof(TextureFormat));
-        ofs.write((char*)&asset->m_Description.Width, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.Height, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.MipLevels, sizeof(u32));
-        ofs.write((char*)&asset->m_Description.Filter, sizeof(TextureFilter));
-        ofs.write((char*)&asset->m_Description.Wrap, sizeof(TextureWrap));
-        ofs.write((char*)&asset->m_Description.UsageFlags, sizeof(TextureBindFlags));
-        ofs.write((char*)&asset->m_IsReadable, sizeof(bool));
+        const TextureDescription& desc = asset->m_TextureResource->GetDescription();
+        bool isGpuWritable = asset->IsGpuWritable();
+        ofs.write((char*)&desc.Format, sizeof(TextureFormat));
+        ofs.write((char*)&desc.Width, sizeof(u32));
+        ofs.write((char*)&desc.MipLevels, sizeof(u32));
+        ofs.write((char*)&desc.Filter, sizeof(TextureFilter));
+        ofs.write((char*)&desc.Wrap, sizeof(TextureWrap));
+        ofs.write((char*)&asset->m_CpuReadable, sizeof(bool));
+        ofs.write((char*)&isGpuWritable, sizeof(bool));
 
-        if (asset->m_IsReadable)
+        if (asset->m_CpuReadable)
         {
             for (u32 face = 0; face < 6; face++)
             {
-                for (u32 mip = 0; mip < asset->m_Description.MipLevels; mip++)
+                for (u32 mip = 0; mip < asset->GetMipLevels(); mip++)
                 {
-                    u32 pixelDataSize = asset->m_PixelData[face][mip].size();
+                    u32 subresource = Texture::CalculateSubresource(mip, asset->GetMipLevels(), face, 6);
+                    u32 pixelDataSize = asset->m_PixelData[subresource].size();
                     ofs.write((char*)&pixelDataSize, sizeof(u32));
-                    ofs.write((char*)asset->m_PixelData[face][mip].data(), pixelDataSize);
+                    ofs.write((char*)asset->m_PixelData[subresource].data(), pixelDataSize);
                 }
             }
         }
@@ -126,9 +131,9 @@ namespace Atom
         {
             for (u32 face = 0; face < 6; face++)
             {
-                for (u32 mip = 0; mip < asset->m_Description.MipLevels; mip++)
+                for (u32 mip = 0; mip < asset->GetMipLevels(); mip++)
                 {
-                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(asset.get(), mip, face);
+                    Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(asset->GetResource(), mip, face);
                     void* mappedData = buffer->Map(0, 0);
 
                     u32 pixelDataSize = buffer->GetSize();
@@ -145,7 +150,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Material> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<MaterialAsset> asset)
     {
         std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
@@ -170,46 +175,32 @@ namespace Atom
         }
 
         // Serialize shader name
-        u32 shaderNameLength = asset->m_Shader->GetName().length();
+        u32 shaderNameLength = asset->GetShader()->GetName().length();
         ofs.write((char*)&shaderNameLength, sizeof(u32));
-        ofs.write(asset->m_Shader->GetName().data(), shaderNameLength);
+        ofs.write(asset->GetShader()->GetName().data(), shaderNameLength);
 
         // Serialize flags
         MaterialFlags flags = asset->GetFlags();
         ofs.write((char*)&flags, sizeof(MaterialFlags));
 
         // Serialize constants data
-        u32 bufferSize = asset->m_ConstantsData.size();
-        ofs.write((char*)&bufferSize, sizeof(u32));
-        ofs.write((char*)asset->m_ConstantsData.data(), bufferSize);
+        ofs.write((char*)asset->GetConstantsData().data(), asset->GetConstantsData().size());
 
         // Serialize textures
-        u32 textureCount = asset->GetTextures().size();
+        u32 textureCount = asset->GetTextureHandles().size();
         ofs.write((char*)&textureCount, sizeof(u32));
 
-        for (auto& [textureRegister, texture] : asset->GetTextures())
+        for (auto& [textureRegister, textureAsset] : asset->GetTextureHandles())
         {
             UUID textureHandle = 0;
 
-            if (texture)
+            if (Ref<Texture2D> texture = std::dynamic_pointer_cast<Texture2D>(textureAsset))
             {
-                switch (texture->GetType())
-                {
-                    case TextureType::Texture2D:
-                    {
-                        Ref<Texture2D> texture = std::dynamic_pointer_cast<Texture2D>(asset->m_Textures[textureRegister]);
-                        ATOM_ENGINE_ASSERT(texture);
-                        textureHandle = texture->GetUUID();
-                        break;
-                    }
-                    case TextureType::TextureCube:
-                    {
-                        Ref<TextureCube> texture = std::dynamic_pointer_cast<TextureCube>(asset->m_Textures[textureRegister]);
-                        ATOM_ENGINE_ASSERT(texture);
-                        textureHandle = texture->GetUUID();
-                        break;
-                    }
-                }
+                textureHandle = texture->GetUUID();
+            }
+            else if (Ref<TextureCube> texture = std::dynamic_pointer_cast<TextureCube>(textureAsset))
+            {
+                textureHandle = texture->GetUUID();
             }
 
             ofs.write((char*)&textureRegister, sizeof(u32));
@@ -268,7 +259,7 @@ namespace Atom
         {
             UUID materialUUID = 0;
 
-            if (Ref<Material> material = asset->m_MaterialTable->GetMaterial(submeshIdx))
+            if (Ref<MaterialAsset> material = asset->m_MaterialTable->GetMaterial(submeshIdx))
                 materialUUID = material->m_MetaData.UUID;
 
             ofs.write((char*)&materialUUID, sizeof(u64));
@@ -703,21 +694,24 @@ namespace Atom
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::Texture2D);
 
-        TextureDescription textureDesc;
-        bool isReadable;
+        TextureFormat format;
+        u32 width, height, mipLevels;
+        TextureFilter filter;
+        TextureWrap wrap;
+        bool isCpuReadable, isGpuWritable;
         Vector<Vector<byte>> pixelData;
 
-        ifs.read((char*)&textureDesc.Format, sizeof(TextureFormat));
-        ifs.read((char*)&textureDesc.Width, sizeof(u32));
-        ifs.read((char*)&textureDesc.Height, sizeof(u32));
-        ifs.read((char*)&textureDesc.MipLevels, sizeof(u32));
-        ifs.read((char*)&textureDesc.Filter, sizeof(TextureFilter));
-        ifs.read((char*)&textureDesc.Wrap, sizeof(TextureWrap));
-        ifs.read((char*)&textureDesc.UsageFlags, sizeof(TextureBindFlags));
-        ifs.read((char*)&isReadable, sizeof(bool));
+        ifs.read((char*)&format, sizeof(TextureFormat));
+        ifs.read((char*)&width, sizeof(u32));
+        ifs.read((char*)&height, sizeof(u32));
+        ifs.read((char*)&mipLevels, sizeof(u32));
+        ifs.read((char*)&filter, sizeof(TextureFilter));
+        ifs.read((char*)&wrap, sizeof(TextureWrap));
+        ifs.read((char*)&isCpuReadable, sizeof(bool));
+        ifs.read((char*)&isGpuWritable, sizeof(bool));
 
-        pixelData.resize(textureDesc.MipLevels);
-        for (u32 mip = 0; mip < textureDesc.MipLevels; mip++)
+        pixelData.resize(mipLevels);
+        for (u32 mip = 0; mip < mipLevels; mip++)
         {
             u32 pixelDataSize;
             ifs.read((char*)&pixelDataSize, sizeof(u32));
@@ -725,7 +719,7 @@ namespace Atom
             ifs.read((char*)pixelData[mip].data(), pixelDataSize);
         }
 
-        Ref<Texture2D> asset = CreateRef<Texture2D>(textureDesc, pixelData, isReadable, metaData.SourceFilepath.stem().string().c_str());
+        Ref<Texture2D> asset = CreateRef<Texture2D>(width, height, format, mipLevels, isCpuReadable, isGpuWritable, pixelData);
         asset->m_MetaData = metaData;
 
         return asset;
@@ -745,33 +739,36 @@ namespace Atom
         DeserializeMetaData(ifs, metaData);
         ATOM_ENGINE_ASSERT(metaData.Type == AssetType::TextureCube);
 
-        TextureDescription textureDesc;
-        bool isReadable;
-        Vector<Vector<byte>> pixelData[6];
+        TextureFormat format;
+        u32 size, mipLevels;
+        TextureFilter filter;
+        TextureWrap wrap;
+        bool isCpuReadable, isGpuWritable;
+        Vector<Vector<byte>> pixelData;
 
-        ifs.read((char*)&textureDesc.Format, sizeof(TextureFormat));
-        ifs.read((char*)&textureDesc.Width, sizeof(u32));
-        ifs.read((char*)&textureDesc.Height, sizeof(u32));
-        ifs.read((char*)&textureDesc.MipLevels, sizeof(u32));
-        ifs.read((char*)&textureDesc.Filter, sizeof(TextureFilter));
-        ifs.read((char*)&textureDesc.Wrap, sizeof(TextureWrap));
-        ifs.read((char*)&textureDesc.UsageFlags, sizeof(TextureBindFlags));
-        ifs.read((char*)&isReadable, sizeof(bool));
+        ifs.read((char*)&format, sizeof(TextureFormat));
+        ifs.read((char*)&size, sizeof(u32));
+        ifs.read((char*)&mipLevels, sizeof(u32));
+        ifs.read((char*)&filter, sizeof(TextureFilter));
+        ifs.read((char*)&wrap, sizeof(TextureWrap));
+        ifs.read((char*)&isCpuReadable, sizeof(bool));
+        ifs.read((char*)&isGpuWritable, sizeof(bool));
+
+        pixelData.resize(mipLevels * 6);
 
         for (u32 face = 0; face < 6; face++)
         {
-            pixelData[face].resize(textureDesc.MipLevels);
-
-            for (u32 mip = 0; mip < textureDesc.MipLevels; mip++)
+            for (u32 mip = 0; mip < mipLevels; mip++)
             {
+                u32 subresource = Texture::CalculateSubresource(mip, mipLevels, face, 6);
                 u32 pixelDataSize;
                 ifs.read((char*)&pixelDataSize, sizeof(u32));
-                pixelData[face][mip].resize(pixelDataSize, 0);
-                ifs.read((char*)pixelData[face][mip].data(), pixelDataSize);
+                pixelData[subresource].resize(pixelDataSize, 0);
+                ifs.read((char*)pixelData[subresource].data(), pixelDataSize);
             }
         }
 
-        Ref<TextureCube> asset = CreateRef<TextureCube>(textureDesc, pixelData, isReadable, metaData.SourceFilepath.stem().string().c_str());
+        Ref<TextureCube> asset = CreateRef<TextureCube>(size, format, mipLevels, isCpuReadable, isGpuWritable, pixelData);
         asset->m_MetaData = metaData;
 
         return asset;
@@ -779,7 +776,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    Ref<Material> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    Ref<MaterialAsset> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
     {
         std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
 
@@ -798,7 +795,7 @@ namespace Atom
         String shaderName(shaderNameLength, '\0');
         ifs.read(shaderName.data(), shaderNameLength);
 
-        Ref<Material> asset = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::None);
+        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::None);
         asset->m_MetaData = metaData;
 
         // Deserialize flags
@@ -807,11 +804,7 @@ namespace Atom
         asset->SetFlags(flags);
 
         // Deserialize uniform buffers
-        u32 bufferSize;
-        ifs.read((char*)&bufferSize, sizeof(u32));
-
-        asset->m_ConstantsData.resize(bufferSize, 0);
-        ifs.read((char*)asset->m_ConstantsData.data(), bufferSize);
+        ifs.read((char*)asset->GetConstantsData().data(), asset->GetConstantsData().size());
 
         // Deserialize textures
         u32 textureCount;
@@ -825,11 +818,12 @@ namespace Atom
             UUID textureHandle;
             ifs.read((char*)&textureHandle, sizeof(u64));
             
-            Ref<Texture> texture = textureHandle != 0 ? AssetManager::GetAsset<Texture>(textureHandle, true) : nullptr;
-            asset->m_Textures[textureRegister] = texture;
+            Ref<TextureAsset> texture = textureHandle != 0 ? AssetManager::GetAsset<TextureAsset>(textureHandle, true) : nullptr;
+            if(texture)
+                asset->SetTexture(textureRegister, texture);
         }
 
-        asset->UpdateDescriptorTables();
+        asset->m_MaterialResource->UpdateDescriptorTables();
 
         return asset;
     }
@@ -893,7 +887,7 @@ namespace Atom
             UUID materialUUID;
             ifs.read((char*)&materialUUID, sizeof(u64));
 
-            meshDesc.MaterialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<Material>(materialUUID, true));
+            meshDesc.MaterialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<MaterialAsset>(materialUUID, true));
         }
 
         Ref<Mesh> asset = CreateRef<Mesh>(meshDesc, isReadable);

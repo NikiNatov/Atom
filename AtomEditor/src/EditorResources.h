@@ -7,21 +7,21 @@ namespace Atom
     class EditorResources
     {
     public:
-        inline static Ref<Texture2D> InfoIcon = nullptr;
-        inline static Ref<Texture2D> WarningIcon = nullptr;
-        inline static Ref<Texture2D> ErrorIcon = nullptr;
-        inline static Ref<Texture2D> ScenePlayIcon = nullptr;
-        inline static Ref<Texture2D> SceneStopIcon = nullptr;
-        inline static Ref<Texture2D> ScenePauseIcon = nullptr;
-        inline static Ref<Texture2D> FolderIcon = nullptr;
-        inline static Ref<Texture2D> Texture2DAssetIcon = nullptr;
-        inline static Ref<Texture2D> TextureCubeAssetIcon = nullptr;
-        inline static Ref<Texture2D> MeshAssetIcon = nullptr;
-        inline static Ref<Texture2D> MaterialAssetIcon = nullptr;
-        inline static Ref<Texture2D> SceneAssetIcon = nullptr;
-        inline static Ref<Texture2D> AnimationAssetIcon = nullptr;
-        inline static Ref<Texture2D> SkeletonAssetIcon = nullptr;
-        inline static Ref<Texture2D> AnimationControllerAssetIcon = nullptr;
+        inline static Ref<Texture> InfoIcon = nullptr;
+        inline static Ref<Texture> WarningIcon = nullptr;
+        inline static Ref<Texture> ErrorIcon = nullptr;
+        inline static Ref<Texture> ScenePlayIcon = nullptr;
+        inline static Ref<Texture> SceneStopIcon = nullptr;
+        inline static Ref<Texture> ScenePauseIcon = nullptr;
+        inline static Ref<Texture> FolderIcon = nullptr;
+        inline static Ref<Texture> Texture2DAssetIcon = nullptr;
+        inline static Ref<Texture> TextureCubeAssetIcon = nullptr;
+        inline static Ref<Texture> MeshAssetIcon = nullptr;
+        inline static Ref<Texture> MaterialAssetIcon = nullptr;
+        inline static Ref<Texture> SceneAssetIcon = nullptr;
+        inline static Ref<Texture> AnimationAssetIcon = nullptr;
+        inline static Ref<Texture> SkeletonAssetIcon = nullptr;
+        inline static Ref<Texture> AnimationControllerAssetIcon = nullptr;
 
     public:
         static void Initialize()

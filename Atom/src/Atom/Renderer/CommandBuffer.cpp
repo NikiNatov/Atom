@@ -59,52 +59,49 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        // Set color attachments
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
         rtvHandles.reserve(AttachmentPoint::NumColorAttachments);
 
-        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
+        D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle{ 0 };
+
+        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
         {
-            auto colorAttachment = framebuffer->GetColorAttachment((AttachmentPoint)i);
-            if (colorAttachment)
+            if (auto attachment = framebuffer->GetAttachment((AttachmentPoint)i))
             {
-                m_ResourceStateTracker.AddTransition(colorAttachment->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+                bool isDepth = i == AttachmentPoint::Depth;
 
-                if (clear)
+                if (i == AttachmentPoint::Depth)
                 {
-                    m_CommandList->ClearRenderTargetView(colorAttachment->GetRTV(), glm::value_ptr(framebuffer->GetClearColor()), 0, nullptr);
+                    m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+                    if (clear)
+                    {
+                        D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
+
+                        if (attachment->GetFormat() == TextureFormat::Depth24Stencil8)
+                            clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
+
+                        const auto& clearVal = attachment->GetClearValue().DepthStencil;
+                        m_CommandList->ClearDepthStencilView(attachment->GetDSV(), clearFlags, clearVal.DepthValue, clearVal.StencilValue, 0, nullptr);
+                    }
+
+                    dsvHandle = attachment->GetDSV();
                 }
-
-                rtvHandles.push_back(colorAttachment->GetRTV());
-            }
-        }
-
-        // Set depth buffer
-        D3D12_CPU_DESCRIPTOR_HANDLE* dsvHandle = nullptr;
-        auto depthBuffer = framebuffer->GetDepthAttachment();
-
-        if (depthBuffer)
-        {
-            m_ResourceStateTracker.AddTransition(depthBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-            if (clear)
-            {
-                D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
-                if (depthBuffer->GetFormat() == TextureFormat::Depth24Stencil8)
+                else
                 {
-                    clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
+                    m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+                    if (clear)
+                        m_CommandList->ClearRenderTargetView(attachment->GetRTV(), glm::value_ptr(attachment->GetClearValue().Color), 0, nullptr);
+
+                    rtvHandles.push_back(attachment->GetRTV());
                 }
-
-                const DepthStencilValue& clearValue = depthBuffer->GetClearValue().DepthStencil;
-                m_CommandList->ClearDepthStencilView(depthBuffer->GetDSV(), clearFlags, clearValue.DepthValue, clearValue.StencilValue, 0, nullptr);
             }
-
-            dsvHandle = &depthBuffer->GetDSV();
         }
 
         m_CommandList->RSSetViewports(1, &framebuffer->GetViewport());
         m_CommandList->RSSetScissorRects(1, &framebuffer->GetScissorRect());
-        m_CommandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), false, dsvHandle);
+        m_CommandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), false, dsvHandle.ptr != 0 ? &dsvHandle : nullptr);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -112,19 +109,11 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
+        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
         {
-            auto colorAttachment = framebuffer->GetColorAttachment((AttachmentPoint)i);
-            if (colorAttachment)
-            {
-                m_ResourceStateTracker.AddTransition(colorAttachment->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COMMON);
-            }
-        }
-
-        auto depthBuffer = framebuffer->GetDepthAttachment();
-        if (depthBuffer)
-        {
-            m_ResourceStateTracker.AddTransition(depthBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_READ);
+            bool isDepth = i == AttachmentPoint::Depth;
+            if(auto attachment = framebuffer->GetAttachment((AttachmentPoint)i))
+                m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), isDepth ? D3D12_RESOURCE_STATE_DEPTH_READ : D3D12_RESOURCE_STATE_COMMON);
         }
 
         m_ResourceStateTracker.CommitBarriers();
@@ -354,7 +343,7 @@ namespace Atom
         if (data)
         {
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-            u32 subresourceIdx = D3D12CalcSubresource(mip, arraySlice, 0, texture->GetMipLevels(), texture->GetType() == TextureType::TextureCube ? 6 : 1);
+            u32 subresourceIdx = Texture::CalculateSubresource(mip, arraySlice, texture->GetMipLevels(), texture->GetArraySize());
             u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
             CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 
@@ -387,7 +376,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
         u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-        u32 subresourceIdx = D3D12CalcSubresource(mip, arraySlice, 0, texture->GetMipLevels(), texture->GetType() == TextureType::TextureCube ? 6 : 1);
+        u32 subresourceIdx = Texture::CalculateSubresource(mip, arraySlice, texture->GetMipLevels(), texture->GetArraySize());
 
         BufferDescription readbackBufferDesc;
         readbackBufferDesc.ElementSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);

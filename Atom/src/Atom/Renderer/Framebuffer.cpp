@@ -67,9 +67,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const glm::vec4& Framebuffer::GetClearColor() const
+    const ClearValue& Framebuffer::GetClearValue(AttachmentPoint attachment) const
     {
-        return m_Description.ClearColor;
+        return m_Description.Attachments[attachment].ClearVal;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -79,20 +79,14 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<RenderTexture2D> Framebuffer::GetColorAttachment(AttachmentPoint attachment) const
+    Ref<RenderSurface> Framebuffer::GetAttachment(AttachmentPoint attachment) const
     {
         if (m_Description.SwapChainFrameBuffer)
         {
             return attachment == AttachmentPoint::Color0 ? Application::Get().GetWindow().GetSwapChain()->GetBackBuffer() : nullptr;
         }
 
-        return m_ColorAttachments[attachment];
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<DepthBuffer> Framebuffer::GetDepthAttachment() const
-    {
-        return m_DepthAttachment;
+        return m_Attachments[attachment];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -120,8 +114,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Framebuffer::Invalidate()
     {
-        for (u32 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
-            m_ColorAttachments[i] = nullptr;
+        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
+            m_Attachments[i] = nullptr;
 
         for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
         {
@@ -136,17 +130,11 @@ namespace Atom
                 attachmentDesc.MipLevels = 1;
                 attachmentDesc.Filter = m_Description.Attachments[i].Filter;
                 attachmentDesc.Wrap = m_Description.Attachments[i].Wrap;
-                attachmentDesc.UsageFlags = (isDepthAttachment ? TextureBindFlags::DepthStencil : TextureBindFlags::RenderTarget);
+                attachmentDesc.Flags = (isDepthAttachment ? TextureFlags::DepthStencil : TextureFlags::RenderTarget) | TextureFlags::ShaderResource;
+                attachmentDesc.ClearValue = m_Description.Attachments[i].ClearVal;
 
-                if (isDepthAttachment)
-                {
-                    m_DepthAttachment = CreateRef<DepthBuffer>(attachmentDesc, fmt::format("{}DepthAttachment", m_Name.c_str()).c_str());
-                }
-                else
-                {
-                    attachmentDesc.ClearValue.Color = m_Description.ClearColor;
-                    m_ColorAttachments[i] = CreateRef<RenderTexture2D>(attachmentDesc, m_Description.SwapChainFrameBuffer, fmt::format("{}ColorAttachment[{}]", m_Name.c_str(), i).c_str());
-                }
+                Ref<Texture> texture = CreateRef<Texture>(attachmentDesc, fmt::format("{}_{}", m_Name.c_str(), isDepthAttachment ? "DepthAttachment" : "ColorAttachment").c_str());
+                m_Attachments[i] = CreateRef<RenderSurface>(texture, 0, 0);
             }
         }
 

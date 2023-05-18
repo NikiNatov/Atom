@@ -2,7 +2,6 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
-#include "Atom/Asset/Asset.h"
 
 #include <glm/glm.hpp>
 
@@ -12,8 +11,7 @@ namespace Atom
     {
         None = 0,
         Texture2D,
-        TextureCube,
-        SwapChainBuffer
+        Texture3D,
     };
 
     enum class TextureFormat
@@ -40,16 +38,6 @@ namespace Atom
         None = 0,
         Clamp, Repeat
     };
-
-    enum class TextureBindFlags : u8
-    {
-        None = 0,
-        UnorderedAccess = BIT(1),
-        RenderTarget = BIT(2),
-        DepthStencil = BIT(3)
-    };
-
-    IMPL_ENUM_OPERATORS(TextureBindFlags);
 
     struct DepthStencilValue
     {
@@ -78,24 +66,43 @@ namespace Atom
             : DepthStencil(depthValue, stencilValue) {}
     };
 
+    enum class TextureFlags : u8
+    {
+        None            = 0,
+        ShaderResource  = BIT(0),
+        UnorderedAccess = BIT(1),
+        RenderTarget    = BIT(2),
+        DepthStencil    = BIT(3),
+        SwapChainBuffer = BIT(4),
+        CubeMap         = BIT(5),
+        
+        DefaultFlags = ShaderResource
+    };
+
+    IMPL_ENUM_OPERATORS(TextureFlags);
+
     struct TextureDescription
     {
+        TextureType Type = TextureType::Texture2D;
         TextureFormat Format = TextureFormat::RGBA8;
-        u32 Width = 0;
-        u32 Height = 0;
+        u32 Width = 1;
+        u32 Height = 1;
+        u32 Depth = 1;
+        u32 ArraySize = 1;
         u32 MipLevels = 1;
-        TextureBindFlags UsageFlags = TextureBindFlags::None;
+        TextureFlags Flags = TextureFlags::DefaultFlags;
+        ClearValue ClearValue = {};
         TextureFilter Filter = TextureFilter::Linear;
         TextureWrap Wrap = TextureWrap::Repeat;
-        ClearValue ClearValue = {};
     };
 
     class Texture
     {
     public:
-        Texture(TextureType type, const TextureDescription& description, const char* debugName);
-        Texture(TextureType type, ID3D12Resource* textureHandle, const char* debugName);
-        virtual ~Texture();
+        Texture(const TextureDescription& description, const char* debugName);
+        Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex, const char* debugName);
+        Texture(ID3D12Resource* textureHandle, TextureFlags additionalFlags, const char* debugName);
+        ~Texture();
         
         Texture(const Texture& rhs) = delete;
         Texture& operator=(const Texture& rhs) = delete;
@@ -110,126 +117,33 @@ namespace Atom
         TextureFormat GetFormat() const;
         u32 GetWidth() const;
         u32 GetHeight() const;
+        u32 GetDepth() const;
+        u32 GetArraySize() const;
         u32 GetMipLevels() const;
-        TextureBindFlags GetBindFlags() const;
+        TextureFlags GetFlags() const;
+        const ClearValue& GetClearValue() const;
         TextureFilter GetFilter() const;
         TextureWrap GetWrap() const;
-        const ClearValue& GetClearValue() const;
+        const TextureDescription& GetDescription() const;
+
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
+        inline D3D12_CPU_DESCRIPTOR_HANDLE GetUAV() const { return m_UAVDescriptor; }
         inline D3D12_CPU_DESCRIPTOR_HANDLE GetSampler() const { return m_SamplerDescriptor; }
 
     public:
-        inline static u32 CalculateMaxMipCount(u32 width, u32 height) { return (u32)glm::log2((f32)glm::max(width, height)) + 1; }
-    protected:
-        void CreateSRV();
+        static u32 CalculateMaxMipCount(u32 width, u32 height);
+        static u32 CalculateSubresource(u32 mip, u32 mipCount, u32 slice, u32 arraySize);
+    private:
+        void CreateSRV(u32 mipIndex = UINT32_MAX, u32 sliceIndex = UINT32_MAX);
+        void CreateUAV(u32 mipIndex, u32 sliceIndex = UINT32_MAX);
         void CreateSampler();
-    protected:
+    private:
+        TextureDescription          m_Description;
         ComPtr<ID3D12Resource>      m_D3DResource;
         D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor{ 0 };
+        D3D12_CPU_DESCRIPTOR_HANDLE m_UAVDescriptor{ 0 };
         D3D12_CPU_DESCRIPTOR_HANDLE m_SamplerDescriptor{ 0 };
-        TextureType                 m_Type;
-        TextureDescription          m_Description;
-    };
-
-    class Texture2D : public Texture, public Asset
-    {
-        friend class AssetSerializer;
-        friend class ContentTools;
-    public:
-        Texture2D(const TextureDescription& description, const Vector<Vector<byte>>& pixelData, bool isReadable, const char* debugName = "Unnamed Texture2D");
-        Texture2D(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Texture2D");
-        ~Texture2D();
-
-        Texture2D(const Texture2D& rhs) = delete;
-        Texture2D& operator=(const Texture2D& rhs) = delete;
-
-        Texture2D(Texture2D&& rhs) noexcept;
-        Texture2D& operator=(Texture2D&& rhs) noexcept;
-
-        void UpdateGPUData(bool makeNonReadable = false);
-        void SetPixels(const Vector<byte>& pixels, u32 mipLevel = 0);
-        const Vector<byte>& GetPixels(u32 mipLevel = 0);
-        bool IsReadable() const;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 mip = 0) const;
-    private:
-        void CreateUAV();
-    private:
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_UAVDescriptors;
-        Vector<Vector<byte>>                m_PixelData;
-        bool                                m_IsReadable;
-    };
-
-    class RenderTexture2D : public Texture
-    {
-    public:
-        RenderTexture2D(const TextureDescription& description, bool swapChainBuffer, const char* debugName = "Unnamed Render Texture");
-        RenderTexture2D(ID3D12Resource* textureHandle, bool swapChainBuffer, const char* debugName = "Unnamed Render Texture");
-        ~RenderTexture2D();
-
-        RenderTexture2D(const RenderTexture2D& rhs) = delete;
-        RenderTexture2D& operator=(const RenderTexture2D& rhs) = delete;
-
-        RenderTexture2D(RenderTexture2D&& rhs) noexcept;
-        RenderTexture2D& operator=(RenderTexture2D&& rhs) noexcept;
-
-        inline bool IsSwapChainBuffer() const { return m_Type == TextureType::SwapChainBuffer; }
-        D3D12_CPU_DESCRIPTOR_HANDLE GetRTV(u32 mip = 0) const;
-    private:
-        void CreateRTV();
-    private:
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_RTVDescriptors;
-    };
-
-    class DepthBuffer : public Texture
-    {
-    public:
-        DepthBuffer(const TextureDescription& description, const char* debugName = "Unnamed Depth Buffer");
-        DepthBuffer(ID3D12Resource* textureHandle, const char* debugName = "Unnamed Depth Buffer");
-        ~DepthBuffer();
-
-        DepthBuffer(const DepthBuffer& rhs) = delete;
-        DepthBuffer& operator=(const DepthBuffer& rhs) = delete;
-
-        DepthBuffer(DepthBuffer&& rhs) noexcept;
-        DepthBuffer& operator=(DepthBuffer&& rhs) noexcept;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE GetDSV(u32 mip = 0) const;
-    private:
-        void CreateDSV();
-    private:
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_DSVDescriptors;
-    };
-
-    class TextureCube : public Texture, public Asset
-    {
-        friend class AssetSerializer;
-        friend class ContentTools;
-    public:
-        TextureCube(const TextureDescription& description, Vector<Vector<byte>> pixelData[6], bool isReadable, const char* debugName = "Unnamed TextureCube");
-        TextureCube(ID3D12Resource* textureHandle, const char* debugName = "Unnamed TextureCube");
-        ~TextureCube();
-
-        TextureCube(const TextureCube& rhs) = delete;
-        TextureCube& operator=(const TextureCube& rhs) = delete;
-
-        TextureCube(TextureCube&& rhs) noexcept;
-        TextureCube& operator=(TextureCube&& rhs) noexcept;
-
-        void UpdateGPUData(bool makeNonReadable = false);
-        void SetPixels(const Vector<byte>& pixels, u32 cubeFace, u32 mipLevel = 0);
-        const Vector<byte>& GetPixels(u32 cubeFace, u32 mipLevel = 0);
-        bool IsReadable() const;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(u32 slice = 0, u32 mip = 0) const;
-        D3D12_CPU_DESCRIPTOR_HANDLE GetArrayUAV(u32 mip = 0) const;
-    private:
-        void CreateUAV();
-    private:
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_UAVDescriptors;
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_ArrayUAVDescriptors;
-        Vector<Vector<byte>>                m_PixelData[6];
-        bool                                m_IsReadable;
+        bool                        m_IsAlias = false;
     };
 }

@@ -242,7 +242,7 @@ namespace Atom
 
         ImVec2 prevPos = ImGui::GetCursorPos();
 
-        Ref<RenderTexture2D> finalImage = m_Renderer->GetFinalImage();
+        Ref<Texture> finalImage = m_Renderer->GetFinalImage()->GetTexture();
         ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
         if (m_ActiveScene->GetSceneState() == SceneState::Running)

@@ -19,7 +19,7 @@ namespace Atom
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MATERIAL"))
 			{
-				m_Material = AssetManager::GetAsset<Material>(*(UUID*)payload->Data, true);
+				m_Material = AssetManager::GetAsset<MaterialAsset>(*(UUID*)payload->Data, true);
 			}
 
 			ImGui::EndDragDropTarget();
@@ -40,9 +40,6 @@ namespace Atom
 				const auto& resourceTable = m_Material->GetShader()->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
 				for (auto& resource : resourceTable.Resources)
 				{
-					if (resource.Name[0] == '_')
-						continue;
-
 					if (resource.Type == ShaderResourceType::Texture2D)
 					{
 						ImGui::Columns(2);
@@ -51,8 +48,8 @@ namespace Atom
 						ImGui::NextColumn();
 						ImGui::PushItemWidth(-1);
 
-						Ref<Texture> texture = m_Material->GetTexture(resource.Name.c_str());
-						ImGui::ImageButton(texture ? (ImTextureID)texture.get() : (ImTextureID)Renderer::GetBlackTexture().get(), { 64.0f, 64.0f }, { 0.0f, 0.0f });
+						Ref<TextureAsset> texture = m_Material->GetTexture(resource.Name.c_str());
+						ImGui::ImageButton(texture ? (ImTextureID)texture->GetResource().get() : (ImTextureID)Renderer::GetBlackTexture().get(), {64.0f, 64.0f}, {0.0f, 0.0f});
 
 						if (ImGui::BeginDragDropTarget())
 						{
@@ -364,7 +361,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialEditorPanel::SetMaterial(const Ref<Material>& material)
+    void MaterialEditorPanel::SetMaterial(const Ref<MaterialAsset>& material)
     {
         m_Material = material;
     }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Texture.h"
+#include "Atom/Asset/TextureAsset.h"
 
 #include <glm/glm.hpp>
 
@@ -38,11 +38,11 @@ namespace Atom
         void ClearLights();
 
         inline Ref<TextureCube> GetEnvironmentMap() const { return m_EnvironmentMap; }
-        inline Ref<TextureCube> GetIrradianceMap() const { return m_IrradianceMap; }
+        inline Ref<Texture> GetIrradianceMap() const { return m_IrradianceMap; }
         inline const Vector<Light>& GetLights() const { return m_Lights; }
     private:
         Ref<TextureCube> m_EnvironmentMap;
-        Ref<TextureCube> m_IrradianceMap;
+        Ref<Texture>     m_IrradianceMap;
         Vector<Light>    m_Lights;
     };
 }

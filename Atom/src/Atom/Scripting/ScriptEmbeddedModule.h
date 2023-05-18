@@ -625,10 +625,6 @@ namespace Atom
             .def_property("tag", &wrappers::Entity::GetTag, &wrappers::Entity::SetTag);
 
         // --------------------------------------------------- Renderer ------------------------------------------------------------
-        py::enum_<Atom::TextureType>(m, "TextureType")
-            .value("Texture2D", Atom::TextureType::Texture2D)
-            .value("TextureCube", Atom::TextureType::TextureCube);
-
         py::enum_<Atom::TextureFormat>(m, "TextureFormat")
             .value("R8", Atom::TextureFormat::R8)
             .value("RGBA8", Atom::TextureFormat::RGBA8)
@@ -647,30 +643,31 @@ namespace Atom
             .value("Repeat", Atom::TextureWrap::Repeat);
 
         py::class_<wrappers::Texture>(m, "Texture")
+            .def("update_gpu_data", &wrappers::Texture2D::UpdateGPUData)
+            .def_property_readonly("format", &wrappers::Texture::GetFormat)
             .def_property_readonly("width", &wrappers::Texture::GetWidth)
             .def_property_readonly("height", &wrappers::Texture::GetHeight)
-            .def_property_readonly("format", &wrappers::Texture::GetFormat)
+            .def_property_readonly("depth", &wrappers::Texture::GetDepth)
+            .def_property_readonly("array_size", &wrappers::Texture::GetArraySize)
             .def_property_readonly("mip_levels", &wrappers::Texture::GetMipLevels)
+            .def_property_readonly("is_cpu_readable", &wrappers::Texture::IsCpuReadable)
+            .def_property_readonly("is_gpu_writable", &wrappers::Texture::IsGpuWritable)
             .def_property("filter", &wrappers::Texture::GetFilter, &wrappers::Texture::SetFilter)
             .def_property("wrap", &wrappers::Texture::GetWrap, &wrappers::Texture::SetWrap);
 
         py::class_<wrappers::Texture2D>(m, "Texture2D")
-            .def(py::init<u32, u32, Atom::TextureFormat, s32>())
+            .def(py::init<u32, u32, Atom::TextureFormat, u32, bool, bool>())
             .def(py::init<u64>())
-            .def("update_gpu_data", &wrappers::Texture2D::UpdateGPUData)
             .def("set_pixels", &wrappers::Texture2D::SetPixels)
             .def("get_pixels", &wrappers::Texture2D::GetPixels)
-            .def_static("find", &wrappers::Texture2D::Find)
-            .def_property_readonly("is_readable", &wrappers::Texture2D::IsReadable);
+            .def_static("find", &wrappers::Texture2D::Find);
 
         py::class_<wrappers::TextureCube>(m, "TextureCube")
-            .def(py::init<u32, Atom::TextureFormat, s32>())
+            .def(py::init<u32, Atom::TextureFormat, u32, bool, bool>())
             .def(py::init<u64>())
-            .def("update_gpu_data", &wrappers::TextureCube::UpdateGPUData)
             .def("set_pixels", &wrappers::TextureCube::SetPixels)
             .def("get_pixels", &wrappers::TextureCube::GetPixels)
-            .def_static("find", &wrappers::TextureCube::Find)
-            .def_property_readonly("is_readable", &wrappers::TextureCube::IsReadable);
+            .def_static("find", &wrappers::TextureCube::Find);
 
         py::enum_<Atom::MaterialFlags>(m, "MaterialFlags")
             .value("DepthTested", Atom::MaterialFlags::DepthTested)
@@ -686,23 +683,20 @@ namespace Atom
             .def("set_vec2", &wrappers::Material::SetVec2)
             .def("set_vec3", &wrappers::Material::SetVec3)
             .def("set_vec4", &wrappers::Material::SetVec4)
-            .def("set_texture2d", &wrappers::Material::SetTexture2D)
-            .def("set_texture_cube", &wrappers::Material::SetTextureCube)
+            .def("set_texture", &wrappers::Material::SetTexture)
             .def("set_flag", &wrappers::Material::SetFlag)
             .def("get_int", &wrappers::Material::GetInt)
             .def("get_float", &wrappers::Material::GetFloat)
             .def("get_vec2", &wrappers::Material::GetVec2)
             .def("get_vec3", &wrappers::Material::GetVec3)
             .def("get_vec4", &wrappers::Material::GetVec4)
-            .def("get_texture2d", &wrappers::Material::GetTexture2D)
-            .def("get_texture_cube", &wrappers::Material::GetTextureCube)
+            .def("get_texture", &wrappers::Material::GetTexture)
             .def("has_int", &wrappers::Material::HasInt)
             .def("has_float", &wrappers::Material::HasFloat)
             .def("has_vec2", &wrappers::Material::HasVec2)
             .def("has_vec3", &wrappers::Material::HasVec3)
             .def("has_vec4", &wrappers::Material::HasVec4)
-            .def("has_texture2d", &wrappers::Material::HasTexture2D)
-            .def("has_texture_cube", &wrappers::Material::HasTextureCube)
+            .def("has_texture", &wrappers::Material::HasTexture)
             .def("has_flag", &wrappers::Material::HasFlag)
             .def_static("find", &wrappers::Material::Find);
 

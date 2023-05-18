@@ -134,19 +134,15 @@ namespace Atom
         m_D3DDescription.PrimitiveTopologyType = Utils::AtomTopologyToD3D12(m_Description.Topology);
         m_D3DDescription.NumRenderTargets = AttachmentPoint::NumColorAttachments;
 
-        for (u8 i = 0; i < AttachmentPoint::NumColorAttachments; i++)
+        for (u8 i = 0; i < AttachmentPoint::NumAttachments; i++)
         {
-            auto colorAttachment = m_Description.Framebuffer->GetColorAttachment((AttachmentPoint)i);
-            if (colorAttachment)
+            if (auto attachment = m_Description.Framebuffer->GetAttachment((AttachmentPoint)i))
             {
-                m_D3DDescription.RTVFormats[i] = Utils::AtomTextureFormatToRTVFormat(colorAttachment->GetFormat());
+                if (i == AttachmentPoint::Depth)
+                    m_D3DDescription.DSVFormat = Utils::AtomTextureFormatToDSVFormat(attachment->GetFormat());
+                else
+                    m_D3DDescription.RTVFormats[i] = Utils::AtomTextureFormatToRTVFormat(attachment->GetFormat());
             }
-        }
-
-        auto depthAttachment = m_Description.Framebuffer->GetDepthAttachment();
-        if (depthAttachment)
-        {
-            m_D3DDescription.DSVFormat = Utils::AtomTextureFormatToDSVFormat(depthAttachment->GetFormat());
         }
 
         m_D3DDescription.SampleDesc.Count = 1;

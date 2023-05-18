@@ -17,9 +17,9 @@ namespace Atom
 
     IMPL_ENUM_OPERATORS(MaterialFlags)
 
-    class Material : public Asset
+    class Material
     {
-        friend class AssetSerializer;
+        friend class MaterialAsset;
         using Uniform = ShaderLayout::Uniform;
         using Resource = ShaderLayout::ShaderResource;
     public:
@@ -63,8 +63,8 @@ namespace Atom
         void SetFlag(MaterialFlags flag, bool state);
         inline void SetFlags(MaterialFlags flags) { m_Flags = flags; }
         inline bool GetFlag(MaterialFlags flag) const { return (m_Flags & flag) != MaterialFlags::None; }
-        inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline MaterialFlags GetFlags() const { return m_Flags; }
+        inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline const Vector<byte>& GetConstantsData() const { return m_ConstantsData; }
         inline const Map<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
         inline const DescriptorAllocation& GetResourceTable() const { return m_ResourceDescriptorTable; }
@@ -81,18 +81,5 @@ namespace Atom
         DescriptorAllocation   m_ResourceDescriptorTable;
         DescriptorAllocation   m_SamplerDescriptorTable;
         bool                   m_Dirty = false;
-    };
-
-    class MaterialTable
-    {
-    public:
-        MaterialTable() = default;
-
-        void SetMaterial(u32 submeshIdx, Ref<Material> material);
-        bool HasMaterial(u32 submeshIdx) const;
-        Ref<Material> GetMaterial(u32 submeshIdx) const;
-        u32 GetMaterialCount() const { return m_Materials.size(); }
-    private:
-        HashMap<u32, Ref<Material>> m_Materials;
     };
 }
