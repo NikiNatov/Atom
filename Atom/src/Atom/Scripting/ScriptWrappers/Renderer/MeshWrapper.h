@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Mesh.h"
+#include "Atom/Asset/MeshAsset.h"
 
 #include "Atom/Scripting/ScriptWrappers/Renderer/MaterialWrapper.h"
 

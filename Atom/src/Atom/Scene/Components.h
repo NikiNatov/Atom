@@ -3,9 +3,9 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/UUID.h"
 #include "Atom/Renderer/Camera.h"
-#include "Atom/Renderer/Mesh.h"
-#include "Atom/Renderer/Texture.h"
 #include "Atom/Scene/Entity.h"
+#include "Atom/Asset/MeshAsset.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

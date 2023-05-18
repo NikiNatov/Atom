@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Animation.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
 
 namespace Atom
 {

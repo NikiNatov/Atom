@@ -6,6 +6,7 @@
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
 #include "Atom/Asset/AssetManager.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
 
 namespace Atom
 {

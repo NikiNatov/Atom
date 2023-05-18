@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Animation.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Asset/SkeletonAsset.h"
 #include "Atom/Asset/MaterialAsset.h"
 
 #include <glm/glm.hpp>

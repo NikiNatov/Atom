@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Asset/MeshAsset.h"
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/EditorCamera.h"
-#include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"

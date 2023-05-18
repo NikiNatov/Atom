@@ -6,6 +6,7 @@
 #include "Atom/Asset/AssetSerializer.h"
 #include "Atom/Asset/TextureAsset.h"
 #include "Atom/Asset/MaterialAsset.h"
+#include "Atom/Asset/MeshAsset.h"
 
 // Core
 #include "Atom/Core/Application.h"
@@ -44,7 +45,6 @@
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/EditorCamera.h"
 #include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/PipelineLibrary.h"
 #include "Atom/Renderer/LightEnvironment.h"

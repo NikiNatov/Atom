@@ -1,5 +1,5 @@
 #include "atompch.h"
-#include "Mesh.h"
+#include "MeshAsset.h"
 
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/CommandQueue.h"

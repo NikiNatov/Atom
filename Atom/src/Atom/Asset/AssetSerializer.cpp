@@ -3,11 +3,11 @@
 
 #include "Atom/Asset/TextureAsset.h"
 #include "Atom/Asset/MaterialAsset.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
+#include "Atom/Asset/MeshAsset.h"
 
 #include "Atom/Renderer/Renderer.h"
-#include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Buffer.h"
-#include "Atom/Renderer/Animation.h"
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/Components.h"
 #include "Atom/Scripting/ScriptEngine.h"

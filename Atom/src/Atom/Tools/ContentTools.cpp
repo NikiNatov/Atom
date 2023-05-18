@@ -2,8 +2,8 @@
 #include "ContentTools.h"
 
 #include "Atom/Asset/AssetSerializer.h"
-#include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Mesh.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
+#include "Atom/Asset/MeshAsset.h"
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Scene/Scene.h"
 

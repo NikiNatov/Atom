@@ -6,12 +6,10 @@
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Mesh.h"
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/LightEnvironment.h"
-
-#include "Atom/Tools/ContentTools.h"
+#include "Atom/Asset/MeshAsset.h"
 
 #include <pix3.h>
 

@@ -2,7 +2,8 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Asset/TextureAsset.h"
-#include "Atom/Renderer/Animation.h"
+#include "Atom/Asset/AnimationAsset.h"
+#include "Atom/Asset/SkeletonAsset.h"
 
 struct aiAnimation;
 struct aiNode;

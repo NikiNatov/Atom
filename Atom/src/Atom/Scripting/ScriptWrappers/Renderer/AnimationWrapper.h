@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Animation.h"
+#include "Atom/Asset/AnimationAsset.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
 
 #include <pybind11/pybind11.h>
 

@@ -2,10 +2,11 @@
 #include "AssetManager.h"
 
 #include "Atom/Asset/AssetSerializer.h"
+#include "Atom/Asset/AnimationAsset.h"
+#include "Atom/Asset/AnimationControllerAsset.h"
+#include "Atom/Asset/MeshAsset.h"
 #include "Atom/Core/Application.h"
 #include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Mesh.h"
-#include "Atom/Renderer/Animation.h"
 #include "Atom/Scene/Scene.h"
 
 namespace Atom
