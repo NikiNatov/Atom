@@ -655,14 +655,14 @@ namespace Atom
             .def_property("filter", &wrappers::Texture::GetFilter, &wrappers::Texture::SetFilter)
             .def_property("wrap", &wrappers::Texture::GetWrap, &wrappers::Texture::SetWrap);
 
-        py::class_<wrappers::Texture2D>(m, "Texture2D")
+        py::class_<wrappers::Texture2D, wrappers::Texture>(m, "Texture2D")
             .def(py::init<u32, u32, Atom::TextureFormat, u32, bool, bool>())
             .def(py::init<u64>())
             .def("set_pixels", &wrappers::Texture2D::SetPixels)
             .def("get_pixels", &wrappers::Texture2D::GetPixels)
             .def_static("find", &wrappers::Texture2D::Find);
 
-        py::class_<wrappers::TextureCube>(m, "TextureCube")
+        py::class_<wrappers::TextureCube, wrappers::Texture>(m, "TextureCube")
             .def(py::init<u32, Atom::TextureFormat, u32, bool, bool>())
             .def(py::init<u64>())
             .def("set_pixels", &wrappers::TextureCube::SetPixels)
