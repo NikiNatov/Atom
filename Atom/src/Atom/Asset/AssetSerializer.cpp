@@ -120,7 +120,7 @@ namespace Atom
             {
                 for (u32 mip = 0; mip < asset->GetMipLevels(); mip++)
                 {
-                    u32 subresource = Texture::CalculateSubresource(mip, asset->GetMipLevels(), face, 6);
+                    u32 subresource = Texture::CalculateSubresource(mip, face, asset->GetMipLevels(), 6);
                     u32 pixelDataSize = asset->m_PixelData[subresource].size();
                     ofs.write((char*)&pixelDataSize, sizeof(u32));
                     ofs.write((char*)asset->m_PixelData[subresource].data(), pixelDataSize);
@@ -760,7 +760,7 @@ namespace Atom
         {
             for (u32 mip = 0; mip < mipLevels; mip++)
             {
-                u32 subresource = Texture::CalculateSubresource(mip, mipLevels, face, 6);
+                u32 subresource = Texture::CalculateSubresource(mip, face, mipLevels, 6);
                 u32 pixelDataSize;
                 ifs.read((char*)&pixelDataSize, sizeof(u32));
                 pixelData[subresource].resize(pixelDataSize, 0);

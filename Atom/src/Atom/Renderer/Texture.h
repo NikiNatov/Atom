@@ -133,7 +133,7 @@ namespace Atom
 
     public:
         static u32 CalculateMaxMipCount(u32 width, u32 height);
-        static u32 CalculateSubresource(u32 mip, u32 mipCount, u32 slice, u32 arraySize);
+        static u32 CalculateSubresource(u32 mip, u32 slice, u32 mipCount, u32 arraySize);
     private:
         void CreateSRV(u32 mipIndex = UINT32_MAX, u32 sliceIndex = UINT32_MAX);
         void CreateUAV(u32 mipIndex, u32 sliceIndex = UINT32_MAX);

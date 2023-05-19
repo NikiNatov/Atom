@@ -327,7 +327,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u32 Texture::CalculateSubresource(u32 mip, u32 mipCount, u32 slice, u32 arraySize)
+    u32 Texture::CalculateSubresource(u32 mip, u32 slice, u32 mipCount, u32 arraySize)
     {
         return D3D12CalcSubresource(mip, slice, 0, mipCount, arraySize);
     }
