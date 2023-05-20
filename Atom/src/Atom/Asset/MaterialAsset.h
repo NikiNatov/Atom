@@ -57,6 +57,7 @@ namespace Atom
     private:
         // Used only during deserialization
         void SetTexture(u32 slot, Ref<TextureAsset> texture);
+        void SetSampler(u32 slot, Ref<TextureSampler> sampler);
     private:
         Ref<Material>               m_MaterialResource;
         Map<u32, Ref<TextureAsset>> m_TextureHandles;

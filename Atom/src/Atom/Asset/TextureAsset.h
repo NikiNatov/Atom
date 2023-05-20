@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Asset/Asset.h"
 #include "Atom/Renderer/Texture.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 namespace Atom
 {
@@ -39,6 +40,8 @@ namespace Atom
         Ref<Texture>         m_TextureResource;
         Vector<Vector<byte>> m_PixelData;
         bool                 m_CpuReadable;
+        TextureFilter        m_Filter = TextureFilter::Linear;
+        TextureWrap          m_Wrap = TextureWrap::Repeat;
     };
 
     class Texture2D : public TextureAsset

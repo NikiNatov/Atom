@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/RenderSurface.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 #include <glm/glm.hpp>
 
@@ -31,7 +32,7 @@ namespace Atom
         ClearValue    ClearVal;
 
         FramebufferAttachment()
-            : Format(TextureFormat::None), Filter(TextureFilter::None), Wrap(TextureWrap::None)
+            : Format(TextureFormat::None), Filter(TextureFilter::Linear), Wrap(TextureWrap::Clamp)
         {}
 
         FramebufferAttachment(TextureFormat format, ClearValue clearValue, TextureFilter filter = TextureFilter::Linear, TextureWrap wrap = TextureWrap::Clamp)

@@ -19,6 +19,16 @@ namespace Atom
     void Renderer::Initialize(const RendererConfig& config)
     {
         ms_Config = config;
+        
+        // Create samplers
+        ms_Samplers.reserve(u32(TextureFilter::NumFilters) * u32(TextureWrap::NumWraps));
+        for (u32 i = 0; i < u32(TextureFilter::NumFilters); i++)
+        {
+            for (u32 j = 0; j < u32(TextureWrap::NumWraps); j++)
+            {
+                ms_Samplers.push_back(CreateRef<TextureSampler>((TextureFilter)i, (TextureWrap)j));
+            }
+        }
 
         // Load shaders
         ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRShader.hlsl");
@@ -341,6 +351,7 @@ namespace Atom
         ms_DefaultMaterialAnimated.reset();
         ms_ErrorMaterial.reset();
         ms_ErrorMaterialAnimated.reset();
+        ms_Samplers.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -392,10 +403,10 @@ namespace Atom
         if (texture)
         {
             DescriptorAllocation resourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(1);
-            Device::Get().CopyDescriptors(resourceTable, 1, &texture->GetSRV(), DescriptorHeapType::ShaderResource);
+            Device::Get().CopyDescriptors(resourceTable, 1, &texture->GetSRV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
 
             DescriptorAllocation samplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &texture->GetSampler(), DescriptorHeapType::Sampler);
+            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp)->GetDescriptor(), DescriptorHeapType::Sampler);
 
             commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
@@ -435,7 +446,7 @@ namespace Atom
             auto& d3dDevice = Device::Get().GetD3DDevice();
 
             DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &equirectTexture->GetSampler(), DescriptorHeapType::Sampler);
+            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
@@ -447,7 +458,7 @@ namespace Atom
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
                 Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX, fmt::format("{}(Unfiltered)_Mip{}", debugName, mip).c_str());
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV(), mipView->GetUAV()};
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -491,7 +502,7 @@ namespace Atom
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "CubeMapPreFilter");
 
             DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &envMapUnfiltered->GetSampler(), DescriptorHeapType::Sampler);
+            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
@@ -506,7 +517,7 @@ namespace Atom
             for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
             {
                 Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX, fmt::format("{}_Mip{}", debugName, mip).c_str());
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV(), mipView->GetUAV() };
+                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
                 Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -560,13 +571,13 @@ namespace Atom
 
         Ref<Texture> irradianceMap = CreateRef<Texture>(irradianceMapDesc, fmt::format("{}(IrradianceMap)", debugName).c_str());
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV(), irradianceMap->GetUAV() };
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV()->GetDescriptor(), irradianceMap->GetUAV()->GetDescriptor() };
 
         DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
         Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
 
         DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-        Device::Get().CopyDescriptors(samplerTable, 1, &environmentMap->GetSampler(), DescriptorHeapType::Sampler);
+        Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
 
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateIrradianceMap");
 
@@ -599,13 +610,12 @@ namespace Atom
         brdfDesc.Format = TextureFormat::RG16F;
         brdfDesc.MipLevels = 1;
         brdfDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
-        brdfDesc.Wrap = TextureWrap::Clamp;
 
         Ref<Texture> brdfTexture = CreateRef<Texture>(brdfDesc, "BRDFTexture(Renderer)");
 
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(1);
-        Device::Get().CopyDescriptors(resourceTable, 1, &brdfTexture->GetUAV(), DescriptorHeapType::ShaderResource);
+        Device::Get().CopyDescriptors(resourceTable, 1, &brdfTexture->GetUAV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
 
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
@@ -631,21 +641,6 @@ namespace Atom
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
 
-        // Create bilinear clamp sampler to use for mip generation
-        D3D12_SAMPLER_DESC samplerDesc = {};
-        samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-        samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        samplerDesc.MipLODBias = 0.0f;
-        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-        samplerDesc.MinLOD = 0.0f;
-        samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-        samplerDesc.MaxAnisotropy = 0;
-
-        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-        Device::Get().GetD3DDevice()->CreateSampler(&samplerDesc, samplerTable.GetBaseCpuDescriptor());
-
         // Run compute shader for each mip
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
@@ -661,10 +656,13 @@ namespace Atom
             u32 TopMipLevel;
         };
 
+        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
+        Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp)->GetDescriptor(), DescriptorHeapType::Sampler);
+
         for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
         {
             Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX, "MipView");
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV(), mipView->GetUAV() };
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
             DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
             Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
@@ -815,5 +813,11 @@ namespace Atom
     Ref<Material> Renderer::GetErrorMaterialAnimated()
     {
         return ms_ErrorMaterialAnimated;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<TextureSampler> Renderer::GetSampler(TextureFilter filter, TextureWrap wrap)
+    {
+        return ms_Samplers[u32(filter) * u32(TextureFilter::NumFilters) + u32(wrap)];
     }
 }

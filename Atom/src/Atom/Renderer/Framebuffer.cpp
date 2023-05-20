@@ -128,8 +128,6 @@ namespace Atom
                 attachmentDesc.Width = m_Description.Width;
                 attachmentDesc.Height = m_Description.Height;
                 attachmentDesc.MipLevels = 1;
-                attachmentDesc.Filter = m_Description.Attachments[i].Filter;
-                attachmentDesc.Wrap = m_Description.Attachments[i].Wrap;
                 attachmentDesc.Flags = (isDepthAttachment ? TextureFlags::DepthStencil : TextureFlags::RenderTarget) | TextureFlags::ShaderResource;
                 attachmentDesc.ClearValue = m_Description.Attachments[i].ClearVal;
 

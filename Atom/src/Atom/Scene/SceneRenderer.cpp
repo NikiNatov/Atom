@@ -221,19 +221,22 @@ namespace Atom
         auto& device = Device::Get();
         Ref<TextureCube> envMap = m_Lights[currentFrameIdx]->GetEnvironmentMap();
         Ref<Texture> irradianceMap = m_Lights[currentFrameIdx]->GetIrradianceMap();
+        Ref<Texture> brdfMap = Renderer::GetBRDF();
 
         D3D12_CPU_DESCRIPTOR_HANDLE frameResourceDescriptors[] = { 
-            envMap ? envMap->GetResource()->GetSRV() : Renderer::GetBlackTextureCube()->GetSRV(),
-            irradianceMap ? irradianceMap->GetSRV() : Renderer::GetBlackTextureCube()->GetSRV(),
-            Renderer::GetBRDF()->GetSRV(),
+            envMap ? envMap->GetResource()->GetSRV()->GetDescriptor() : Renderer::GetBlackTextureCube()->GetSRV()->GetDescriptor(),
+            irradianceMap ? irradianceMap->GetSRV()->GetDescriptor() : Renderer::GetBlackTextureCube()->GetSRV()->GetDescriptor(),
+            brdfMap->GetSRV()->GetDescriptor(),
             m_LightsSBs[currentFrameIdx]->GetSRV(),
             m_BoneTransformsSBs[currentFrameIdx]->GetSRV()
         };
 
+        Ref<TextureSampler> defaultSampler = Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp);
+
         D3D12_CPU_DESCRIPTOR_HANDLE frameSamplerDescriptors[] = {
-            envMap ? envMap->GetResource()->GetSampler() : Renderer::GetBlackTextureCube()->GetSampler(),
-            irradianceMap ? irradianceMap->GetSampler() : Renderer::GetBlackTextureCube()->GetSampler(),
-            Renderer::GetBRDF()->GetSampler()
+            envMap ? Renderer::GetSampler(envMap->GetFilter(), envMap->GetWrap())->GetDescriptor() : defaultSampler->GetDescriptor(), // Environment map
+            defaultSampler->GetDescriptor(), // Irradiance map sampler
+            defaultSampler->GetDescriptor() // BRDF sampler
         };
 
         m_FrameResourceTable = device.GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(_countof(frameResourceDescriptors));

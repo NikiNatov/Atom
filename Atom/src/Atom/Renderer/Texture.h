@@ -2,6 +2,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
+#include "Atom/Renderer/TextureView.h"
 
 #include <glm/glm.hpp>
 
@@ -23,20 +24,6 @@ namespace Atom
         RG32F, RGBA32F,
         Depth24Stencil8,
         Depth32
-    };
-
-    enum class TextureFilter
-    {
-        None = 0,
-        Linear,
-        Nearest,
-        Anisotropic
-    };
-
-    enum class TextureWrap
-    {
-        None = 0,
-        Clamp, Repeat
     };
 
     struct DepthStencilValue
@@ -92,8 +79,6 @@ namespace Atom
         u32 MipLevels = 1;
         TextureFlags Flags = TextureFlags::DefaultFlags;
         ClearValue ClearValue = {};
-        TextureFilter Filter = TextureFilter::Linear;
-        TextureWrap Wrap = TextureWrap::Repeat;
     };
 
     class Texture
@@ -110,9 +95,6 @@ namespace Atom
         Texture(Texture&& rhs) noexcept;
         Texture& operator=(Texture&& rhs) noexcept;
 
-        void SetFilter(TextureFilter filter);
-        void SetWrap(TextureWrap wrap);
-
         TextureType GetType() const;
         TextureFormat GetFormat() const;
         u32 GetWidth() const;
@@ -122,28 +104,20 @@ namespace Atom
         u32 GetMipLevels() const;
         TextureFlags GetFlags() const;
         const ClearValue& GetClearValue() const;
-        TextureFilter GetFilter() const;
-        TextureWrap GetWrap() const;
         const TextureDescription& GetDescription() const;
 
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
-        inline D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_SRVDescriptor; }
-        inline D3D12_CPU_DESCRIPTOR_HANDLE GetUAV() const { return m_UAVDescriptor; }
-        inline D3D12_CPU_DESCRIPTOR_HANDLE GetSampler() const { return m_SamplerDescriptor; }
+        inline const TextureViewRO* GetSRV() const { return m_SRV.get(); }
+        inline const TextureViewRW* GetUAV() const { return m_UAV.get(); }
 
     public:
         static u32 CalculateMaxMipCount(u32 width, u32 height);
         static u32 CalculateSubresource(u32 mip, u32 slice, u32 mipCount, u32 arraySize);
     private:
-        void CreateSRV(u32 mipIndex = UINT32_MAX, u32 sliceIndex = UINT32_MAX);
-        void CreateUAV(u32 mipIndex, u32 sliceIndex = UINT32_MAX);
-        void CreateSampler();
-    private:
-        TextureDescription          m_Description;
-        ComPtr<ID3D12Resource>      m_D3DResource;
-        D3D12_CPU_DESCRIPTOR_HANDLE m_SRVDescriptor{ 0 };
-        D3D12_CPU_DESCRIPTOR_HANDLE m_UAVDescriptor{ 0 };
-        D3D12_CPU_DESCRIPTOR_HANDLE m_SamplerDescriptor{ 0 };
-        bool                        m_IsAlias = false;
+        ComPtr<ID3D12Resource> m_D3DResource;
+        TextureDescription     m_Description;
+        Scope<TextureViewRO>   m_SRV;
+        Scope<TextureViewRW>   m_UAV;
+        bool                   m_IsAlias = false;
     };
 }

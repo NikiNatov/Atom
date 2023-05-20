@@ -82,19 +82,19 @@ namespace Atom
                             clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
 
                         const auto& clearVal = attachment->GetClearValue().DepthStencil;
-                        m_CommandList->ClearDepthStencilView(attachment->GetDSV(), clearFlags, clearVal.DepthValue, clearVal.StencilValue, 0, nullptr);
+                        m_CommandList->ClearDepthStencilView(attachment->GetDSV()->GetDescriptor(), clearFlags, clearVal.DepthValue, clearVal.StencilValue, 0, nullptr);
                     }
 
-                    dsvHandle = attachment->GetDSV();
+                    dsvHandle = attachment->GetDSV()->GetDescriptor();
                 }
                 else
                 {
                     m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
                     if (clear)
-                        m_CommandList->ClearRenderTargetView(attachment->GetRTV(), glm::value_ptr(attachment->GetClearValue().Color), 0, nullptr);
+                        m_CommandList->ClearRenderTargetView(attachment->GetRTV()->GetDescriptor(), glm::value_ptr(attachment->GetClearValue().Color), 0, nullptr);
 
-                    rtvHandles.push_back(attachment->GetRTV());
+                    rtvHandles.push_back(attachment->GetRTV()->GetDescriptor());
                 }
             }
         }

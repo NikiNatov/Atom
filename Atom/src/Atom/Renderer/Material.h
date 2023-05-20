@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Renderer/Shader.h"
 #include "Atom/Renderer/Texture.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 namespace Atom
 {
@@ -36,6 +37,10 @@ namespace Atom
 
         void SetTexture(const char* uniformName, const Ref<Texture>& texture);
         Ref<Texture> GetTexture(const char* uniformName);
+
+        void SetSampler(const char* uniformName, const Ref<TextureSampler>& sampler);
+        Ref<TextureSampler> GetSampler(const char* uniformName);
+
         bool HasResource(const char* name, ShaderResourceType type);
 
         template<typename T>
@@ -67,6 +72,7 @@ namespace Atom
         inline Ref<GraphicsShader> GetShader() const { return m_Shader; }
         inline const Vector<byte>& GetConstantsData() const { return m_ConstantsData; }
         inline const Map<u32, Ref<Texture>>& GetTextures() const { return m_Textures; }
+        inline const Map<u32, Ref<TextureSampler>>& GetSamplers() const { return m_Samplers; }
         inline const DescriptorAllocation& GetResourceTable() const { return m_ResourceDescriptorTable; }
         inline const DescriptorAllocation& GetSamplerTable() const { return m_SamplerDescriptorTable; }
         inline bool IsDirty() const { return m_Dirty; }
@@ -74,12 +80,13 @@ namespace Atom
         const Uniform* FindUniformDeclaration(const char* name);
         const Resource* FindResourceDeclaration(const char* name);
     private:
-        Ref<GraphicsShader>    m_Shader;
-        MaterialFlags          m_Flags;
-        Vector<byte>           m_ConstantsData;
-        Map<u32, Ref<Texture>> m_Textures;
-        DescriptorAllocation   m_ResourceDescriptorTable;
-        DescriptorAllocation   m_SamplerDescriptorTable;
-        bool                   m_Dirty = false;
+        Ref<GraphicsShader>           m_Shader;
+        MaterialFlags                 m_Flags;
+        Vector<byte>                  m_ConstantsData;
+        Map<u32, Ref<Texture>>        m_Textures;
+        Map<u32, Ref<TextureSampler>> m_Samplers;
+        DescriptorAllocation          m_ResourceDescriptorTable;
+        DescriptorAllocation          m_SamplerDescriptorTable;
+        bool                          m_Dirty = false;
     };
 }

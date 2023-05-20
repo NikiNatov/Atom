@@ -11,6 +11,7 @@
 #include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/DescriptorHeap.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 namespace Atom { namespace Utils {
 

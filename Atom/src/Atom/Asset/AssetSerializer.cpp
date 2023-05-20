@@ -41,13 +41,16 @@ namespace Atom
         }
 
         const TextureDescription& desc = asset->m_TextureResource->GetDescription();
+        TextureFilter filter = asset->GetFilter();
+        TextureWrap wrap = asset->GetWrap();
         bool isGpuWritable = asset->IsGpuWritable();
+
         ofs.write((char*)&desc.Format, sizeof(TextureFormat));
         ofs.write((char*)&desc.Width, sizeof(u32));
         ofs.write((char*)&desc.Height, sizeof(u32));
         ofs.write((char*)&desc.MipLevels, sizeof(u32));
-        ofs.write((char*)&desc.Filter, sizeof(TextureFilter));
-        ofs.write((char*)&desc.Wrap, sizeof(TextureWrap));
+        ofs.write((char*)&filter, sizeof(TextureFilter));
+        ofs.write((char*)&wrap, sizeof(TextureWrap));
         ofs.write((char*)&asset->m_CpuReadable, sizeof(bool));
         ofs.write((char*)&isGpuWritable, sizeof(bool));
 
@@ -105,12 +108,15 @@ namespace Atom
         }
 
         const TextureDescription& desc = asset->m_TextureResource->GetDescription();
+        TextureFilter filter = asset->GetFilter();
+        TextureWrap wrap = asset->GetWrap();
         bool isGpuWritable = asset->IsGpuWritable();
+
         ofs.write((char*)&desc.Format, sizeof(TextureFormat));
         ofs.write((char*)&desc.Width, sizeof(u32));
         ofs.write((char*)&desc.MipLevels, sizeof(u32));
-        ofs.write((char*)&desc.Filter, sizeof(TextureFilter));
-        ofs.write((char*)&desc.Wrap, sizeof(TextureWrap));
+        ofs.write((char*)&filter, sizeof(TextureFilter));
+        ofs.write((char*)&wrap, sizeof(TextureWrap));
         ofs.write((char*)&asset->m_CpuReadable, sizeof(bool));
         ofs.write((char*)&isGpuWritable, sizeof(bool));
 
@@ -205,6 +211,19 @@ namespace Atom
 
             ofs.write((char*)&textureRegister, sizeof(u32));
             ofs.write((char*)&textureHandle, sizeof(u64));
+        }
+
+        // Serialize samplers
+        u32 samplerCount = asset->m_MaterialResource->GetSamplers().size();
+        ofs.write((char*)&samplerCount, sizeof(u32));
+
+        for (auto& [samplerRegister, sampler] : asset->m_MaterialResource->GetSamplers())
+        {
+            TextureFilter filter = sampler ? sampler->GetFilter() : TextureFilter::NumFilters;
+            TextureWrap wrap = sampler ? sampler->GetWrap() : TextureWrap::NumWraps;
+            ofs.write((char*)&samplerRegister, sizeof(u32));
+            ofs.write((char*)&filter, sizeof(TextureFilter));
+            ofs.write((char*)&wrap, sizeof(TextureWrap));
         }
 
         return true;
@@ -721,6 +740,8 @@ namespace Atom
 
         Ref<Texture2D> asset = CreateRef<Texture2D>(width, height, format, mipLevels, isCpuReadable, isGpuWritable, pixelData);
         asset->m_MetaData = metaData;
+        asset->SetFilter(filter);
+        asset->SetWrap(wrap);
 
         return asset;
     }
@@ -770,6 +791,8 @@ namespace Atom
 
         Ref<TextureCube> asset = CreateRef<TextureCube>(size, format, mipLevels, isCpuReadable, isGpuWritable, pixelData);
         asset->m_MetaData = metaData;
+        asset->SetFilter(filter);
+        asset->SetWrap(wrap);
 
         return asset;
     }
@@ -821,6 +844,27 @@ namespace Atom
             Ref<TextureAsset> texture = textureHandle != 0 ? AssetManager::GetAsset<TextureAsset>(textureHandle, true) : nullptr;
             if(texture)
                 asset->SetTexture(textureRegister, texture);
+        }
+
+        // Deserialize samplers
+        u32 samplerCount;
+        ifs.read((char*)&samplerCount, sizeof(u32));
+
+        for (u32 i = 0; i < samplerCount; i++)
+        {
+            u32 samplerRegister;
+            ifs.read((char*)&samplerRegister, sizeof(u32));
+
+            TextureFilter filter;
+            ifs.read((char*)&filter, sizeof(TextureFilter));
+
+            TextureWrap wrap;
+            ifs.read((char*)&wrap, sizeof(TextureWrap));
+
+            if (filter != TextureFilter::NumFilters && wrap != TextureWrap::NumWraps)
+            {
+                asset->SetSampler(samplerRegister, Renderer::GetSampler(filter, wrap));
+            }
         }
 
         asset->m_MaterialResource->UpdateDescriptorTables();

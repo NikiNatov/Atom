@@ -4,6 +4,7 @@
 #include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/PipelineLibrary.h"
 #include "Atom/Renderer/Texture.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 namespace Atom
 {
@@ -60,19 +61,21 @@ namespace Atom
         static Ref<Material> GetDefaultMaterialAnimated();
         static Ref<Material> GetErrorMaterial();
         static Ref<Material> GetErrorMaterialAnimated();
+        static Ref<TextureSampler> GetSampler(TextureFilter filter, TextureWrap wrap);
     private:
-        inline static RendererConfig    ms_Config;
-        inline static ShaderLibrary     ms_ShaderLibrary;
-        inline static PipelineLibrary   ms_PipelineLibrary;
-        inline static Ref<VertexBuffer> ms_FullscreenQuadVB;
-        inline static Ref<IndexBuffer>  ms_FullscreenQuadIB;
-        inline static Ref<Texture>      ms_BRDFTexture;
-        inline static Ref<Texture>      ms_ErrorTexture;
-        inline static Ref<Texture>      ms_BlackTexture;
-        inline static Ref<Texture>      ms_BlackTextureCube;
-        inline static Ref<Material>     ms_DefaultMaterial;
-        inline static Ref<Material>     ms_DefaultMaterialAnimated;
-        inline static Ref<Material>     ms_ErrorMaterial;
-        inline static Ref<Material>     ms_ErrorMaterialAnimated;
+        inline static RendererConfig              ms_Config;
+        inline static ShaderLibrary               ms_ShaderLibrary;
+        inline static PipelineLibrary             ms_PipelineLibrary;
+        inline static Ref<VertexBuffer>           ms_FullscreenQuadVB;
+        inline static Ref<IndexBuffer>            ms_FullscreenQuadIB;
+        inline static Ref<Texture>                ms_BRDFTexture;
+        inline static Ref<Texture>                ms_ErrorTexture;
+        inline static Ref<Texture>                ms_BlackTexture;
+        inline static Ref<Texture>                ms_BlackTextureCube;
+        inline static Ref<Material>               ms_DefaultMaterial;
+        inline static Ref<Material>               ms_DefaultMaterialAnimated;
+        inline static Ref<Material>               ms_ErrorMaterial;
+        inline static Ref<Material>               ms_ErrorMaterialAnimated;
+        inline static Vector<Ref<TextureSampler>> ms_Samplers;
     };
 }

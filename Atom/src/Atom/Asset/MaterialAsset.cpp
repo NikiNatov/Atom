@@ -1,6 +1,8 @@
 #include "atompch.h"
 #include "MaterialAsset.h"
 
+#include "Atom/Renderer/Renderer.h"
+
 namespace Atom
 {
     // -------------------------------------------------- MaterialAsset ------------------------------------------------------------
@@ -11,7 +13,7 @@ namespace Atom
         m_MaterialResource = CreateRef<Material>(shader, flags);
 
         for (auto& [slot, _] : m_MaterialResource->GetTextures())
-            m_TextureHandles[slot] = 0;
+            m_TextureHandles[slot] = nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -19,21 +21,32 @@ namespace Atom
         : Asset(AssetType::Material), m_MaterialResource(materialResource)
     {
         for (auto& [slot, _] : m_MaterialResource->GetTextures())
-            m_TextureHandles[slot] = 0;
+            m_TextureHandles[slot] = nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void MaterialAsset::SetTexture(const char* name, Ref<TextureAsset> texture)
     {
-        const Material::Resource* resource = m_MaterialResource->FindResourceDeclaration(name);
-        if (!resource || resource->Type != ShaderResourceType::Texture2D)
+        const Material::Resource* textureResource = m_MaterialResource->FindResourceDeclaration(name);
+        if (!textureResource || textureResource->Type != ShaderResourceType::Texture2D)
         {
             ATOM_ERROR("Texture with name \"{}\" does not exist", name);
             return;
         }
 
+        String samplerName = fmt::format("{}Sampler", name);
+        const Material::Resource* samplerResource = m_MaterialResource->FindResourceDeclaration(samplerName.c_str());
+        if (!samplerResource || samplerResource->Type != ShaderResourceType::Sampler)
+        {
+            ATOM_ERROR("Missing sampler for texture with name \"{}\"", name);
+            return;
+        }
+
+        Ref<TextureSampler> sampler = Renderer::GetSampler(texture->GetFilter(), texture->GetWrap());
+
         m_MaterialResource->SetTexture(name, texture->GetResource());
-        m_TextureHandles[resource->Register] = texture;
+        m_MaterialResource->SetSampler(samplerName.c_str(), sampler);
+        m_TextureHandles[textureResource->Register] = texture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -120,6 +133,12 @@ namespace Atom
     {
         m_MaterialResource->m_Textures[slot] = texture->GetResource();
         m_TextureHandles[slot] = texture;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void MaterialAsset::SetSampler(u32 slot, Ref<TextureSampler> sampler)
+    {
+        m_MaterialResource->m_Samplers[slot] = sampler;
     }
 
     // -------------------------------------------------- MaterialTable ------------------------------------------------------------

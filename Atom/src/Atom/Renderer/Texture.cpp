@@ -6,6 +6,7 @@
 
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/ResourceStateTracker.h"
+#include "Atom/Renderer/TextureView.h"
 
 namespace Atom
 {
@@ -86,33 +87,48 @@ namespace Atom
         ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
         // Create views
-        CreateSRV();
-        CreateUAV(0);
-        CreateSampler();
+        TextureViewDescription viewDesc;
+        viewDesc.FirstMip = 0;
+        viewDesc.MipLevels = m_Description.MipLevels;
+        viewDesc.FirstSlice = 0;
+        viewDesc.ArraySize = m_Description.ArraySize;
+
+        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex, const char* debugName)
         : m_Description(aliasedTexture.m_Description), m_D3DResource(aliasedTexture.m_D3DResource), m_IsAlias(true)
     {
-        m_Description.Width = mipIndex == UINT32_MAX ? aliasedTexture.m_Description.Width : aliasedTexture.m_Description.Width >> mipIndex;
-        m_Description.Height = mipIndex == UINT32_MAX ? aliasedTexture.m_Description.Height : aliasedTexture.m_Description.Height >> mipIndex;
+        m_Description.Width = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Width : aliasedTexture.m_Description.Width >> mipIndex;
+        m_Description.Height = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Height : aliasedTexture.m_Description.Height >> mipIndex;
 
         if(m_Description.Type == TextureType::Texture3D)
-            m_Description.Depth = mipIndex == UINT32_MAX ? aliasedTexture.m_Description.Depth : aliasedTexture.m_Description.Depth >> mipIndex;
+            m_Description.Depth = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Depth : aliasedTexture.m_Description.Depth >> mipIndex;
         else
-            m_Description.ArraySize = sliceIndex == UINT32_MAX ? aliasedTexture.m_Description.ArraySize : 1;
+            m_Description.ArraySize = sliceIndex == TextureView::AllSlices ? aliasedTexture.m_Description.ArraySize : 1;
 
-        m_Description.MipLevels = mipIndex == UINT32_MAX ? aliasedTexture.m_Description.MipLevels : 1;
+        m_Description.MipLevels = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.MipLevels : 1;
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
         DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
-        CreateSRV(mipIndex, sliceIndex);
-        CreateUAV(mipIndex, sliceIndex);
-        CreateSampler();
+        // Create views
+        TextureViewDescription viewDesc;
+        viewDesc.FirstMip = mipIndex == TextureView::AllMips ? 0 : mipIndex;
+        viewDesc.MipLevels = mipIndex == TextureView::AllMips ? m_Description.MipLevels : 1;
+        viewDesc.FirstSlice = sliceIndex == TextureView::AllSlices ? 0 : sliceIndex;
+        viewDesc.ArraySize = sliceIndex == TextureView::AllSlices ? m_Description.ArraySize : 1;
+
+        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -137,8 +153,6 @@ namespace Atom
         m_Description.Flags |= desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ? TextureFlags::DepthStencil : TextureFlags::None;
         m_Description.Flags |= desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ? TextureFlags::UnorderedAccess : TextureFlags::None;
         m_Description.Flags |= additionalFlags;
-        m_Description.Filter = TextureFilter::Linear;
-        m_Description.Wrap = TextureWrap::Repeat;
 
         bool isShaderResource = IsSet(m_Description.Flags & TextureFlags::ShaderResource);
         bool isRenderTarget = IsSet(m_Description.Flags & TextureFlags::RenderTarget);
@@ -170,36 +184,29 @@ namespace Atom
         ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
         // Create views
-        CreateSRV();
-        CreateUAV(0);
-        CreateSampler();
+        TextureViewDescription viewDesc;
+        viewDesc.FirstMip = 0;
+        viewDesc.MipLevels = m_Description.MipLevels;
+        viewDesc.FirstSlice = 0;
+        viewDesc.ArraySize = m_Description.ArraySize;
+
+        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::~Texture()
     {
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-        {
-            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-        }
-
-        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-        {
-            Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-        }
-
         if(!m_IsAlias)
             Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(Texture&& rhs) noexcept
-        : m_D3DResource(rhs.m_D3DResource), m_SRVDescriptor(rhs.m_SRVDescriptor), m_SamplerDescriptor(rhs.m_SamplerDescriptor), m_Description(rhs.m_Description), m_IsAlias(rhs.m_IsAlias)
+        : m_D3DResource(std::move(rhs.m_D3DResource)), m_Description(std::move(rhs.m_Description)), m_SRV(std::move(rhs.m_SRV)), m_UAV(std::move(rhs.m_UAV)), m_IsAlias(rhs.m_IsAlias)
     {
-        rhs.m_D3DResource = nullptr;
-        rhs.m_SRVDescriptor = { 0 };
-        rhs.m_SamplerDescriptor = { 0 };
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -207,47 +214,18 @@ namespace Atom
     {
         if (this != &rhs)
         {
-            if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-            {
-                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-            }
-
-            if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-            {
-                Device::Get().GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-            }
-
             Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
 
-            m_D3DResource = rhs.m_D3DResource;
-            m_SRVDescriptor = rhs.m_SRVDescriptor;
-            m_SamplerDescriptor = rhs.m_SamplerDescriptor;
-            m_Description = rhs.m_Description;
+            m_D3DResource = std::move(rhs.m_D3DResource);
+            m_Description = std::move(rhs.m_Description);
+            m_SRV = std::move(rhs.m_SRV);
+            m_UAV = std::move(rhs.m_UAV);
             m_IsAlias = rhs.m_IsAlias;
-
-            rhs.m_D3DResource = nullptr;
-            rhs.m_SRVDescriptor = { 0 };
-            rhs.m_SamplerDescriptor = { 0 };
         }
 
         return *this;
     }
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::SetFilter(TextureFilter filter)
-    {
-        m_Description.Filter = filter;
-        CreateSampler();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::SetWrap(TextureWrap wrap)
-    {
-        m_Description.Wrap = wrap;
-        CreateSampler();
-    }
-    
     // -----------------------------------------------------------------------------------------------------------------------------
     TextureType Texture::GetType() const
     {
@@ -297,18 +275,6 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    TextureFilter Texture::GetFilter() const
-    {
-        return m_Description.Filter;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    TextureWrap Texture::GetWrap() const
-    {
-        return m_Description.Wrap;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     const TextureDescription& Texture::GetDescription() const
     {
         return m_Description;
@@ -330,123 +296,5 @@ namespace Atom
     u32 Texture::CalculateSubresource(u32 mip, u32 slice, u32 mipCount, u32 arraySize)
     {
         return D3D12CalcSubresource(mip, slice, 0, mipCount, arraySize);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::CreateSRV(u32 mipIndex, u32 sliceIndex)
-    {
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-        {
-            auto& dx12Device = Device::Get();
-
-            if (m_SRVDescriptor.ptr)
-                dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_SRVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = Utils::AtomTextureFormatToSRVFormat(m_Description.Format);
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-            if (m_Description.Type == TextureType::Texture2D)
-            {
-                if (IsSet(m_Description.Flags & TextureFlags::CubeMap))
-                {
-                    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-                    srvDesc.TextureCube.MostDetailedMip = mipIndex == UINT32_MAX ? 0 : mipIndex;
-                    srvDesc.TextureCube.MipLevels = mipIndex == UINT32_MAX ? m_Description.MipLevels : 1;
-                }
-                else
-                {
-                    if (m_Description.ArraySize > 1)
-                    {
-                        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-                        srvDesc.Texture2DArray.MostDetailedMip = mipIndex == UINT32_MAX ? 0 : mipIndex;
-                        srvDesc.Texture2DArray.MipLevels = mipIndex == UINT32_MAX ? m_Description.MipLevels : 1;
-                        srvDesc.Texture2DArray.FirstArraySlice = sliceIndex == UINT32_MAX ? 0 : sliceIndex;
-                        srvDesc.Texture2DArray.ArraySize = sliceIndex == UINT32_MAX ? m_Description.ArraySize : 1;
-                    }
-                    else
-                    {
-                        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-                        srvDesc.Texture2D.MostDetailedMip = mipIndex == UINT32_MAX ? 0 : mipIndex;
-                        srvDesc.Texture2D.MipLevels = mipIndex == UINT32_MAX ? m_Description.MipLevels : 1;
-                    }
-                }
-            }
-            else
-            {
-                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-                srvDesc.Texture3D.MostDetailedMip = mipIndex == UINT32_MAX ? 0 : mipIndex;
-                srvDesc.Texture3D.MipLevels = mipIndex == UINT32_MAX ? m_Description.MipLevels : 1;
-            }
-
-            m_SRVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-            dx12Device.GetD3DDevice()->CreateShaderResourceView(m_D3DResource.Get(), &srvDesc, m_SRVDescriptor);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::CreateUAV(u32 mipIndex, u32 sliceIndex)
-    {
-        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-        {
-            auto& dx12Device = Device::Get();
-
-            if (m_UAVDescriptor.ptr)
-                dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->ReleaseDescriptor(m_UAVDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-
-            D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-            uavDesc.Format = Utils::AtomTextureFormatToUAVFormat(m_Description.Format);
-
-            if (m_Description.Type == TextureType::Texture2D)
-            {
-                if (IsSet(m_Description.Flags & TextureFlags::CubeMap) || m_Description.ArraySize > 1)
-                {
-                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-                    uavDesc.Texture2DArray.MipSlice = mipIndex;
-                    uavDesc.Texture2DArray.FirstArraySlice = sliceIndex == UINT32_MAX ? 0 : sliceIndex;
-                    uavDesc.Texture2DArray.ArraySize = sliceIndex == UINT32_MAX ? m_Description.ArraySize : 1;
-                }
-                else
-                {
-                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-                    uavDesc.Texture2D.MipSlice = mipIndex;
-                }
-            }
-            else
-            {
-                uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
-                uavDesc.Texture3D.MipSlice = mipIndex;
-                uavDesc.Texture3D.FirstWSlice = sliceIndex == UINT32_MAX ? 0 : sliceIndex;
-                uavDesc.Texture3D.WSize = sliceIndex == UINT32_MAX ? m_Description.Depth : 1;
-            }
-
-            m_UAVDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateDescriptor();
-            dx12Device.GetD3DDevice()->CreateUnorderedAccessView(m_D3DResource.Get(), nullptr, &uavDesc, m_UAVDescriptor);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Texture::CreateSampler()
-    {
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-        {
-            auto& dx12Device = Device::Get();
-
-            if (m_SamplerDescriptor.ptr)
-                dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->ReleaseDescriptor(m_SamplerDescriptor, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-
-            D3D12_SAMPLER_DESC samplerDesc = {};
-            samplerDesc.AddressU = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
-            samplerDesc.AddressV = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
-            samplerDesc.AddressW = Utils::AtomTextureWrapToD3D12(m_Description.Wrap);
-            samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-            samplerDesc.Filter = Utils::AtomTextureFilterToD3D12(m_Description.Filter);
-            samplerDesc.MinLOD = 0.0f;
-            samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-            samplerDesc.MaxAnisotropy = m_Description.Filter == TextureFilter::Anisotropic ? D3D12_REQ_MAXANISOTROPY : 1;
-
-            m_SamplerDescriptor = dx12Device.GetCPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateDescriptor();
-            dx12Device.GetD3DDevice()->CreateSampler(&samplerDesc, m_SamplerDescriptor);
-        }
     }
 }

@@ -14,6 +14,7 @@ namespace Atom
         const auto& shaderLayout = m_Shader->GetShaderLayout();
         const auto& constants = shaderLayout.GetConstants(ShaderBindPoint::Material);
         const auto& resourceTable = shaderLayout.GetResourceDescriptorTable(ShaderBindPoint::Material);
+        const auto& samplerTable = shaderLayout.GetSamplerDescriptorTable(ShaderBindPoint::Material);
 
         // Create constants data storage
         m_ConstantsData.resize(constants.TotalSize, 0);
@@ -25,12 +26,19 @@ namespace Atom
                 m_Textures[resource.Register] = nullptr;
         }
 
+        // Create sampler array
+        for (const auto& resource : samplerTable.Resources)
+        {
+            if (resource.Type == ShaderResourceType::Sampler)
+                m_Samplers[resource.Register] = nullptr;
+        }
+
         UpdateDescriptorTables();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Material::Material(Material&& rhs) noexcept
-        : m_Shader(std::move(rhs.m_Shader)), m_ConstantsData(std::move(rhs.m_ConstantsData)), m_Textures(std::move(rhs.m_Textures)), m_Flags(rhs.m_Flags)
+        : m_Shader(std::move(rhs.m_Shader)), m_ConstantsData(std::move(rhs.m_ConstantsData)), m_Textures(std::move(rhs.m_Textures)), m_Samplers(std::move(rhs.m_Samplers)), m_Flags(rhs.m_Flags)
     {
     }
 
@@ -49,6 +57,7 @@ namespace Atom
             m_Shader = std::move(rhs.m_Shader);
             m_ConstantsData = std::move(rhs.m_ConstantsData);
             m_Textures = std::move(rhs.m_Textures);
+            m_Samplers = std::move(rhs.m_Samplers);
             m_Flags = rhs.m_Flags;
         }
 
@@ -79,21 +88,19 @@ namespace Atom
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureDescriptors;
         textureDescriptors.reserve(m_Textures.size());
 
-        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplerDescriptors;
-        samplerDescriptors.reserve(m_Textures.size());
-
-        for (const auto& [textureSlot, texture] : m_Textures)
+        Ref<Texture> errorTexture = Renderer::GetErrorTexture();
+        for (const auto& [_, texture] : m_Textures)
         {
-            if (!texture)
-            {
-                textureDescriptors.push_back(Renderer::GetErrorTexture()->GetSRV());
-                samplerDescriptors.push_back(Renderer::GetErrorTexture()->GetSampler());
-            }
-            else
-            {
-                textureDescriptors.push_back(texture->GetSRV());
-                samplerDescriptors.push_back(texture->GetSampler());
-            }
+            textureDescriptors.push_back(texture ? texture->GetSRV()->GetDescriptor() : errorTexture->GetSRV()->GetDescriptor());
+        }
+
+        Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplerDescriptors;
+        samplerDescriptors.reserve(m_Samplers.size());
+
+        Ref<TextureSampler> defaultSampler = Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp);
+        for (const auto& [_, sampler] : m_Samplers)
+        {
+            samplerDescriptors.push_back(sampler ? sampler->GetDescriptor() : defaultSampler->GetDescriptor());
         }
 
         Device::Get().CopyDescriptors(m_ResourceDescriptorTable, textureDescriptors.size(), textureDescriptors.data(), DescriptorHeapType::ShaderResource);
@@ -104,8 +111,8 @@ namespace Atom
     void Material::SetTexture(const char* uniformName, const Ref<Texture>& texture)
     {
         const Resource* resource = FindResourceDeclaration(uniformName);
-        ATOM_ENGINE_ASSERT(resource, fmt::format("Resource with name \"{}\" does not exist!", uniformName));
-        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube, fmt::format("Resource with name \"{}\" is not a texture!", uniformName));
+        ATOM_ENGINE_ASSERT(resource, fmt::format("Texture with name \"{}\" does not exist!", uniformName));
+        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube, fmt::format("Texture with name \"{}\" is not a texture!", uniformName));
         m_Textures[resource->Register] = texture;
         m_Dirty = true;
     }
@@ -114,9 +121,28 @@ namespace Atom
     Ref<Texture> Material::GetTexture(const char* uniformName)
     {
         const Resource* resource = FindResourceDeclaration(uniformName);
-        ATOM_ENGINE_ASSERT(resource, fmt::format("Resource with name \"{}\" does not exist!", uniformName));
-        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube, fmt::format("Resource with name \"{}\" is not a texture!", uniformName));
+        ATOM_ENGINE_ASSERT(resource, fmt::format("Texture with name \"{}\" does not exist!", uniformName));
+        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Texture2D || resource->Type == ShaderResourceType::TextureCube, fmt::format("Texture with name \"{}\" is not a texture!", uniformName));
         return m_Textures[resource->Register];
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Material::SetSampler(const char* uniformName, const Ref<TextureSampler>& sampler)
+    {
+        const Resource* resource = FindResourceDeclaration(uniformName);
+        ATOM_ENGINE_ASSERT(resource, fmt::format("Sampler with name \"{}\" does not exist!", uniformName));
+        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Sampler, fmt::format("Sampler with name \"{}\" is not a texture!", uniformName));
+        m_Samplers[resource->Register] = sampler;
+        m_Dirty = true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<TextureSampler> Material::GetSampler(const char* uniformName)
+    {
+        const Resource* resource = FindResourceDeclaration(uniformName);
+        ATOM_ENGINE_ASSERT(resource, fmt::format("Sampler with name \"{}\" does not exist!", uniformName));
+        ATOM_ENGINE_ASSERT(resource->Type == ShaderResourceType::Sampler, fmt::format("Sampler with name \"{}\" is not a texture!", uniformName));
+        return m_Samplers[resource->Register];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -165,9 +191,19 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     const Material::Resource* Material::FindResourceDeclaration(const char* name)
     {
-        const auto& resourceTable = m_Shader->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);;
+        const auto& resourceTable = m_Shader->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
 
         for (const auto& resource : resourceTable.Resources)
+        {
+            if (resource.Name == name)
+            {
+                return &resource;
+            }
+        }
+
+        const auto& samplerTable = m_Shader->GetShaderLayout().GetSamplerDescriptorTable(ShaderBindPoint::Material);
+
+        for (const auto& resource : samplerTable.Resources)
         {
             if (resource.Name == name)
             {

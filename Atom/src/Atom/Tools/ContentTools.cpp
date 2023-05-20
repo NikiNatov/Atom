@@ -126,6 +126,9 @@ namespace Atom
             if (importSettings.IsCubeMap)
             {
                 Ref<TextureCube> textureCube = std::static_pointer_cast<TextureCube>(asset);
+                textureCube->SetFilter(importSettings.Filter);
+                textureCube->SetWrap(importSettings.Wrap);
+
                 for (u32 face = 0; face < 6; face++)
                 {
                     for (u32 mip = 0; mip < textureCube->GetMipLevels(); mip++)
@@ -144,6 +147,9 @@ namespace Atom
             else
             {
                 Ref<Texture2D> texture2D = std::static_pointer_cast<Texture2D>(asset);
+                texture2D->SetFilter(importSettings.Filter);
+                texture2D->SetWrap(importSettings.Wrap);
+
                 for (u32 mip = 0; mip < texture2D->GetMipLevels(); mip++)
                 {
                     Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture2D->GetResource(), mip);
@@ -208,6 +214,9 @@ namespace Atom
             if (importSettings.IsCubeMap)
             {
                 Ref<TextureCube> textureCube = std::static_pointer_cast<TextureCube>(asset);
+                textureCube->SetFilter(importSettings.Filter);
+                textureCube->SetWrap(importSettings.Wrap);
+
                 for (u32 face = 0; face < 6; face++)
                 {
                     for (u32 mip = 0; mip < textureCube->GetMipLevels(); mip++)
@@ -226,6 +235,9 @@ namespace Atom
             else
             {
                 Ref<Texture2D> texture2D = std::static_pointer_cast<Texture2D>(asset);
+                texture2D->SetFilter(importSettings.Filter);
+                texture2D->SetWrap(importSettings.Wrap);
+
                 for (u32 mip = 0; mip < texture2D->GetMipLevels(); mip++)
                 {
                     Ref<ReadbackBuffer> buffer = Renderer::ReadbackTextureData(texture2D->GetResource(), mip);
@@ -620,8 +632,6 @@ namespace Atom
         textureDesc.Width = width;
         textureDesc.Height = height;
         textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
-        textureDesc.Filter = importSettings.Filter;
-        textureDesc.Wrap = importSettings.Wrap;
         textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
         Ref<Texture> texture = CreateRef<Texture>(textureDesc, sourcePath.stem().string().c_str());
@@ -649,8 +659,6 @@ namespace Atom
         textureDesc.Width = width;
         textureDesc.Height = height;
         textureDesc.MipLevels = Texture::CalculateMaxMipCount(width, height);
-        textureDesc.Filter = importSettings.Filter;
-        textureDesc.Wrap = importSettings.Wrap;
         textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
         Ref<Texture> texture = CreateRef<Texture>(textureDesc, name.c_str());

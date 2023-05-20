@@ -96,7 +96,7 @@ namespace Atom
                 ImGui::PushItemWidth(-1);
 
                 const char* filterStr[] = { "Linear", "Nearest", "Anisotropic" };
-                const char* currentFilter = filterStr[(s32)m_ImportSettings.Filter - 1];
+                const char* currentFilter = filterStr[(s32)m_ImportSettings.Filter];
 
                 if (ImGui::BeginCombo("##Filter", currentFilter))
                 {
@@ -106,7 +106,7 @@ namespace Atom
                         if (ImGui::Selectable(filterStr[i], isSelected))
                         {
                             currentFilter = filterStr[i];
-                            m_ImportSettings.Filter = (TextureFilter)(i + 1);
+                            m_ImportSettings.Filter = (TextureFilter)i;
                         }
 
                         if (isSelected)
@@ -129,7 +129,7 @@ namespace Atom
                 ImGui::PushItemWidth(-1);
 
                 const char* wrapStr[] = { "Clamp", "Repeat" };
-                const char* currentWrapMode = wrapStr[(s32)m_ImportSettings.Wrap - 1];
+                const char* currentWrapMode = wrapStr[(s32)m_ImportSettings.Wrap];
 
                 if (ImGui::BeginCombo("##Wrap", currentWrapMode))
                 {
@@ -139,7 +139,7 @@ namespace Atom
                         if (ImGui::Selectable(wrapStr[i], isSelected))
                         {
                             currentWrapMode = wrapStr[i];
-                            m_ImportSettings.Wrap = (TextureWrap)(i + 1);
+                            m_ImportSettings.Wrap = (TextureWrap)i;
                         }
 
                         if (isSelected)

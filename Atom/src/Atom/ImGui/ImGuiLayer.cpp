@@ -141,7 +141,7 @@ namespace Atom
         if (m_TextureCache[currentFrameIndex].find(texture) == m_TextureCache[currentFrameIndex].end())
         {
             DescriptorAllocation gpuDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(1);
-            Device::Get().CopyDescriptors(gpuDescriptor, 1, &texture->GetSRV(), DescriptorHeapType::ShaderResource);
+            Device::Get().CopyDescriptors(gpuDescriptor, 1, &texture->GetSRV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
             m_TextureCache[currentFrameIndex].emplace(texture, gpuDescriptor);
             return gpuDescriptor;
         }
@@ -329,8 +329,6 @@ namespace Atom
 
         TextureDescription fontTextureDesc;
         fontTextureDesc.Format = TextureFormat::RGBA8;
-        fontTextureDesc.Filter = TextureFilter::Anisotropic;
-        fontTextureDesc.Wrap = TextureWrap::Repeat;
         fontTextureDesc.Width = width;
         fontTextureDesc.Height = height;
 

@@ -5,6 +5,7 @@
 #include "Atom/Core/Input.h"
 #include "Atom/Core/Timer.h"
 #include "Atom/Physics/PhysicsEngine.h"
+#include "Atom/Renderer/TextureSampler.h"
 
 #include "Atom/Scripting/ScriptWrappers/Scene/EntityWrapper.h"
 #include "Atom/Scripting/ScriptWrappers/Scene/ComponentWrapper.h"

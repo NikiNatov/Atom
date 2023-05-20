@@ -27,15 +27,12 @@ namespace Atom
         const Ref<Texture> GetTexture() const;
         bool IsSwapChainBuffer() const;
 
-        inline D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return m_RTVDescriptor; }
-        inline D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() const { return m_DSVDescriptor; }
+        inline const TextureViewRT* GetRTV() const { return m_RTV.get(); }
+        inline const TextureViewDS* GetDSV() const { return m_DSV.get(); }
 
     private:
-        void CreateRTV(u32 mipIndex, u32 sliceIndex = UINT32_MAX);
-        void CreateDSV(u32 mipIndex, u32 sliceIndex = UINT32_MAX);
-    private:
-        Ref<Texture> m_Texture;
-        D3D12_CPU_DESCRIPTOR_HANDLE m_RTVDescriptor{ 0 };
-        D3D12_CPU_DESCRIPTOR_HANDLE m_DSVDescriptor{ 0 };
+        Ref<Texture>         m_Texture;
+        Scope<TextureViewRT> m_RTV;
+        Scope<TextureViewDS> m_DSV;
     };
 }
