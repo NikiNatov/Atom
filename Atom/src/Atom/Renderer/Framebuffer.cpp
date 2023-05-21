@@ -131,8 +131,7 @@ namespace Atom
                 attachmentDesc.Flags = (isDepthAttachment ? TextureFlags::DepthStencil : TextureFlags::RenderTarget) | TextureFlags::ShaderResource;
                 attachmentDesc.ClearValue = m_Description.Attachments[i].ClearVal;
 
-                Ref<Texture> texture = CreateRef<Texture>(attachmentDesc, fmt::format("{}_{}", m_Name.c_str(), isDepthAttachment ? "DepthAttachment" : "ColorAttachment").c_str());
-                m_Attachments[i] = CreateRef<RenderSurface>(texture, 0, 0);
+                m_Attachments[i] = CreateRef<RenderSurface>(attachmentDesc, fmt::format("{}_{}", m_Name.c_str(), isDepthAttachment ? "DepthAttachment" : "ColorAttachment").c_str());
             }
         }
 

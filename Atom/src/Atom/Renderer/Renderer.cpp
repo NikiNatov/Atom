@@ -457,7 +457,7 @@ namespace Atom
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
-                Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX, fmt::format("{}(Unfiltered)_Mip{}", debugName, mip).c_str());
+                Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX);
                 D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
@@ -516,7 +516,7 @@ namespace Atom
 
             for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
             {
-                Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX, fmt::format("{}_Mip{}", debugName, mip).c_str());
+                Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX);
                 D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
                 DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
@@ -661,7 +661,7 @@ namespace Atom
 
         for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
         {
-            Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX, "MipView");
+            Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX);
             D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
             DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));

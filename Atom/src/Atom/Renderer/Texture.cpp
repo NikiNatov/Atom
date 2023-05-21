@@ -91,7 +91,7 @@ namespace Atom
         viewDesc.FirstMip = 0;
         viewDesc.MipLevels = m_Description.MipLevels;
         viewDesc.FirstSlice = 0;
-        viewDesc.ArraySize = m_Description.ArraySize;
+        viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
         if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
             m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
@@ -100,9 +100,11 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Texture::Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex, const char* debugName)
+    Texture::Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex)
         : m_Description(aliasedTexture.m_Description), m_D3DResource(aliasedTexture.m_D3DResource), m_IsAlias(true)
     {
+        ATOM_ENGINE_ASSERT(!aliasedTexture.IsAlias());
+
         m_Description.Width = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Width : aliasedTexture.m_Description.Width >> mipIndex;
         m_Description.Height = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Height : aliasedTexture.m_Description.Height >> mipIndex;
 
@@ -113,17 +115,12 @@ namespace Atom
 
         m_Description.MipLevels = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.MipLevels : 1;
 
-#if defined (ATOM_DEBUG)
-        String name = debugName;
-        DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
-#endif
-
         // Create views
         TextureViewDescription viewDesc;
         viewDesc.FirstMip = mipIndex == TextureView::AllMips ? 0 : mipIndex;
-        viewDesc.MipLevels = mipIndex == TextureView::AllMips ? m_Description.MipLevels : 1;
+        viewDesc.MipLevels = m_Description.MipLevels;
         viewDesc.FirstSlice = sliceIndex == TextureView::AllSlices ? 0 : sliceIndex;
-        viewDesc.ArraySize = sliceIndex == TextureView::AllSlices ? m_Description.ArraySize : 1;
+        viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
         if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
             m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
@@ -188,7 +185,7 @@ namespace Atom
         viewDesc.FirstMip = 0;
         viewDesc.MipLevels = m_Description.MipLevels;
         viewDesc.FirstSlice = 0;
-        viewDesc.ArraySize = m_Description.ArraySize;
+        viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
         if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
             m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
@@ -278,6 +275,12 @@ namespace Atom
     const TextureDescription& Texture::GetDescription() const
     {
         return m_Description;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool Texture::IsAlias() const
+    {
+        return m_IsAlias;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

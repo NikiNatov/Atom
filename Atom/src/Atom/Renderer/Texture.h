@@ -85,7 +85,7 @@ namespace Atom
     {
     public:
         Texture(const TextureDescription& description, const char* debugName);
-        Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex, const char* debugName);
+        Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex);
         Texture(ID3D12Resource* textureHandle, TextureFlags additionalFlags, const char* debugName);
         ~Texture();
         
@@ -105,6 +105,7 @@ namespace Atom
         TextureFlags GetFlags() const;
         const ClearValue& GetClearValue() const;
         const TextureDescription& GetDescription() const;
+        bool IsAlias() const;
 
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
         inline const TextureViewRO* GetSRV() const { return m_SRV.get(); }

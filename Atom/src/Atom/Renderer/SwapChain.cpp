@@ -136,9 +136,7 @@ namespace Atom
             // Get the back buffer resource
             ComPtr<ID3D12Resource2> backBuffer = nullptr;
             DXCall(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
-
-            Ref<Texture> backBufferTexture = CreateRef<Texture>(backBuffer.Detach(), TextureFlags::SwapChainBuffer, fmt::format("SwapChainBackBuffer[{}]", i).c_str());
-            m_BackBuffers[i] = CreateRef<RenderSurface>(backBufferTexture, 0, 0);
+            m_BackBuffers[i] = CreateRef<RenderSurface>(backBuffer.Detach(), true, fmt::format("SwapChainBackBuffer[{}]", i).c_str());
         }
 
         // Recreate viewport
