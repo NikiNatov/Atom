@@ -5,6 +5,9 @@
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/Material.h"
 
+#include "Atom/Renderer/RenderGraph/RenderGraph.h"
+#include "Atom/Renderer/RenderGraph/RenderPassBuilder.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -15,6 +18,110 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::Initialize()
     {
+        // TODO: Testing only. Remove when render graphi implementation is finished
+        DEFINE_RID_UA(R0);
+        DEFINE_RID_DS(R1);
+        DEFINE_RID_RT(R2);
+        DEFINE_RID_UA(R3);
+        DEFINE_RID_UA(R4);
+        DEFINE_RID_UA(R5);
+        DEFINE_RID_UA(R6);
+        DEFINE_RID_UA(R7);
+        DEFINE_RID_UA(R8);
+
+        RenderGraph g;
+
+        g.AddRenderPass("A", CommandQueueType::Graphics,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.NewUA(RID(R0), {});
+                builder.NewDS(RID(R1), {});
+                builder.NewRT(RID(R2), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("B", CommandQueueType::Compute,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R0));
+
+                builder.NewUA(RID(R3), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("C", CommandQueueType::Compute,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R1));
+
+                builder.NewUA(RID(R4), {});
+                builder.NewUA(RID(R5), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("D", CommandQueueType::Graphics,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R2));
+
+                builder.NewUA(RID(R6), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("E", CommandQueueType::Graphics,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R3));
+                builder.Read(RID(R4));
+
+                builder.NewUA(RID(R7), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("F", CommandQueueType::Compute,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R5));
+
+                builder.NewUA(RID(R8), {});
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.AddRenderPass("G", CommandQueueType::Graphics,
+            [&](RenderPassBuilder& builder)
+            {
+                builder.Read(RID(R5));
+                builder.Read(RID(R6));
+                builder.Read(RID(R7));
+                builder.Read(RID(R8));
+            },
+            [&](RenderPassContext& context)
+            {
+            }
+        );
+
+        g.Build();
+        g.Reset();
+        // --------------------------------------------------------------------------------------------------------------
+
         const PipelineLibrary& pipelineLib = Renderer::GetPipelineLibrary();
         const ShaderLibrary& shaderLib = Renderer::GetShaderLibrary();
 

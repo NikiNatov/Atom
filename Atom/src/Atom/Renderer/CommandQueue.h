@@ -14,7 +14,7 @@ namespace Atom
         Graphics,
         Compute,
         Copy,
-        TypeCount = Copy
+        NumTypes
     };
 
     class CommandQueue
