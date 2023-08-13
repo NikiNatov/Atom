@@ -2,6 +2,7 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
+#include "Atom/Renderer/ResourceState.h"
 
 namespace Atom
 {
@@ -20,6 +21,7 @@ namespace Atom
         u32 ElementSize = 0;
         u32 ElementCount = 0;
         bool IsDynamic = false;
+        ResourceState InitialState = ResourceState::Common;
     };
 
     class Buffer
@@ -41,6 +43,7 @@ namespace Atom
         u32 GetElementCount() const;
         u32 GetSize() const;
         bool IsDynamic() const;
+        ResourceState GetInitialState() const;
         inline ComPtr<ID3D12Resource> GetD3DResource() const { return m_D3DResource; }
 
     protected:

@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/TextureView.h"
+#include "Atom/Renderer/ResourceState.h"
 
 #include <glm/glm.hpp>
 
@@ -79,6 +80,7 @@ namespace Atom
         u32 MipLevels = 1;
         TextureFlags Flags = TextureFlags::DefaultFlags;
         ClearValue ClearValue = {};
+        ResourceState InitialState = ResourceState::Common;
     };
 
     class Texture
@@ -104,6 +106,7 @@ namespace Atom
         u32 GetMipLevels() const;
         TextureFlags GetFlags() const;
         const ClearValue& GetClearValue() const;
+        ResourceState GetInitialState() const;
         const TextureDescription& GetDescription() const;
         bool IsAlias() const;
 

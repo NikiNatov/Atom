@@ -26,6 +26,7 @@ namespace Atom
         u32 GetArraySize() const;
         TextureFlags GetFlags() const;
         const ClearValue& GetClearValue() const;
+        ResourceState GetInitialState() const;
         bool IsSwapChainBuffer() const;
         bool IsAlias() const;
         Ref<Texture> GetTexture() const;

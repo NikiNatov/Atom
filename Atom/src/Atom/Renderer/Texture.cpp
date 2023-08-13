@@ -76,7 +76,9 @@ namespace Atom
             clearValue.Color[3] = m_Description.ClearValue.Color.a;
         }
 
-        DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+        D3D12_RESOURCE_STATES initialState = Utils::AtomResourceStateToD3D12(m_Description.InitialState);
+
+        DXCall(d3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState,
             isRenderTarget || isDepthStencil ? &clearValue : nullptr, IID_PPV_ARGS(&m_D3DResource)));
 
 #if defined (ATOM_DEBUG)
@@ -84,7 +86,7 @@ namespace Atom
         DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
-        ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+        ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), initialState);
 
         // Create views
         TextureViewDescription viewDesc;
@@ -287,6 +289,12 @@ namespace Atom
     const ClearValue& Texture::GetClearValue() const
     {
         return m_Description.ClearValue;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ResourceState Texture::GetInitialState() const
+    {
+        return m_Description.InitialState;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

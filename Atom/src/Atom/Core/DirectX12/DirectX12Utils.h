@@ -12,6 +12,7 @@
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/DescriptorHeap.h"
 #include "Atom/Renderer/TextureSampler.h"
+#include "Atom/Renderer/ResourceState.h"
 
 namespace Atom { namespace Utils {
 
@@ -390,5 +391,52 @@ namespace Atom { namespace Utils {
 
         ATOM_ASSERT(false, "Unknown format!");
         return 0;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    static D3D12_RESOURCE_STATES AtomResourceStateToD3D12(ResourceState state)
+    {
+        D3D12_RESOURCE_STATES d3dState = D3D12_RESOURCE_STATE_COMMON;
+
+        if (IsSet(state & ResourceState::ConstantBuffer))
+            d3dState |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        if (IsSet(state & ResourceState::IndexBuffer))
+            d3dState |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+        if (IsSet(state & ResourceState::RenderTarget))
+            d3dState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+        if (IsSet(state & ResourceState::UnorderedAccess))
+            d3dState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        if (IsSet(state & ResourceState::DepthWrite))
+            d3dState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        if (IsSet(state & ResourceState::DepthRead))
+            d3dState |= D3D12_RESOURCE_STATE_DEPTH_READ;
+        if (IsSet(state & ResourceState::NonPixelShaderRead))
+            d3dState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        if (IsSet(state & ResourceState::PixelShaderRead))
+            d3dState |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if (IsSet(state & ResourceState::StreamOut))
+            d3dState |= D3D12_RESOURCE_STATE_STREAM_OUT;
+        if (IsSet(state & ResourceState::IndirectArgument))
+            d3dState |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+        if (IsSet(state & ResourceState::CopyDestination))
+            d3dState |= D3D12_RESOURCE_STATE_COPY_DEST;
+        if (IsSet(state & ResourceState::CopySource))
+            d3dState |= D3D12_RESOURCE_STATE_COPY_SOURCE;
+        if (IsSet(state & ResourceState::ResolveDestination))
+            d3dState |= D3D12_RESOURCE_STATE_RESOLVE_DEST;
+        if (IsSet(state & ResourceState::ResolveSource))
+            d3dState |= D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+        if (IsSet(state & ResourceState::RaytracingAccelerationStructure))
+            d3dState |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        if (IsSet(state & ResourceState::Present))
+            d3dState |= D3D12_RESOURCE_STATE_PRESENT;
+        if (IsSet(state & ResourceState::GenericRead))
+            d3dState |= D3D12_RESOURCE_STATE_GENERIC_READ;
+        if (IsSet(state & ResourceState::AnyShaderRead))
+            d3dState |= D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+        if (IsSet(state & ResourceState::Predication))
+            d3dState |= D3D12_RESOURCE_STATE_PREDICATION;
+
+        return d3dState;
     }
 }}

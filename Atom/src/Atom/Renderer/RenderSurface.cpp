@@ -131,6 +131,12 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    ResourceState RenderSurface::GetInitialState() const
+    {
+        return m_Texture->GetInitialState();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Ref<Texture> RenderSurface::GetTexture() const
     {
         return m_Texture;

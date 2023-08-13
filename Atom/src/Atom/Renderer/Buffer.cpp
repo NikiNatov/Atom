@@ -28,7 +28,7 @@ namespace Atom
         }
         else
         {
-            initialState = m_Description.IsDynamic ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_COMMON;
+            initialState = m_Description.IsDynamic ? D3D12_RESOURCE_STATE_GENERIC_READ : Utils::AtomResourceStateToD3D12(description.InitialState);
             heapProps = CD3DX12_HEAP_PROPERTIES(m_Description.IsDynamic ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT);
         }
 
@@ -119,6 +119,12 @@ namespace Atom
     bool Buffer::IsDynamic() const
     {
         return m_Description.IsDynamic;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ResourceState Buffer::GetInitialState() const
+    {
+        return m_Description.InitialState;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
