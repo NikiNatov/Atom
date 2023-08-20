@@ -24,7 +24,13 @@ namespace Atom
     {
     public:
         static constexpr u16 InvalidID = 0xffff;
+
+        struct Hash
+        {
+            inline size_t operator()(const ResourceID& id) const { return std::hash<u16>()(id.m_Index); }
+        };
     public:
+        ResourceID() = default;
         ResourceID(const char* name);
         ~ResourceID();
 
@@ -32,10 +38,11 @@ namespace Atom
         inline u16 GetIndex() const { return m_Index; }
         inline const char* GetName() const { return ResourceIDRegistry::GetName(m_Index); }
 
-        inline bool operator==(const ResourceID& rhs) { return m_Index == rhs.m_Index; }
-        inline bool operator!=(const ResourceID& rhs) { return !(*this == rhs); }
-        inline operator bool() { return IsValid(); }
-        inline operator u16() { return m_Index; }
+        inline bool operator==(const ResourceID& rhs) const { return m_Index == rhs.m_Index; }
+        inline bool operator!=(const ResourceID& rhs) const { return !(*this == rhs); }
+        inline bool operator<(const ResourceID& rhs) const { return m_Index < rhs.m_Index; }
+        inline operator bool() const { return IsValid(); }
+        inline operator u16() const { return m_Index; }
     private:
         u16 m_Index = InvalidID;
     };
