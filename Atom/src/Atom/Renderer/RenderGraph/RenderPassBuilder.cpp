@@ -21,30 +21,36 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::NewUA(ResourceID_UA id, const TextureDescription& description)
     {
-        m_Graph.CreateResource<TextureResource>(id, description)->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<TextureUAV>>(&m_Graph, id));
+        const auto& resource = m_Graph.CreateResource<TextureResource>(id, description);
+        resource->SetProducerPassID(m_PassID);
+        m_Outputs.push_back(CreateScope<ResourceView<TextureResource, TextureUAV>>(resource.get()));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::NewRT(ResourceID_RT id, const TextureDescription& description)
     {
-        m_Graph.CreateResource<RenderSurfaceResource>(id, description)->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<SurfaceRTV>>(&m_Graph, id));
+        const auto& resource = m_Graph.CreateResource<RenderSurfaceResource>(id, description);
+        resource->SetProducerPassID(m_PassID);
+        m_Outputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceRTV>>(resource.get()));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::NewDS(ResourceID_DS id, const TextureDescription& description)
     {
-        m_Graph.CreateResource<RenderSurfaceResource>(id, description)->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<SurfaceDSV>>(&m_Graph, id));
+        const auto& resource = m_Graph.CreateResource<RenderSurfaceResource>(id, description);
+        resource->SetProducerPassID(m_PassID);
+        m_Outputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Read(ResourceID_UA id)
     {
         ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
-        if(!HasInput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<TextureSRV>>(&m_Graph, id));
+        if (!HasInput(id))
+        {
+            const auto& resource = m_Graph.GetResource<TextureResource>(id);
+            m_Inputs.push_back(CreateScope<ResourceView<TextureResource, TextureSRV>>(resource.get()));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -52,15 +58,25 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
         if (!HasInput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<TextureSRV>>(&m_Graph, id));
+        {
+            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
+            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, TextureSRV>>(resource.get()));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderPassBuilder::Read(ResourceID_DS id)
+    void RenderPassBuilder::Read(ResourceID_DS id, bool isSRV)
     {
         ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
         if (!HasInput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<TextureSRV>>(&m_Graph, id));
+        {
+            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
+            if (isSRV)
+                m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, TextureSRV>>(resource.get()));
+            else
+                m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
+            
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -68,7 +84,10 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
         if (!HasOutput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<TextureUAV>>(&m_Graph, id));
+        {
+            const auto& resource = m_Graph.GetResource<TextureResource>(id);
+            m_Inputs.push_back(CreateScope<ResourceView<TextureResource, TextureUAV>>(resource.get()));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -76,7 +95,10 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
         if (!HasOutput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<SurfaceRTV>>(&m_Graph, id));
+        {
+            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
+            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceRTV>>(resource.get()));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -84,7 +106,10 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
         if (!HasOutput(id))
-            m_Inputs.push_back(CreateScope<ResourceView<SurfaceDSV>>(&m_Graph, id));
+        {
+            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
+            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

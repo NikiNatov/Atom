@@ -43,15 +43,6 @@ namespace Atom
         m_ResourceLifetimes.clear();
     }
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const Ref<Resource>& RenderGraph::GetResource(ResourceID id) const
-    {
-        for (auto& resource : m_Resources)
-            if (resource && resource->GetID() == id)
-                return resource;
-
-        return nullptr;
-    }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderGraph::BuildAdjacencyLists()

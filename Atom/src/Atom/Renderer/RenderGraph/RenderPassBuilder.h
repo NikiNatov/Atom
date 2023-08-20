@@ -24,7 +24,7 @@ namespace Atom
 
         void Read(ResourceID_UA id);
         void Read(ResourceID_RT id);
-        void Read(ResourceID_DS id);
+        void Read(ResourceID_DS id, bool isSRV = false);
 
         void Write(ResourceID_UA id);
         void Write(ResourceID_RT id);

@@ -53,7 +53,22 @@ namespace Atom
             return resource;
         }
 
-        const Ref<Resource>& GetResource(ResourceID id) const;
+        template<typename ResourceType>
+        const Ref<ResourceType>& GetResource(ResourceID id) const
+        {
+            for (auto& resource : m_Resources)
+            {
+                if (resource && resource->GetID() == id)
+                {
+                    Ref<ResourceType> castedResource = std::dynamic_pointer_cast<ResourceType>(resource);
+                    ATOM_ENGINE_ASSERT(castedResource, "Resource type mismatch");
+                    return castedResource;
+                }
+            }
+
+            return nullptr;
+        }
+
     private:
         void BuildAdjacencyLists();
         void BuildExecutionOrder();

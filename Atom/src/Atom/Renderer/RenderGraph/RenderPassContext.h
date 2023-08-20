@@ -12,14 +12,14 @@ namespace Atom
     public:
         RenderPassContext(const RenderPass& pass, Vector<Scope<IResourceView>>&& inputs, Vector<Scope<IResourceView>>&& outputs);
 
-        const ResourceView<TextureUAV>& GetUA(ResourceID_UA id) const;
-        const ResourceView<TextureSRV>& GetSR(ResourceID_UA id) const;
+        const ResourceView<TextureResource, TextureUAV>& GetUA(ResourceID_UA id) const;
+        const ResourceView<TextureResource, TextureSRV>& GetSR(ResourceID_UA id) const;
 
-        const ResourceView<SurfaceRTV>& GetRT(ResourceID_RT id) const;
-        const ResourceView<TextureSRV>& GetSR(ResourceID_RT id) const;
+        const ResourceView<RenderSurfaceResource, SurfaceRTV>& GetRT(ResourceID_RT id) const;
+        const ResourceView<RenderSurfaceResource, TextureSRV>& GetSR(ResourceID_RT id) const;
 
-        const ResourceView<SurfaceDSV>& GetDS(ResourceID_DS id) const;
-        const ResourceView<TextureSRV>& GetSR(ResourceID_DS id) const;
+        const ResourceView<RenderSurfaceResource, SurfaceDSV>& GetDS(ResourceID_DS id) const;
+        const ResourceView<RenderSurfaceResource, TextureSRV>& GetSR(ResourceID_DS id) const;
 
         inline Ref<CommandBuffer> GetCommandBuffer() const { return m_CommandBuffer; }
         inline const Vector<Scope<IResourceView>>& GetInputs() const { return m_Inputs; }

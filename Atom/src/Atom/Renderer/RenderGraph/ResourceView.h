@@ -7,20 +7,18 @@
 
 namespace Atom
 {
-#define DEFINE_VIEW_CLASS(viewClassName, resourceType, returnType, viewDataType, readOnly) \
+#define DEFINE_VIEW_CLASS(viewClassName, returnType, readOnly) \
     struct viewClassName \
     { \
-        using ResourceType = resourceType; \
         using ReturnType = returnType; \
-        using ViewDataType = viewDataType; \
         inline static const char* ViewClassName = #viewClassName; \
         inline static constexpr bool ReadOnly = readOnly; \
     }
 
-    DEFINE_VIEW_CLASS(TextureSRV, TextureResource, Texture, TextureResource::Data, true);
-    DEFINE_VIEW_CLASS(TextureUAV, TextureResource, Texture, TextureResource::Data, false);
-    DEFINE_VIEW_CLASS(SurfaceRTV, RenderSurfaceResource, RenderSurface, RenderSurfaceResource::Data, false);
-    DEFINE_VIEW_CLASS(SurfaceDSV, RenderSurfaceResource, RenderSurface, RenderSurfaceResource::Data, false);
+    DEFINE_VIEW_CLASS(TextureUAV, Texture, false);
+    DEFINE_VIEW_CLASS(TextureSRV, Texture, true);
+    DEFINE_VIEW_CLASS(SurfaceRTV, RenderSurface, false);
+    DEFINE_VIEW_CLASS(SurfaceDSV, RenderSurface, false);
 
     class IResourceView
     {
@@ -28,28 +26,27 @@ namespace Atom
         virtual bool IsReadOnly() const = 0;
         virtual const char* GetName() const = 0;
         virtual ResourceID GetResourceID() const = 0;
+
+        template<typename ResourceType, typename ViewClass>
+        bool IsResourceViewType() { return dynamic_cast<ResourceView<ResourceType, ViewClass>*>(this); }
     };
 
     class RenderGraph;
 
-    template<typename ViewClass>
+    template<typename ResourceType, typename ViewClass>
     class ResourceView : public IResourceView
     {
     public:
-        ResourceView(const RenderGraph* graph, ResourceID id)
-            : m_Graph(graph), m_ResourceID(id) {}
+        ResourceView(const ResourceType* resource)
+            : m_Resource(resource) {}
 
         virtual bool IsReadOnly() const override { return ViewClass::ReadOnly; }
         virtual const char* GetName() const override { return ViewClass::ViewClassName; }
-        virtual ResourceID GetResourceID() const override { return m_ResourceID; }
+        virtual ResourceID GetResourceID() const override { return m_Resource->GetID(); }
 
-        template<typename ViewType>
-        typename const ViewType::ReturnType* GetData() const { return GetData<ViewType>(TextureView::AllMips, TextureView::AllSlices); }
-
-        template<typename ViewType>
-        typename const ViewType::ReturnType* GetData(u32 mip, u32 slice) const;
+        typename const ViewClass::ReturnType* GetData() const { return GetData<ViewClass>(TextureView::AllMips, TextureView::AllSlices); }
+        typename const ViewClass::ReturnType* GetData(u32 mip, u32 slice) const;
     private:
-        const RenderGraph* m_Graph;
-        ResourceID         m_ResourceID;
+        const ResourceType* m_Resource;
     };
 }

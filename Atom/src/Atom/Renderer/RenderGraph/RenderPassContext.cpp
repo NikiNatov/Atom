@@ -10,51 +10,51 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureUAV>& RenderPassContext::GetUA(ResourceID_UA id) const
+    const ResourceView<TextureResource, TextureUAV>& RenderPassContext::GetUA(ResourceID_UA id) const
     {
         const IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No UAV found for resource");
-        return *(ResourceView<TextureUAV>*)view;
+        return *(ResourceView<TextureResource, TextureUAV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureSRV>& RenderPassContext::GetSR(ResourceID_UA id) const
+    const ResourceView<TextureResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_UA id) const
     {
         const IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<TextureSRV>*)view;
+        return *(ResourceView<TextureResource, TextureSRV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<SurfaceRTV>& RenderPassContext::GetRT(ResourceID_RT id) const
+    const ResourceView<RenderSurfaceResource, SurfaceRTV>& RenderPassContext::GetRT(ResourceID_RT id) const
     {
         const IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No RTV found for resource");
-        return *(ResourceView<SurfaceRTV>*)view;
+        return *(ResourceView<RenderSurfaceResource, SurfaceRTV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureSRV>& RenderPassContext::GetSR(ResourceID_RT id) const
+    const ResourceView<RenderSurfaceResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_RT id) const
     {
         const IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<TextureSRV>*)view;
+        return *(ResourceView<RenderSurfaceResource, TextureSRV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<SurfaceDSV>& RenderPassContext::GetDS(ResourceID_DS id) const
+    const ResourceView<RenderSurfaceResource, SurfaceDSV>& RenderPassContext::GetDS(ResourceID_DS id) const
     {
         const IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No DSV found for resource");
-        return *(ResourceView<SurfaceDSV>*)view;
+        return *(ResourceView<RenderSurfaceResource, SurfaceDSV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureSRV>& RenderPassContext::GetSR(ResourceID_DS id) const
+    const ResourceView<RenderSurfaceResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_DS id) const
     {
         const IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<TextureSRV>*)view;
+        return *(ResourceView<RenderSurfaceResource, TextureSRV>*)view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
