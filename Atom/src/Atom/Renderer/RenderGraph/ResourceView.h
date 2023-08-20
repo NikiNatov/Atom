@@ -43,8 +43,11 @@ namespace Atom
         virtual const char* GetName() const override { return ViewClass::ViewClassName; }
         virtual ResourceID GetResourceID() const override { return m_ResourceID; }
 
-        typename const ViewClass::ReturnType* GetData() const { return GetData(TextureView::AllMips, TextureView::AllSlices); }
-        typename const ViewClass::ReturnType* GetData(u32 mip, u32 slice) const;
+        template<typename ViewType>
+        typename const ViewType::ReturnType* GetData() const { return GetData<ViewType>(TextureView::AllMips, TextureView::AllSlices); }
+
+        template<typename ViewType>
+        typename const ViewType::ReturnType* GetData(u32 mip, u32 slice) const;
     private:
         const RenderGraph* m_Graph;
         ResourceID         m_ResourceID;
