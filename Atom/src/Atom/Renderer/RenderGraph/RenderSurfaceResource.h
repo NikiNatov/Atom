@@ -31,6 +31,7 @@ namespace Atom
         inline u32 GetArraySize() const { return m_Description.ArraySize; }
         inline u32 GetMipLevels() const { return m_Description.MipLevels; }
         inline TextureFlags GetFlags() const { return m_Description.Flags; }
+        inline ResourceState GetInitialState() const { return m_Description.InitialState; }
         inline const TextureDescription& GetDescription() const { return m_Description; }
     public:
         static RenderSurface* GetView(const Data* data, u32 mip, u32 slice);
