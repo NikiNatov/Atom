@@ -24,6 +24,8 @@ namespace Atom
 
         virtual void Allocate() override;
         virtual void Free() override;
+        virtual bool CanDecayToCommonStateFromState(ResourceState state) const override;
+        virtual bool CanPromoteFromCommonStateToState(ResourceState state) const override;
 
         inline TextureFormat GetFormat() const { return m_Description.Format; }
         inline u32 GetWidth() const { return m_Description.Width; }

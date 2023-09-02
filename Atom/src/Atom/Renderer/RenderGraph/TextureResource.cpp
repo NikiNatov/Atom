@@ -83,6 +83,23 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
+    bool TextureResource::CanDecayToCommonStateFromState(ResourceState state) const
+    {
+        return IsSet(state & ResourceState::NonPixelShaderRead) ||
+            IsSet(state & ResourceState::PixelShaderRead) ||
+            IsSet(state & ResourceState::CopySource);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool TextureResource::CanPromoteFromCommonStateToState(ResourceState state) const
+    {
+        return IsSet(state & ResourceState::NonPixelShaderRead) || 
+            IsSet(state & ResourceState::PixelShaderRead) || 
+            IsSet(state & ResourceState::CopySource) || 
+            IsSet(state & ResourceState::CopyDestination);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
     Texture* TextureResource::GetView(const Data* data, u32 mip, u32 slice)
     {
         if (mip == TextureView::AllMips && slice == TextureView::AllSlices)

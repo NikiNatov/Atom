@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Renderer/ResourceState.h"
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
 
 namespace Atom
@@ -14,6 +15,8 @@ namespace Atom
 
         virtual void Allocate() = 0;
         virtual void Free() = 0;
+        virtual bool CanDecayToCommonStateFromState(ResourceState state) const = 0;
+        virtual bool CanPromoteFromCommonStateToState(ResourceState state) const = 0;
 
         inline bool IsAllocated() const { return m_Data != nullptr; }
         inline void SetProducerPassID(u16 producerPassID) { m_ProducerPassID = producerPassID; }
