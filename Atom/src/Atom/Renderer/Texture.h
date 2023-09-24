@@ -4,6 +4,7 @@
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/TextureView.h"
 #include "Atom/Renderer/ResourceState.h"
+#include "Atom/Renderer/HWResource.h"
 
 #include <glm/glm.hpp>
 
@@ -83,7 +84,7 @@ namespace Atom
         ResourceState InitialState = ResourceState::Common;
     };
 
-    class Texture
+    class Texture : public HWResource
     {
     public:
         Texture(const TextureDescription& description, const char* debugName);
@@ -118,7 +119,6 @@ namespace Atom
         static u32 CalculateMaxMipCount(u32 width, u32 height);
         static u32 CalculateSubresource(u32 mip, u32 slice, u32 mipCount, u32 arraySize);
     private:
-        ComPtr<ID3D12Resource> m_D3DResource;
         TextureDescription     m_Description;
         Scope<TextureViewRO>   m_SRV;
         Scope<TextureViewRW>   m_UAV;

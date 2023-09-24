@@ -103,9 +103,10 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(const Texture& aliasedTexture, u32 mipIndex, u32 sliceIndex)
-        : m_Description(aliasedTexture.m_Description), m_D3DResource(aliasedTexture.m_D3DResource), m_IsAlias(true)
+        : m_Description(aliasedTexture.m_Description), m_IsAlias(true)
     {
         ATOM_ENGINE_ASSERT(!aliasedTexture.IsAlias());
+        m_D3DResource = aliasedTexture.m_D3DResource;
 
         m_Description.Width = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Width : aliasedTexture.m_Description.Width >> mipIndex;
         m_Description.Height = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.Height : aliasedTexture.m_Description.Height >> mipIndex;
@@ -204,8 +205,9 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::Texture(Texture&& rhs) noexcept
-        : m_D3DResource(std::move(rhs.m_D3DResource)), m_Description(std::move(rhs.m_Description)), m_SRV(std::move(rhs.m_SRV)), m_UAV(std::move(rhs.m_UAV)), m_IsAlias(rhs.m_IsAlias)
+        : m_Description(std::move(rhs.m_Description)), m_SRV(std::move(rhs.m_SRV)), m_UAV(std::move(rhs.m_UAV)), m_IsAlias(rhs.m_IsAlias)
     {
+        m_D3DResource = std::move(rhs.m_D3DResource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -49,6 +49,7 @@
 #include "Atom/Renderer/PipelineLibrary.h"
 #include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Renderer/RenderSurface.h"
+#include "Atom/Renderer/HWResource.h"
 
 // Scene
 #include "Atom/Scene/Components.h"

@@ -56,9 +56,9 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Buffer::Buffer(Buffer&& rhs) noexcept
-        : m_D3DResource(rhs.m_D3DResource), m_Description(rhs.m_Description), m_Type(rhs.m_Type), m_MapRange(rhs.m_MapRange)
+        : m_Description(rhs.m_Description), m_Type(rhs.m_Type), m_MapRange(rhs.m_MapRange)
     {
-        rhs.m_D3DResource = nullptr;
+        m_D3DResource = std::move(rhs.m_D3DResource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

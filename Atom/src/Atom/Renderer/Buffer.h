@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/ResourceState.h"
+#include "Atom/Renderer/HWResource.h"
 
 namespace Atom
 {
@@ -24,7 +25,7 @@ namespace Atom
         ResourceState InitialState = ResourceState::Common;
     };
 
-    class Buffer
+    class Buffer : public HWResource
     {
     public:
         Buffer(BufferType type, const BufferDescription& description, const char* debugName = "Unnamed Buffer");
@@ -49,7 +50,6 @@ namespace Atom
     protected:
         BufferDescription      m_Description;
         BufferType             m_Type;
-        ComPtr<ID3D12Resource> m_D3DResource;
         D3D12_RANGE            m_MapRange;
     };
 
