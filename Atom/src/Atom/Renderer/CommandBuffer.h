@@ -21,6 +21,7 @@ namespace Atom
     class ReadbackBuffer;
     class GPUDescriptorHeap;
     class ComputeShader;
+    class ResourceBarrier;
     enum class CommandQueueType;
 
     class CommandBuffer
@@ -32,6 +33,7 @@ namespace Atom
         void Begin();
         void BeginRenderPass(const Framebuffer* framebuffer, bool clear = false);
         void EndRenderPass(const Framebuffer* framebuffer);
+        void ApplyBarriers(const Vector<ResourceBarrier*>& barriers);
         void TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
         void AddUAVBarrier(const Texture* texture);
         void CommitBarriers();

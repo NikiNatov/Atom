@@ -12,6 +12,7 @@
 #include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ResourceBarrier.h"
 
 #include <glm\gtc\type_ptr.hpp>
 
@@ -117,6 +118,21 @@ namespace Atom
         }
 
         m_ResourceStateTracker.CommitBarriers();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::ApplyBarriers(const Vector<ResourceBarrier*>& barriers)
+    {
+        Vector<D3D12_RESOURCE_BARRIER> d3dBarriers;
+        d3dBarriers.reserve(barriers.size());
+
+        for (const auto* barrier : barriers)
+            d3dBarriers.push_back(barrier->GetD3DBarrier());
+
+        if (d3dBarriers.size())
+        {
+            m_CommandList->ResourceBarrier(d3dBarriers.size(), d3dBarriers.data());
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
