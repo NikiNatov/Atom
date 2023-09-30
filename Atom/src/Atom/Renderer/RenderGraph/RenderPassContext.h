@@ -7,29 +7,40 @@
 
 namespace Atom
 {
+    class ResourceScheduler;
+    class SceneFrameData;
+
     class RenderPassContext
     {
     public:
-        RenderPassContext(const RenderPass& pass, Vector<Scope<IResourceView>>&& inputs, Vector<Scope<IResourceView>>&& outputs);
+        RenderPassContext(RenderPassID passID, Ref<CommandBuffer> cmdBuffer, const ResourceScheduler& resourceScheduler, const SceneFrameData& sceneData);
 
-        const ResourceView<TextureResource, TextureUAV>& GetUA(ResourceID_UA id) const;
-        const ResourceView<TextureResource, TextureSRV>& GetSR(ResourceID_UA id) const;
+        ResourceView<TextureUAV>* GetUA(ResourceID_UA id) const;
+        ResourceView<TextureSRV>* GetSR(ResourceID_UA id) const;
 
-        const ResourceView<RenderSurfaceResource, SurfaceRTV>& GetRT(ResourceID_RT id) const;
-        const ResourceView<RenderSurfaceResource, TextureSRV>& GetSR(ResourceID_RT id) const;
+        ResourceView<SurfaceRTV>* GetRT(ResourceID_RT id) const;
+        ResourceView<SurfaceSRV>* GetSR(ResourceID_RT id) const;
 
-        const ResourceView<RenderSurfaceResource, SurfaceDSV>& GetDS(ResourceID_DS id) const;
-        const ResourceView<RenderSurfaceResource, TextureSRV>& GetSR(ResourceID_DS id) const;
+        ResourceView<SurfaceDSV_RW>* GetDS_RW(ResourceID_DS id) const;
+        ResourceView<SurfaceDSV_RO>* GetDS_RO(ResourceID_DS id) const;
+        ResourceView<SurfaceSRV>* GetSR(ResourceID_DS id) const;
 
+        Ref<ConstantBuffer> GetFrameConstantBuffer() const;
+        const DescriptorAllocation& GetFrameResourceTable() const;
+        const DescriptorAllocation& GetFrameSamplerTable() const;
+
+        inline RenderPassID GetPassID() const { return m_PassID; }
         inline Ref<CommandBuffer> GetCommandBuffer() const { return m_CommandBuffer; }
-        inline const Vector<Scope<IResourceView>>& GetInputs() const { return m_Inputs; }
-        inline const Vector<Scope<IResourceView>>& GetOutputs() const { return m_Outputs; }
+        inline const SceneFrameData& GetSceneData() const { return m_SceneData; }
+
     private:
-        const IResourceView* FindInput(ResourceID id) const;
-        const IResourceView* FindOutput(ResourceID id) const;
+        IResourceView* FindInput(ResourceID id) const;
+        IResourceView* FindOutput(ResourceID id) const;
+
     private:
-        Ref<CommandBuffer>           m_CommandBuffer;
-        Vector<Scope<IResourceView>> m_Inputs;
-        Vector<Scope<IResourceView>> m_Outputs;
+        RenderPassID             m_PassID;
+        Ref<CommandBuffer>       m_CommandBuffer;
+        const ResourceScheduler& m_ResourceScheduler;
+        const SceneFrameData&    m_SceneData;
     };
 }

@@ -7,6 +7,7 @@
 #include "CommandBuffer.h"
 #include "Device.h"
 #include "Renderer.h"
+#include "Fence.h"
 
 namespace Atom
 {
@@ -25,8 +26,8 @@ namespace Atom
 
         DXCall(d3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_D3DCommandQueue)));
 
-        // Create fence
-        DXCall(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_D3DFence)));
+        // Create cmd buffer processing fence
+        m_CmdBufferProcessingFence = CreateRef<Fence>("Command Buffer Processing Fence");
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -44,25 +45,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 CommandQueue::Signal()
+    void CommandQueue::SignalFence(const Ref<Fence>& fence, u64 value)
     {
-        DXCall(m_D3DCommandQueue->Signal(m_D3DFence.Get(), ++m_FenceValue));
-        return m_FenceValue;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandQueue::WaitForFenceValue(u64 value)
-    {
-        if (m_D3DFence->GetCompletedValue() < value)
-        {
-            if (HANDLE fenceEvent = CreateEvent(0, false, false, 0))
-            {
-                // If the fence value is not reached pause the current thread
-                DXCall(m_D3DFence->SetEventOnCompletion(value, fenceEvent));
-                WaitForSingleObject(fenceEvent, INFINITE);
-                CloseHandle(fenceEvent);
-            }
-        }
+        DXCall(m_D3DCommandQueue->Signal(fence->GetD3DFence().Get(), value));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -71,25 +56,30 @@ namespace Atom
         std::unique_lock<std::mutex> lock(m_CmdBufferProcessingMutex);
         m_CmdBufferProcessingCV.wait(lock, [this] { return m_InFlightCmdBuffers.Empty(); });
 
-        u64 fenceValueToWait = Signal();
-        WaitForFenceValue(fenceValueToWait);
+        Ref<Fence> fence = CreateRef<Fence>();
+        u64 fenceValueToWait = fence->IncrementTargetValue();
+        SignalFence(fence, fenceValueToWait);
+        fence->WaitForValueCPU(fenceValueToWait);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandQueue::WaitForQueue(const CommandQueue* queue)
+    void CommandQueue::WaitFence(const Ref<Fence>& fence, u64 value)
     {
-        m_D3DCommandQueue->Wait(queue->m_D3DFence.Get(), queue->m_FenceValue);
+        m_D3DCommandQueue->Wait(fence->GetD3DFence().Get(), value);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
+    void CommandQueue::ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer)
     {
-        return ExecuteCommandLists({ commandBuffer });
+        ExecuteCommandLists({ commandBuffer });
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u64 CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
+    void CommandQueue::ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers)
     {
+        if (commandBuffers.empty())
+            return;
+
         Vector<ID3D12CommandList*> commandListArray;
 
         for (auto& buffer : commandBuffers)
@@ -99,14 +89,13 @@ namespace Atom
         }
 
         m_D3DCommandQueue->ExecuteCommandLists(commandListArray.size(), commandListArray.data());
-        u64 fenceValue = Signal();
+        u64 fenceValue = m_CmdBufferProcessingFence->IncrementTargetValue();
+        SignalFence(m_CmdBufferProcessingFence, fenceValue);
 
         for (auto& buffer : commandBuffers)
         {
             m_InFlightCmdBuffers.Emplace(buffer, fenceValue);
         }
-
-        return fenceValue;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -142,7 +131,7 @@ namespace Atom
             {
                 CommandBufferEntry entry = m_InFlightCmdBuffers.Pop();
 
-                WaitForFenceValue(entry.FenceValue);
+                m_CmdBufferProcessingFence->WaitForValueCPU(entry.FenceValue);
                 m_AvailableCmdBuffers.Push(entry.CmdBuffer);
             }
 

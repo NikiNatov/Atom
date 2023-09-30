@@ -11,7 +11,6 @@
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Buffer.h"
-#include "Atom/Renderer/Framebuffer.h"
 
 namespace Atom
 {
@@ -189,9 +188,12 @@ namespace Atom
         if (drawData->DisplaySize.x > 0.0f && drawData->DisplaySize.y > 0.0f)
         {
             CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+            RenderSurface* swapChainBuffer = Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get();
+
             Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
             commandBuffer->Begin();
-            commandBuffer->BeginRenderPass(m_Pipeline->GetFramebuffer().get(), m_ClearRenderTarget);
+            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandBuffer->BeginRenderPass({ Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get() }, m_ClearRenderTarget);
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
 
@@ -287,7 +289,7 @@ namespace Atom
                 globalVtxOffset += cmdList->VtxBuffer.Size;
             }
 
-            commandBuffer->EndRenderPass(m_Pipeline->GetFramebuffer().get());
+            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), D3D12_RESOURCE_STATE_PRESENT);
             commandBuffer->End();
 
             gfxQueue->ExecuteCommandList(commandBuffer);
@@ -318,8 +320,22 @@ namespace Atom
         m_VertexBuffers.resize(numFramesInFlight, nullptr);
         m_IndexBuffers.resize(numFramesInFlight, nullptr);
 
-        // Get the pipeline
-        m_Pipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("ImGuiPipeline");
+        // Create the pipeline
+        GraphicsPipelineDescription pipelineDesc;
+        pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("ImGuiShader");
+        pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA8 };
+        pipelineDesc.EnableBlend = true;
+        pipelineDesc.EnableDepthTest = false;
+        pipelineDesc.BackfaceCulling = false;
+        pipelineDesc.Wireframe = false;
+        pipelineDesc.Topology = Topology::Triangles;
+        pipelineDesc.Layout = {
+            { "POSITION", ShaderDataType::Float2 },
+            { "TEX_COORD", ShaderDataType::Float2 },
+            { "COLOR", ShaderDataType::Unorm4 },
+        };
+
+        m_Pipeline = Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
 
         // Create font texture
         ImGuiIO& io = ImGui::GetIO();

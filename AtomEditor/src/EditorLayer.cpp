@@ -34,8 +34,7 @@ namespace Atom
         const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
         OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "SandboxProject/SandboxProject.atmproj");
         
-        m_Renderer = CreateRef<SceneRenderer>();
-        m_Renderer->Initialize();
+        m_Renderer = CreateRef<SceneRenderer>(false);
 
         m_SceneHierarchyPanel.SetScene(m_EditorScene);
         m_ActiveScene = m_EditorScene;
@@ -57,7 +56,7 @@ namespace Atom
         if (m_NeedsResize)
         {
             m_ActiveScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
-            m_Renderer->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+            m_Renderer->SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
             m_NeedsResize = false;
         }
 
@@ -242,8 +241,8 @@ namespace Atom
 
         ImVec2 prevPos = ImGui::GetCursorPos();
 
-        Ref<Texture> finalImage = m_Renderer->GetFinalImage()->GetTexture();
-        ImGui::Image((ImTextureID)finalImage.get(), {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
+        const Texture* finalImage = m_Renderer->GetFinalImage();
+        ImGui::Image((ImTextureID)finalImage, {(f32)finalImage->GetWidth(), (f32)finalImage->GetHeight()});
 
         if (m_ActiveScene->GetSceneState() == SceneState::Running)
         {

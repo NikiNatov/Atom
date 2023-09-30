@@ -3,6 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/RenderSurface.h"
+#include "Atom/Renderer/Fence.h"
 
 namespace Atom
 {
@@ -33,6 +34,7 @@ namespace Atom
         u32                        m_TearingSupported;
         u32                        m_BackBufferIndex;
         Vector<Ref<RenderSurface>> m_BackBuffers;
+        Ref<Fence>                 m_FrameFence;
         Vector<u64>                m_FrameFenceValues;
     };
 }

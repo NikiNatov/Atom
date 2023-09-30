@@ -4,7 +4,6 @@
 
 #include "Pipeline.h"
 #include "Device.h"
-#include "Framebuffer.h"
 
 namespace Atom
 {
@@ -134,15 +133,13 @@ namespace Atom
         m_D3DDescription.PrimitiveTopologyType = Utils::AtomTopologyToD3D12(m_Description.Topology);
         m_D3DDescription.NumRenderTargets = AttachmentPoint::NumColorAttachments;
 
-        for (u8 i = 0; i < AttachmentPoint::NumAttachments; i++)
+        u32 currentRTVIdx = 0;
+        for (TextureFormat targetFormat : m_Description.RenderTargetFormats)
         {
-            if (auto attachment = m_Description.Framebuffer->GetAttachment((AttachmentPoint)i))
-            {
-                if (i == AttachmentPoint::Depth)
-                    m_D3DDescription.DSVFormat = Utils::AtomTextureFormatToDSVFormat(attachment->GetFormat());
-                else
-                    m_D3DDescription.RTVFormats[i] = Utils::AtomTextureFormatToRTVFormat(attachment->GetFormat());
-            }
+            if (targetFormat == TextureFormat::Depth32 || targetFormat == TextureFormat::Depth24Stencil8)
+                m_D3DDescription.DSVFormat = Utils::AtomTextureFormatToDSVFormat(targetFormat);
+            else
+                m_D3DDescription.RTVFormats[currentRTVIdx++] = Utils::AtomTextureFormatToRTVFormat(targetFormat);
         }
 
         m_D3DDescription.SampleDesc.Count = 1;
@@ -173,9 +170,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Framebuffer> GraphicsPipeline::GetFramebuffer() const
+    TextureFormat GraphicsPipeline::GetRenderTargetFormat(AttachmentPoint attachmentPoint) const
     {
-        return m_Description.Framebuffer;
+        return m_Description.RenderTargetFormats[attachmentPoint];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

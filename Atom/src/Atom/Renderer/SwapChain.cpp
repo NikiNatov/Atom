@@ -47,6 +47,9 @@ namespace Atom
         m_BackBuffers.resize(framesInFlight, nullptr);
         RecreateBuffers();
 
+        // Create frame fence
+        m_FrameFence = CreateRef<Fence>("Frame fence");
+
         // Initialize fence values
         m_FrameFenceValues.resize(framesInFlight, 0);
     }
@@ -63,13 +66,14 @@ namespace Atom
 
         // Present and signal the fence for the current frame
         DXCall(m_DXGISwapChain->Present(vsync, !vsync && m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0));
-        m_FrameFenceValues[m_BackBufferIndex] = gfxQueue->Signal();
+        m_FrameFenceValues[m_BackBufferIndex] = m_FrameFence->IncrementTargetValue();
+        gfxQueue->SignalFence(m_FrameFence, m_FrameFenceValues[m_BackBufferIndex]);
 
         // Update the back buffer index
         m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
         // If the next frame is not finished rendering, wait
-        gfxQueue->WaitForFenceValue(m_FrameFenceValues[m_BackBufferIndex]);
+        m_FrameFence->WaitForValueCPU(m_FrameFenceValues[m_BackBufferIndex]);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

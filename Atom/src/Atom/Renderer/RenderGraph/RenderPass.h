@@ -14,27 +14,23 @@ namespace Atom
     {
         friend class RenderGraph;
     public:
-        using BuildCallback = std::function<void(RenderPassBuilder&)>;
-        using ExecuteCallback = std::function<void(RenderPassContext&)>;
-    public:
-        RenderPass(RenderPassID id, const String& name, CommandQueueType queueType, const BuildCallback& buildFn, const ExecuteCallback& executeFn);
-        ~RenderPass();
+        virtual ~RenderPass() = default;
 
-        void Build(RenderPassBuilder& builder);
-        void Execute();
+        virtual void Build(RenderPassBuilder& builder) = 0;
+        virtual void Execute(RenderPassContext& context) = 0;
 
         inline RenderPassID GetID() const { return m_ID; }
         inline const String& GetName() const { return m_Name; }
         inline CommandQueueType GetQueueType() const { return m_QueueType; }
-    private:
+    protected:
+        RenderPass(RenderPassID id, const String& name, CommandQueueType queueType);
+    protected:
         RenderPassID             m_ID;
         String                   m_Name;
         CommandQueueType         m_QueueType;
-        BuildCallback            m_BuildFn;
-        ExecuteCallback          m_ExecuteFn;
 
         // Execution info
-        RenderPassContext*       m_Context;
+        bool                     m_SignalRequired = false;
         HashSet<RenderPassID>    m_SyncPasses;
         u32                      m_SyncIndicesPerQueue[u32(CommandQueueType::NumTypes)] = { UINT32_MAX, UINT32_MAX, UINT32_MAX };
         u32                      m_DependencyGroupIndex = UINT32_MAX;

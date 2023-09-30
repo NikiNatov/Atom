@@ -35,10 +35,8 @@ namespace Atom
         static void Initialize(const RendererConfig& config = RendererConfig());
         static void Shutdown();
         static void BeginFrame();
-        static void BeginRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer, bool clear = true);
-        static void EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer);
         static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial);
-        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<Texture> texture);
+        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Texture* texture);
         static Ref<Texture> CreateEnvironmentMap(Ref<Texture> equirectTexture, u32 mapSize, const char* debugName);
         static Ref<Texture> CreateIrradianceMap(Ref<Texture> environmentMap, u32 mapSize, const char* debugName);
         static Ref<Texture> CreateBRDFTexture();
@@ -51,8 +49,8 @@ namespace Atom
         static const RendererConfig& GetConfig();
         static u32 GetCurrentFrameIndex();
         static u32 GetFramesInFlight();
-        static const ShaderLibrary& GetShaderLibrary();
-        static const PipelineLibrary& GetPipelineLibrary();
+        static ShaderLibrary& GetShaderLibrary();
+        static PipelineLibrary& GetPipelineLibrary();
         static Ref<Texture> GetBRDF();
         static Ref<Texture> GetErrorTexture();
         static Ref<Texture> GetBlackTexture();

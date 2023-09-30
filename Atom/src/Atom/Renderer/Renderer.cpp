@@ -6,7 +6,6 @@
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Asset/MeshAsset.h"
@@ -44,160 +43,6 @@ namespace Atom
         ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/BRDFShader.hlsl");
 
         // Load pipelines
-        {
-            FramebufferDescription fbDesc;
-            fbDesc.SwapChainFrameBuffer = false;
-            fbDesc.Width = 1980;
-            fbDesc.Height = 1080;
-            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA16F, ClearValue(0.2f, 0.2f, 0.2f, 1.0f), TextureFilter::Linear, TextureWrap::Clamp };
-            fbDesc.Attachments[AttachmentPoint::Depth] = { TextureFormat::Depth24Stencil8, ClearValue(1.0f, 0), TextureFilter::Linear, TextureWrap::Clamp };
-
-            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "GeometryFramebuffer");
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader");
-                pipelineDesc.Framebuffer = frameBuffer;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                    { "NORMAL", ShaderDataType::Float3 },
-                    { "TANGENT", ShaderDataType::Float3 },
-                    { "BITANGENT", ShaderDataType::Float3 },
-                };
-                pipelineDesc.EnableBlend = true;
-                pipelineDesc.EnableDepthTest = true;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.BackfaceCulling = true;
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("MeshPBRPipeline", pipelineDesc);
-            }
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader");
-                pipelineDesc.Framebuffer = frameBuffer;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                    { "NORMAL", ShaderDataType::Float3 },
-                    { "TANGENT", ShaderDataType::Float3 },
-                    { "BITANGENT", ShaderDataType::Float3 },
-                    { "BONE_IDS", ShaderDataType::Uint4 },
-                    { "BONE_WEIGHTS", ShaderDataType::Float4 },
-                };
-                pipelineDesc.EnableBlend = true;
-                pipelineDesc.EnableDepthTest = true;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.BackfaceCulling = true;
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("MeshPBRAnimatedPipeline", pipelineDesc);
-            }
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("SkyBoxShader");
-                pipelineDesc.Framebuffer = frameBuffer;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                };
-                pipelineDesc.EnableBlend = false;
-                pipelineDesc.EnableDepthTest = false;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.BackfaceCulling = true;
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("SkyBoxPipeline", pipelineDesc);
-            }
-        }
-
-        {
-            FramebufferDescription fbDesc;
-            fbDesc.SwapChainFrameBuffer = false;
-            fbDesc.Width = 1980;
-            fbDesc.Height = 1080;
-            fbDesc.Attachments[AttachmentPoint::Color0] = { TextureFormat::RGBA8, ClearValue(0.2f, 0.2f, 0.2f, 1.0f), TextureFilter::Linear, TextureWrap::Clamp };
-
-            Ref<Framebuffer> frameBuffer = CreateRef<Framebuffer>(fbDesc, "CompositeFramebuffer");
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("CompositeShader");
-                pipelineDesc.Framebuffer = frameBuffer;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                };
-                pipelineDesc.EnableBlend = false;
-                pipelineDesc.EnableDepthTest = false;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.BackfaceCulling = true;
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("CompositePipeline", pipelineDesc);
-            }
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("FullscreenQuadShader");
-                pipelineDesc.Framebuffer = frameBuffer;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                };
-                pipelineDesc.EnableBlend = false;
-                pipelineDesc.EnableDepthTest = false;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.BackfaceCulling = true;
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("FullscreenQuadPipeline", pipelineDesc);
-            }
-        }
-
-        {
-            FramebufferDescription fbDesc;
-            fbDesc.SwapChainFrameBuffer = true;
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "ImGuiFramebuffer");
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("ImGuiShader");
-                pipelineDesc.EnableBlend = true;
-                pipelineDesc.EnableDepthTest = false;
-                pipelineDesc.BackfaceCulling = false;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float2 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                    { "COLOR", ShaderDataType::Unorm4 },
-                };
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
-            }
-
-            {
-                GraphicsPipelineDescription pipelineDesc;
-                pipelineDesc.Framebuffer = CreateRef<Framebuffer>(fbDesc, "SwapChainFramebuffer");
-                pipelineDesc.Shader = ms_ShaderLibrary.Get<GraphicsShader>("FullscreenQuadShader");
-                pipelineDesc.EnableBlend = false;
-                pipelineDesc.EnableDepthTest = false;
-                pipelineDesc.BackfaceCulling = true;
-                pipelineDesc.Wireframe = false;
-                pipelineDesc.Topology = Topology::Triangles;
-                pipelineDesc.Layout = {
-                    { "POSITION", ShaderDataType::Float3 },
-                    { "TEX_COORD", ShaderDataType::Float2 },
-                };
-
-                ms_PipelineLibrary.Load<GraphicsPipeline>("SwapChainPipeline", pipelineDesc);
-            }
-
-        }
 
         {
             ComputePipelineDescription pipelineDesc;
@@ -364,18 +209,6 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer, bool clear)
-    {
-        commandBuffer->BeginRenderPass(framebuffer.get(), clear);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndRenderPass(Ref<CommandBuffer> commandBuffer, Ref<Framebuffer> framebuffer)
-    {
-        commandBuffer->EndRenderPass(framebuffer.get());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial)
     {
         const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
@@ -398,7 +231,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Ref<Texture> texture)
+    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Texture* texture)
     {
         if (texture)
         {
@@ -408,7 +241,6 @@ namespace Atom
             DescriptorAllocation samplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(1);
             Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp)->GetDescriptor(), DescriptorHeapType::Sampler);
 
-            commandBuffer->TransitionResource(texture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, resourceTable.GetBaseGpuDescriptor(), samplerTable.GetBaseGpuDescriptor());
         }
 
@@ -425,6 +257,9 @@ namespace Atom
 
         CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+
+        Ref<Fence> copyQueueFence = CreateRef<Fence>("CreateEnvironmentMap_CopyQueueFence");
+        Ref<Fence> computeQueueFence = CreateRef<Fence>("CreateEnvironmentMap_ComputeQueueFence");
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //                        Phase 1: Equirectangular map to cubemap                              //
@@ -470,8 +305,8 @@ namespace Atom
 
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), D3D12_RESOURCE_STATE_COMMON);
             computeCmdBuffer->End();
-            computeQueue->WaitForQueue(copyQueue);
             computeQueue->ExecuteCommandList(computeCmdBuffer);
+            computeQueue->SignalFence(computeQueueFence, computeQueueFence->IncrementTargetValue());
 
             PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
         }
@@ -494,8 +329,9 @@ namespace Atom
             }
 
             copyCmdBuffer->End();
-            copyQueue->WaitForQueue(computeQueue);
+            copyQueue->WaitFence(computeQueueFence, computeQueueFence->GetTargetValue());
             copyQueue->ExecuteCommandList(copyCmdBuffer);
+            copyQueue->SignalFence(copyQueueFence, copyQueueFence->IncrementTargetValue());
         }
 
         {
@@ -533,7 +369,7 @@ namespace Atom
 
             computeCmdBuffer->TransitionResource(envMap.get(), D3D12_RESOURCE_STATE_COMMON);
             computeCmdBuffer->End();
-            computeQueue->WaitForQueue(copyQueue);
+            computeQueue->WaitFence(copyQueueFence, copyQueueFence->GetTargetValue());
             computeQueue->ExecuteCommandList(computeCmdBuffer);
 
             PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
@@ -688,8 +524,6 @@ namespace Atom
 
         computeCmdBuffer->End();
 
-        // Wait for any copy operations to complate in order to make sure we have all the data already uploaded before executing
-        computeQueue->WaitForQueue(Device::Get().GetCommandQueue(CommandQueueType::Copy));
         computeQueue->ExecuteCommandList(computeCmdBuffer);
         computeQueue->Flush();
 
@@ -756,13 +590,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ShaderLibrary& Renderer::GetShaderLibrary()
+    ShaderLibrary& Renderer::GetShaderLibrary()
     {
         return ms_ShaderLibrary;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const PipelineLibrary& Renderer::GetPipelineLibrary()
+    PipelineLibrary& Renderer::GetPipelineLibrary()
     {
         return ms_PipelineLibrary;
     }

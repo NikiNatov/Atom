@@ -9,23 +9,30 @@ namespace Atom
     class TextureResource : public Resource
     {
     public:
-        struct Data : DataBase
+        using HWResourceType = Texture;
+        using ResourceDescType = TextureDescription;
+
+        struct ViewData
         {
-            Texture*  MainResource = nullptr;
-            Texture** MipViews = nullptr;
-            Texture** SliceViews = nullptr;
-            Texture** SubresourceViews = nullptr;
+            HWResourceType*  MainResource = nullptr;
+            HWResourceType** MipViews = nullptr;
+            HWResourceType** SliceViews = nullptr;
+            HWResourceType** SubresourceViews = nullptr;
         };
 
     public:
-        TextureResource(ResourceID_UA id, const TextureDescription& description);
-        TextureResource(ResourceID_UA id, Texture* externalTexture);
+        TextureResource(ResourceID_UA id, const ResourceDescType& description);
+        TextureResource(ResourceID_UA id, HWResourceType* externalResource);
         ~TextureResource();
 
         virtual void Allocate() override;
         virtual void Free() override;
+        virtual bool IsAllocated() const override;
         virtual bool CanDecayToCommonStateFromState(ResourceState state) const override;
         virtual bool CanPromoteFromCommonStateToState(ResourceState state) const override;
+        virtual HWResource* GetHWResource() const override;
+
+        HWResourceType* GetView(u32 mip, u32 slice) const;
 
         inline TextureFormat GetFormat() const { return m_Description.Format; }
         inline u32 GetWidth() const { return m_Description.Width; }
@@ -35,11 +42,10 @@ namespace Atom
         inline u32 GetMipLevels() const { return m_Description.MipLevels; }
         inline TextureFlags GetFlags() const { return m_Description.Flags; }
         inline ResourceState GetInitialState() const { return m_Description.InitialState; }
-        inline const TextureDescription& GetDescription() const { return m_Description; }
-    public:
-        static Texture* GetView(const Data* data, u32 mip, u32 slice);
+        inline const ResourceDescType& GetDescription() const { return m_Description; }
     private:
-        TextureDescription m_Description;
-        Texture*           m_ExternalTexture;
+        ResourceDescType m_Description;
+        HWResourceType*  m_ExternalResource;
+        ViewData*        m_ViewData;
     };
 }

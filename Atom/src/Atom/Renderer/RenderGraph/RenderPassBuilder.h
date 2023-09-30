@@ -1,26 +1,26 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
 #include "Atom/Renderer/RenderGraph/RenderPass.h"
-#include "Atom/Renderer/RenderGraph/RenderPassContext.h"
+#include "Atom/Renderer/RenderGraph/TextureResource.h"
+#include "Atom/Renderer/RenderGraph/RenderSurfaceResource.h"
 
 namespace Atom
 {
-    class RenderGraph;
-    class IResourceView;
+    class ResourceScheduler;
 
     class RenderPassBuilder
     {
     public:
-        RenderPassBuilder(RenderGraph& graph, RenderPassID passID);
+        RenderPassBuilder(RenderPassID passID, ResourceScheduler& resourceScheduler);
 
-        RenderPassContext* Finalize();
-
-        void NewUA(ResourceID_UA id, const TextureDescription& description);
-        void NewRT(ResourceID_RT id, const TextureDescription& description);
-        void NewDS(ResourceID_DS id, const TextureDescription& description);
+        void NewUA(ResourceID_UA id, const ResourceID_UA::ResourceType::ResourceDescType& description);
+        void NewUA(ResourceID_UA id, ResourceID_UA::ResourceType::HWResourceType* externalResource);
+        void NewRT(ResourceID_RT id, const ResourceID_RT::ResourceType::ResourceDescType& description);
+        void NewRT(ResourceID_RT id, ResourceID_RT::ResourceType::HWResourceType* externalResource);
+        void NewDS(ResourceID_DS id, const ResourceID_DS::ResourceType::ResourceDescType& description);
+        void NewDS(ResourceID_DS id, ResourceID_DS::ResourceType::HWResourceType* externalResource);
 
         void Read(ResourceID_UA id);
         void Read(ResourceID_RT id);
@@ -32,12 +32,7 @@ namespace Atom
 
         inline RenderPassID GetPassID() const { return m_PassID; }
     private:
-        bool HasInput(ResourceID id) const;
-        bool HasOutput(ResourceID id) const;
-    private:
-        RenderGraph&                 m_Graph;
-        RenderPassID                 m_PassID;
-        Vector<Scope<IResourceView>> m_Inputs;
-        Vector<Scope<IResourceView>> m_Outputs;
+        ResourceScheduler& m_ResourceScheduler;
+        RenderPassID       m_PassID;
     };
 }

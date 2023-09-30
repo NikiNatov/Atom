@@ -7,23 +7,10 @@ namespace Atom
     class TextureResource;
     class RenderSurfaceResource;
 
-    class ResourceIDRegistry
-    {
-    public:
-        static u16 Register(const char* name);
-        static void Unregister(u16 idx);
-
-        static const char* GetName(u16 idx);
-        static u32 GetResourceCount();
-    private:
-        inline static Vector<const char*> ms_Resources;
-        inline static Stack<u16> ms_FreeIDs;
-    };
-
     class ResourceID
     {
     public:
-        static constexpr u16 InvalidID = 0xffff;
+        static constexpr u16 InvalidIndex = 0xffff;
 
         struct Hash
         {
@@ -34,9 +21,9 @@ namespace Atom
         ResourceID(const char* name);
         ~ResourceID();
 
-        inline bool IsValid() const { return m_Index != InvalidID; }
+        inline bool IsValid() const { return m_Index != InvalidIndex; }
         inline u16 GetIndex() const { return m_Index; }
-        inline const char* GetName() const { return ResourceIDRegistry::GetName(m_Index); }
+        inline const char* GetName() const { return m_Name; }
 
         inline bool operator==(const ResourceID& rhs) const { return m_Index == rhs.m_Index; }
         inline bool operator!=(const ResourceID& rhs) const { return !(*this == rhs); }
@@ -44,7 +31,8 @@ namespace Atom
         inline operator bool() const { return IsValid(); }
         inline operator u16() const { return m_Index; }
     private:
-        u16 m_Index = InvalidID;
+        u16         m_Index = InvalidIndex;
+        const char* m_Name = nullptr;
     };
 
 #define DEFINE_RESOURCE_ID_TYPE(typeName, resourceType) \

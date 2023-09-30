@@ -2,173 +2,27 @@
 #include "SceneRenderer.h"
 
 #include "Atom/Renderer/Device.h"
-#include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/Material.h"
 
 #include "Atom/Renderer/RenderGraph/RenderGraph.h"
 #include "Atom/Renderer/RenderGraph/RenderPassBuilder.h"
 
+#include "Atom/Renderer/RenderPasses/SkyBoxPass.h"
+#include "Atom/Renderer/RenderPasses/GeometryPass.h"
+#include "Atom/Renderer/RenderPasses/CompositePass.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    SceneRenderer::~SceneRenderer()
+    SceneRenderer::SceneRenderer(bool renderToSwapChain)
+        : m_RenderToSwapChain(renderToSwapChain), m_ViewportWidth(1), m_ViewportHeight(1), m_RenderGraph(*this)
     {
+        m_FrameData.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::Initialize()
+    SceneRenderer::~SceneRenderer()
     {
-        // TODO: Testing only. Remove when render graphi implementation is finished
-        DEFINE_RID_UA(R0);
-        DEFINE_RID_DS(R1);
-        DEFINE_RID_RT(R2);
-        DEFINE_RID_UA(R3);
-        DEFINE_RID_UA(R4);
-        DEFINE_RID_UA(R5);
-        DEFINE_RID_UA(R6);
-        DEFINE_RID_UA(R7);
-        DEFINE_RID_UA(R8);
-
-        RenderGraph g;
-
-        g.AddRenderPass("A", CommandQueueType::Graphics,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.NewUA(RID(R0), {});
-                builder.NewDS(RID(R1), {});
-                builder.NewRT(RID(R2), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("B", CommandQueueType::Compute,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R0));
-
-                builder.NewUA(RID(R3), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("C", CommandQueueType::Compute,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R1));
-
-                builder.NewUA(RID(R4), {});
-                builder.NewUA(RID(R5), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("D", CommandQueueType::Graphics,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R2));
-
-                builder.NewUA(RID(R6), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("E", CommandQueueType::Graphics,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R3));
-                builder.Read(RID(R4));
-
-                builder.NewUA(RID(R7), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("F", CommandQueueType::Compute,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R5));
-
-                builder.NewUA(RID(R8), {});
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.AddRenderPass("G", CommandQueueType::Graphics,
-            [&](RenderPassBuilder& builder)
-            {
-                builder.Read(RID(R5));
-                builder.Read(RID(R6));
-                builder.Read(RID(R7));
-                builder.Read(RID(R8));
-            },
-            [&](RenderPassContext& context)
-            {
-            }
-        );
-
-        g.Build();
-        g.Reset();
-        // --------------------------------------------------------------------------------------------------------------
-
-        const PipelineLibrary& pipelineLib = Renderer::GetPipelineLibrary();
-        const ShaderLibrary& shaderLib = Renderer::GetShaderLibrary();
-
-        // Set pipelines
-        m_GeometryPipeline = pipelineLib.Get<GraphicsPipeline>("MeshPBRPipeline");
-        m_AnimatedGeometryPipeline = pipelineLib.Get<GraphicsPipeline>("MeshPBRAnimatedPipeline");
-        m_CompositePipeline = pipelineLib.Get<GraphicsPipeline>("CompositePipeline");
-        m_SkyBoxPipeline = pipelineLib.Get<GraphicsPipeline>("SkyBoxPipeline");
-        m_FullScreenQuadPipeline = pipelineLib.Get<GraphicsPipeline>("FullscreenQuadPipeline");
-
-        u32 framesInFlight = Renderer::GetFramesInFlight();
-
-        // Create frame constant buffers
-        m_FrameConstants.resize(framesInFlight);
-        m_FrameCBs.resize(framesInFlight);
-
-        BufferDescription frameCBDesc;
-        frameCBDesc.ElementCount = 1;
-        frameCBDesc.ElementSize = sizeof(FrameConstants);
-        frameCBDesc.IsDynamic = true;
-
-        for(u32 frameIdx = 0 ; frameIdx < framesInFlight; frameIdx++)
-            m_FrameCBs[frameIdx] = CreateRef<ConstantBuffer>(frameCBDesc, fmt::format("FrameCB[{}]", frameIdx).c_str());
-
-        // Create lights structured buffer
-        m_Lights.resize(framesInFlight);
-        m_LightsSBs.resize(framesInFlight);
-
-        BufferDescription lightsSBDesc;
-        lightsSBDesc.ElementCount = 1;
-        lightsSBDesc.ElementSize = sizeof(Light);
-        lightsSBDesc.IsDynamic = true;
-
-        for (u32 i = 0; i < framesInFlight; i++)
-            m_LightsSBs[i] = CreateRef<StructuredBuffer>(lightsSBDesc, fmt::format("LightsSB[{}]", i).c_str());
-
-        // Create bone transforms structured buffers
-        m_BoneTransforms.resize(framesInFlight);
-        m_BoneTransformsSBs.resize(framesInFlight);
-
-        BufferDescription animSBDesc;
-        animSBDesc.ElementCount = 1;
-        animSBDesc.ElementSize = sizeof(glm::mat4);
-        animSBDesc.IsDynamic = true;
-
-        for (u32 i = 0; i < framesInFlight; i++)
-            m_BoneTransformsSBs[i] = CreateRef<StructuredBuffer>(animSBDesc, fmt::format("BoneTransformsSB[{}]", i).c_str());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -176,23 +30,16 @@ namespace Atom
     {
         u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
 
-        // Set frame constants
-        m_FrameConstants[currentFrameIdx].ViewMatrix = glm::inverse(cameraTransform);
-        m_FrameConstants[currentFrameIdx].ProjectionMatrix = camera.GetProjection();
-        m_FrameConstants[currentFrameIdx].InvViewProjMatrix = glm::inverse(m_FrameConstants[currentFrameIdx].ProjectionMatrix * m_FrameConstants[currentFrameIdx].ViewMatrix);
-        m_FrameConstants[currentFrameIdx].CameraPosition = cameraTransform[3];
-        m_FrameConstants[currentFrameIdx].CameraExposure = 0.5f; // Hard-coded for now
-        m_FrameConstants[currentFrameIdx].NumLights = lightEnvironment->GetLights().size();
-
-        // Set lights data
-        m_Lights[currentFrameIdx] = lightEnvironment;
-
-        // Reset bone transforms
-        m_BoneTransforms[currentFrameIdx].clear();
-
-        // Reset draw lists
-        m_DrawList.clear();
-        m_DrawListAnimated.clear();
+        // Set frame data
+        m_FrameData[currentFrameIdx].CameraConstants.ViewMatrix = glm::inverse(cameraTransform);
+        m_FrameData[currentFrameIdx].CameraConstants.ProjectionMatrix = camera.GetProjection();
+        m_FrameData[currentFrameIdx].CameraConstants.InvViewProjMatrix = glm::inverse(camera.GetProjection() * m_FrameData[currentFrameIdx].CameraConstants.ViewMatrix);
+        m_FrameData[currentFrameIdx].CameraConstants.CameraPosition = cameraTransform[3];
+        m_FrameData[currentFrameIdx].CameraConstants.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData[currentFrameIdx].Lights = lightEnvironment;
+        m_FrameData[currentFrameIdx].BoneTransforms.clear();
+        m_FrameData[currentFrameIdx].StaticMeshes.clear();
+        m_FrameData[currentFrameIdx].AnimatedMeshes.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -201,22 +48,15 @@ namespace Atom
         u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
 
         // Set camera transforms
-        m_FrameConstants[currentFrameIdx].ViewMatrix = editorCamera.GetViewMatrix();
-        m_FrameConstants[currentFrameIdx].ProjectionMatrix = editorCamera.GetProjection();
-        m_FrameConstants[currentFrameIdx].InvViewProjMatrix = glm::inverse(m_FrameConstants[currentFrameIdx].ProjectionMatrix * m_FrameConstants[currentFrameIdx].ViewMatrix);
-        m_FrameConstants[currentFrameIdx].CameraPosition = editorCamera.GetPosition();
-        m_FrameConstants[currentFrameIdx].CameraExposure = 0.5f; // Hard-coded for now
-        m_FrameConstants[currentFrameIdx].NumLights = lightEnvironment->GetLights().size();
-
-        // Set lights data
-        m_Lights[currentFrameIdx] = lightEnvironment;
-
-        // Reset bone transforms
-        m_BoneTransforms[currentFrameIdx].clear();
-
-        // Reset draw lists
-        m_DrawList.clear();
-        m_DrawListAnimated.clear();
+        m_FrameData[currentFrameIdx].CameraConstants.ViewMatrix = editorCamera.GetViewMatrix();
+        m_FrameData[currentFrameIdx].CameraConstants.ProjectionMatrix = editorCamera.GetProjection();
+        m_FrameData[currentFrameIdx].CameraConstants.InvViewProjMatrix = glm::inverse(editorCamera.GetProjection() * editorCamera.GetViewMatrix());
+        m_FrameData[currentFrameIdx].CameraConstants.CameraPosition = editorCamera.GetPosition();
+        m_FrameData[currentFrameIdx].CameraConstants.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData[currentFrameIdx].Lights = lightEnvironment;
+        m_FrameData[currentFrameIdx].BoneTransforms.clear();
+        m_FrameData[currentFrameIdx].StaticMeshes.clear();
+        m_FrameData[currentFrameIdx].AnimatedMeshes.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -225,6 +65,8 @@ namespace Atom
         if (!mesh)
             return;
 
+        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
+
         const auto& submeshes = mesh->GetSubmeshes();
         for (u32 submeshIdx = 0 ; submeshIdx < submeshes.size(); submeshIdx++)
         {
@@ -232,11 +74,11 @@ namespace Atom
             const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
             Ref<MaterialAsset> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
-            DrawCommand& drawCommand = m_DrawList.emplace_back();
-            drawCommand.Mesh = mesh;
-            drawCommand.SubmeshIndex = submeshIdx;
-            drawCommand.Transform = transform;
-            drawCommand.Material = material ? material->GetResource() : Renderer::GetErrorMaterial();
+            MeshEntry& meshEntry = m_FrameData[currentFrameIdx].StaticMeshes.emplace_back();
+            meshEntry.Mesh = mesh;
+            meshEntry.SubmeshIndex = submeshIdx;
+            meshEntry.Transform = transform;
+            meshEntry.Material = material ? material->GetResource() : Renderer::GetErrorMaterial();
         }
     }
 
@@ -256,174 +98,42 @@ namespace Atom
             const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
             Ref<MaterialAsset> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
-            AnimatedDrawCommand& drawCommand = m_DrawListAnimated.emplace_back();
-            drawCommand.Mesh = mesh;
-            drawCommand.SubmeshIndex = submeshIdx;
-            drawCommand.Transform = transform;
-            drawCommand.Material = material ? material->GetResource() : Renderer::GetErrorMaterialAnimated();
-            drawCommand.BoneTransformIndex = m_BoneTransforms[currentFrameIdx].size();
+            MeshEntry& meshEntry = m_FrameData[currentFrameIdx].AnimatedMeshes.emplace_back();
+            meshEntry.Mesh = mesh;
+            meshEntry.SubmeshIndex = submeshIdx;
+            meshEntry.Transform = transform;
+            meshEntry.Material = material ? material->GetResource() : Renderer::GetErrorMaterialAnimated();
+            meshEntry.BoneTransformIndex = m_FrameData[currentFrameIdx].BoneTransforms.size();
         }
 
         // Set all bone transforms
         for (auto& bone : skeleton->GetBones())
-            m_BoneTransforms[currentFrameIdx].push_back(bone.AnimatedTransform);
+            m_FrameData[currentFrameIdx].BoneTransforms.push_back(bone.AnimatedTransform);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::OnViewportResize(u32 width, u32 height)
+    void SceneRenderer::SetViewportSize(u32 width, u32 height)
     {
-        m_GeometryPipeline->GetFramebuffer()->Resize(width, height);
-        m_CompositePipeline->GetFramebuffer()->Resize(width, height);
-        m_FullScreenQuadPipeline->GetFramebuffer()->Resize(width, height);
+        m_ViewportWidth = width;
+        m_ViewportHeight = height;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void SceneRenderer::PreRender(Ref<CommandBuffer> commandBuffer)
     {
-        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
-
-        // Update frame constant buffer data
-        void* data = m_FrameCBs[currentFrameIdx]->Map(0, 0);
-        memcpy(data, &m_FrameConstants[currentFrameIdx], sizeof(FrameConstants));
-        m_FrameCBs[currentFrameIdx]->Unmap();
-
-        // Update lights structured buffer data
-        const auto& lights = m_Lights[currentFrameIdx]->GetLights();
-        if (!lights.empty())
-        {
-            if (m_LightsSBs[currentFrameIdx]->GetElementCount() != lights.size())
-            {
-                BufferDescription sbDesc;
-                sbDesc.ElementCount = lights.size();
-                sbDesc.ElementSize = sizeof(Light);
-                sbDesc.IsDynamic = true;
-
-                m_LightsSBs[currentFrameIdx] = CreateRef<StructuredBuffer>(sbDesc, fmt::format("LightsSB[{}]", currentFrameIdx).c_str());
-            }
-
-            void* lightsData = m_LightsSBs[currentFrameIdx]->Map(0, 0);
-            memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-            m_LightsSBs[currentFrameIdx]->Unmap();
-        }
-
-        // Update bone transforms structured buffer data
-        if (!m_BoneTransforms[currentFrameIdx].empty())
-        {
-            if (m_BoneTransformsSBs[currentFrameIdx]->GetElementCount() != m_BoneTransforms[currentFrameIdx].size())
-            {
-                BufferDescription animSBDesc;
-                animSBDesc.ElementCount = m_BoneTransforms[currentFrameIdx].size();
-                animSBDesc.ElementSize = sizeof(glm::mat4);
-                animSBDesc.IsDynamic = true;
-
-                m_BoneTransformsSBs[currentFrameIdx] = CreateRef<StructuredBuffer>(animSBDesc, fmt::format("BoneTransformsSB[{}]", currentFrameIdx).c_str());
-            }
-
-            void* boneTransformData = m_BoneTransformsSBs[currentFrameIdx]->Map(0, 0);
-            memcpy(boneTransformData, m_BoneTransforms[currentFrameIdx].data(), sizeof(glm::mat4) * m_BoneTransforms[currentFrameIdx].size());
-            m_BoneTransformsSBs[currentFrameIdx]->Unmap();
-        }
-        
-        // Create descriptor tables for the frame
-        auto& device = Device::Get();
-        Ref<TextureCube> envMap = m_Lights[currentFrameIdx]->GetEnvironmentMap();
-        Ref<Texture> irradianceMap = m_Lights[currentFrameIdx]->GetIrradianceMap();
-        Ref<Texture> brdfMap = Renderer::GetBRDF();
-
-        D3D12_CPU_DESCRIPTOR_HANDLE frameResourceDescriptors[] = { 
-            envMap ? envMap->GetResource()->GetSRV()->GetDescriptor() : Renderer::GetBlackTextureCube()->GetSRV()->GetDescriptor(),
-            irradianceMap ? irradianceMap->GetSRV()->GetDescriptor() : Renderer::GetBlackTextureCube()->GetSRV()->GetDescriptor(),
-            brdfMap->GetSRV()->GetDescriptor(),
-            m_LightsSBs[currentFrameIdx]->GetSRV(),
-            m_BoneTransformsSBs[currentFrameIdx]->GetSRV()
-        };
-
-        Ref<TextureSampler> defaultSampler = Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp);
-
-        D3D12_CPU_DESCRIPTOR_HANDLE frameSamplerDescriptors[] = {
-            envMap ? Renderer::GetSampler(envMap->GetFilter(), envMap->GetWrap())->GetDescriptor() : defaultSampler->GetDescriptor(), // Environment map
-            defaultSampler->GetDescriptor(), // Irradiance map sampler
-            defaultSampler->GetDescriptor() // BRDF sampler
-        };
-
-        m_FrameResourceTable = device.GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(_countof(frameResourceDescriptors));
-        device.CopyDescriptors(m_FrameResourceTable, _countof(frameResourceDescriptors), frameResourceDescriptors, DescriptorHeapType::ShaderResource);
-
-        m_FrameSamplerTable = device.GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(_countof(frameSamplerDescriptors));
-        device.CopyDescriptors(m_FrameSamplerTable, _countof(frameSamplerDescriptors), frameSamplerDescriptors, DescriptorHeapType::Sampler);
+        // TODO: sorting, culling, ...
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::Flush()
+    void SceneRenderer::Render()
     {
-        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
-        Ref<CommandBuffer> gfxCmdBuffer = gfxQueue->GetCommandBuffer();
-        gfxCmdBuffer->Begin();
-        gfxCmdBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
+        m_RenderGraph.Reset();
 
-        PreRender(gfxCmdBuffer);
-        GeometryPass(gfxCmdBuffer);
-        CompositePass(gfxCmdBuffer);
+        m_RenderGraph.AddRenderPass<SkyBoxPass>("SkyBoxPass", m_ViewportWidth, m_ViewportHeight);
+        m_RenderGraph.AddRenderPass<GeometryPass>("GeometryPass");
+        m_RenderGraph.AddRenderPass<CompositePass>("CompositePass", m_ViewportWidth, m_ViewportHeight, m_RenderToSwapChain);
 
-        gfxCmdBuffer->End();
-        gfxQueue->ExecuteCommandList(gfxCmdBuffer);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::GeometryPass(Ref<CommandBuffer> commandBuffer)
-    {
-        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
-
-        Renderer::BeginRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
-
-        // Render skybox
-        commandBuffer->SetGraphicsPipeline(m_SkyBoxPipeline.get());
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, m_FrameCBs[currentFrameIdx].get());
-        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, m_FrameResourceTable.GetBaseGpuDescriptor(), m_FrameSamplerTable.GetBaseGpuDescriptor());
-        Renderer::RenderFullscreenQuad(commandBuffer, nullptr);
-
-        struct MeshPBRInstanceConstants
-        {
-            glm::mat4 Transform;
-            u32 BoneTransformOffset;
-        };
-
-        // Render animated meshes
-        commandBuffer->SetGraphicsPipeline(m_AnimatedGeometryPipeline.get());
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, m_FrameCBs[currentFrameIdx].get());
-        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, m_FrameResourceTable.GetBaseGpuDescriptor(), m_FrameSamplerTable.GetBaseGpuDescriptor());
-
-        for (u32 i = 0; i < m_DrawListAnimated.size(); i++)
-        {
-            MeshPBRInstanceConstants constants = { m_DrawListAnimated[i].Transform, m_DrawListAnimated[i].BoneTransformIndex };
-            commandBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &constants, sizeof(MeshPBRInstanceConstants) / 4);
-            Renderer::RenderMesh(commandBuffer, m_DrawListAnimated[i].Mesh, m_DrawListAnimated[i].SubmeshIndex, m_DrawListAnimated[i].Material);
-        }
-
-        // Render static meshes
-        commandBuffer->SetGraphicsPipeline(m_GeometryPipeline.get());
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, m_FrameCBs[currentFrameIdx].get());
-        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, m_FrameResourceTable.GetBaseGpuDescriptor(), m_FrameSamplerTable.GetBaseGpuDescriptor());
-
-        for (u32 i = 0; i < m_DrawList.size(); i++)
-        {
-            MeshPBRInstanceConstants constants = { m_DrawList[i].Transform, UINT32_MAX };
-            commandBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &constants, sizeof(MeshPBRInstanceConstants) / 4);
-            Renderer::RenderMesh(commandBuffer, m_DrawList[i].Mesh, m_DrawList[i].SubmeshIndex, m_DrawList[i].Material);
-        }
-
-        Renderer::EndRenderPass(commandBuffer, m_GeometryPipeline->GetFramebuffer());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void SceneRenderer::CompositePass(Ref<CommandBuffer> commandBuffer)
-    {
-        u32 currentFrameIdx = Renderer::GetCurrentFrameIndex();
-
-        Renderer::BeginRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
-        commandBuffer->SetGraphicsPipeline(m_CompositePipeline.get());
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, m_FrameCBs[currentFrameIdx].get());
-        Renderer::RenderFullscreenQuad(commandBuffer, m_GeometryPipeline->GetFramebuffer()->GetAttachment(AttachmentPoint::Color0)->GetTexture());
-        Renderer::EndRenderPass(commandBuffer, m_CompositePipeline->GetFramebuffer());
+        m_RenderGraph.Build();
+        m_RenderGraph.Execute();
     }
 }

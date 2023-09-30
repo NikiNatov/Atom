@@ -1,67 +1,127 @@
 #include "atompch.h"
 #include "ResourceView.h"
 
-#include "Atom/Renderer/RenderGraph/RenderGraph.h"
+#include "Atom/Renderer/RenderGraph/ResourceScheduler.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    typename const TextureUAV::ReturnType* ResourceView<TextureResource, TextureUAV>::GetData(u32 mip, u32 slice) const
+    typename TextureUAV::HWResourceType* ResourceView<TextureUAV>::GetData() const
     {
-        auto* data = (TextureResource::Data*)m_Resource->GetData();
-        ATOM_ENGINE_ASSERT(data, "Resource not allocated!");
-        auto* view = TextureResource::GetView(data, mip, slice);
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename TextureUAV::HWResourceType* ResourceView<TextureUAV>::GetData(u32 mip, u32 slice) const
+    {
+        TextureUAV::ResourceType* resource = dynamic_cast<TextureUAV::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureFlags::UnorderedAccess));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureUAV::RequiredFlags));
         return view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    typename const TextureSRV::ReturnType* ResourceView<TextureResource, TextureSRV>::GetData(u32 mip, u32 slice) const
+    typename TextureSRV::HWResourceType* ResourceView<TextureSRV>::GetData() const
     {
-        auto* data = (TextureResource::Data*)m_Resource->GetData();
-        ATOM_ENGINE_ASSERT(data, "Resource not allocated!");
-        auto* view = TextureResource::GetView(data, mip, slice);
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename TextureSRV::HWResourceType* ResourceView<TextureSRV>::GetData(u32 mip, u32 slice) const
+    {
+        TextureSRV::ResourceType* resource = dynamic_cast<TextureSRV::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureFlags::ShaderResource));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureSRV::RequiredFlags));
         return view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    typename const SurfaceRTV::ReturnType* ResourceView<RenderSurfaceResource, SurfaceRTV>::GetData(u32 mip, u32 slice) const
+    typename SurfaceRTV::HWResourceType* ResourceView<SurfaceRTV>::GetData() const
     {
-        auto* data = (RenderSurfaceResource::Data*)m_Resource->GetData();
-        ATOM_ENGINE_ASSERT(data, "Resource not allocated!");
-        auto* view = RenderSurfaceResource::GetView(data, mip, slice);
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename SurfaceRTV::HWResourceType* ResourceView<SurfaceRTV>::GetData(u32 mip, u32 slice) const
+    {
+        SurfaceRTV::ResourceType* resource = dynamic_cast<SurfaceRTV::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureFlags::RenderTarget));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceRTV::RequiredFlags));
         return view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    typename const SurfaceDSV::ReturnType* ResourceView<RenderSurfaceResource, SurfaceDSV>::GetData(u32 mip, u32 slice) const
+    typename SurfaceDSV_RW::HWResourceType* ResourceView<SurfaceDSV_RW>::GetData() const
     {
-        auto* data = (RenderSurfaceResource::Data*)m_Resource->GetData();
-        ATOM_ENGINE_ASSERT(data, "Resource not allocated!");
-        auto* view = RenderSurfaceResource::GetView(data, mip, slice);
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename SurfaceDSV_RW::HWResourceType* ResourceView<SurfaceDSV_RW>::GetData(u32 mip, u32 slice) const
+    {
+        SurfaceDSV_RW::ResourceType* resource = dynamic_cast<SurfaceDSV_RW::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureFlags::DepthStencil));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceDSV_RW::RequiredFlags));
         return view;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    typename const TextureSRV::ReturnType* ResourceView<RenderSurfaceResource, TextureSRV>::GetData(u32 mip, u32 slice) const
+    typename SurfaceDSV_RO::HWResourceType* ResourceView<SurfaceDSV_RO>::GetData() const
     {
-        auto data = (RenderSurfaceResource::Data*)m_Resource->GetData();
-        ATOM_ENGINE_ASSERT(data, "Resource not allocated!");
-        auto* view = RenderSurfaceResource::GetView(data, mip, slice);
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename SurfaceDSV_RO::HWResourceType* ResourceView<SurfaceDSV_RO>::GetData(u32 mip, u32 slice) const
+    {
+        SurfaceDSV_RO::ResourceType* resource = dynamic_cast<SurfaceDSV_RO::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureFlags::ShaderResource));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceDSV_RO::RequiredFlags));
+        return view;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename SurfaceSRV::HWResourceType* ResourceView<SurfaceSRV>::GetData() const
+    {
+        return GetData(TextureView::AllMips, TextureView::AllSlices);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    template<>
+    typename SurfaceSRV::HWResourceType* ResourceView<SurfaceSRV>::GetData(u32 mip, u32 slice) const
+    {
+        SurfaceSRV::ResourceType* resource = dynamic_cast<SurfaceSRV::ResourceType*>(m_ResourceScheduler.GetResource(m_ResourceID));
+        ATOM_ENGINE_ASSERT(resource, "Resource does not exist or is not the correct type for the view!");
+        ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
+        auto* view = resource->GetView(mip, slice);
+        ATOM_ENGINE_ASSERT(view);
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceSRV::RequiredFlags));
         return view->GetTexture().get();
     }
 }

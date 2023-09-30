@@ -14,16 +14,16 @@ namespace Atom
         template<typename PipelineType>
         void Add(const String& name, const Ref<PipelineType>& pipeline)
         {
-            bool exists = Exists(name);
-            ATOM_ENGINE_ASSERT(!exists, "Pipeline with that name already exists!");
-
-            if (!exists)
+            if (!Exists(name))
                 m_PipelineMap[name] = pipeline;
         }
 
         template<typename PipelineType, typename PipelineDescType>
         Ref<PipelineType> Load(const String& name, const PipelineDescType& description)
         {
+            if (Exists(name))
+                return Get<PipelineType>(name);
+
             Ref<PipelineType> pipeline = CreateRef<PipelineType>(description, name.c_str());
             Add(name, pipeline);
             return pipeline;

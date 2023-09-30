@@ -23,16 +23,13 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void RuntimeLayer::OnAttach()
     {
-        const PipelineLibrary& pipelineLib = Renderer::GetPipelineLibrary();
-        const ShaderLibrary& shaderLib = Renderer::GetShaderLibrary();
-
-        m_SwapChainPipeline = pipelineLib.Get<GraphicsPipeline>("SwapChainPipeline");
-
         const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
         OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "../AtomEditor/SandboxProject/SandboxProject.atmproj");
 
-        m_SceneRenderer = CreateRef<SceneRenderer>();
-        m_SceneRenderer->Initialize();
+        const auto& window = Application::Get().GetWindow();
+
+        m_SceneRenderer = CreateRef<SceneRenderer>(true);
+        m_SceneRenderer->SetViewportSize(window.GetWidth(), window.GetHeight());
 
         m_ActiveScene->OnStart();
     }
@@ -48,19 +45,6 @@ namespace Atom
     {
         m_ActiveScene->OnUpdate(ts);
         m_ActiveScene->OnRuntimeRender(m_SceneRenderer);
-
-        CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
-        Ref<CommandBuffer> cmdBuffer = gfxQueue->GetCommandBuffer();
-        cmdBuffer->Begin();
-        cmdBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
-
-        Renderer::BeginRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
-        cmdBuffer->SetGraphicsPipeline(m_SwapChainPipeline.get());
-        Renderer::RenderFullscreenQuad(cmdBuffer, m_SceneRenderer->GetFinalImage()->GetTexture());
-        Renderer::EndRenderPass(cmdBuffer, m_SwapChainPipeline->GetFramebuffer());
-
-        cmdBuffer->End();
-        gfxQueue->ExecuteCommandList(cmdBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -115,7 +99,7 @@ namespace Atom
     bool RuntimeLayer::OnWindowResized(WindowResizedEvent& e)
     {
         m_ActiveScene->OnViewportResize(e.GetWidth(), e.GetHeight());
-        m_SceneRenderer->OnViewportResize(e.GetWidth(), e.GetHeight());
+        m_SceneRenderer->SetViewportSize(e.GetWidth(), e.GetHeight());
         return false;
     }
 }

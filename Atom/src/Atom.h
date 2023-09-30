@@ -37,7 +37,6 @@
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Shader.h"
 #include "Atom/Renderer/Pipeline.h"
-#include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/DescriptorHeap.h"
 #include "Atom/Renderer/ResourceStateTracker.h"

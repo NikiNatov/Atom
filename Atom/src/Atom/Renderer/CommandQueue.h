@@ -8,6 +8,7 @@
 namespace Atom
 {
     class CommandBuffer;
+    class Fence;
 
     enum class CommandQueueType
     {
@@ -23,23 +24,19 @@ namespace Atom
         CommandQueue(CommandQueueType type, const char* debugName = "Unnamed Command Queue");
         ~CommandQueue();
 
-        u64 Signal();
-        void WaitForFenceValue(u64 value);
-        void WaitForQueue(const CommandQueue* queue);
+        void SignalFence(const Ref<Fence>& fence, u64 value);
+        void WaitFence(const Ref<Fence>& fence, u64 value);
         void Flush();
-        u64 ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer);
-        u64 ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers);
+        void ExecuteCommandList(const Ref<CommandBuffer>& commandBuffer);
+        void ExecuteCommandLists(const Vector<Ref<CommandBuffer>>& commandBuffers);
         Ref<CommandBuffer> GetCommandBuffer();
         inline CommandQueueType GetQueueType() const { return m_Type; }
         inline ComPtr<ID3D12CommandQueue> GetD3DCommandQueue() const { return m_D3DCommandQueue; }
-        inline ComPtr<ID3D12Fence1> GetD3DFence() const { return m_D3DFence; }
     private:
         void ProcessInFlightCommandBuffers();
     private:
         ComPtr<ID3D12CommandQueue> m_D3DCommandQueue;
         CommandQueueType           m_Type;
-        ComPtr<ID3D12Fence1>       m_D3DFence;
-        u64                        m_FenceValue = 0;
 
         struct CommandBufferEntry
         {
@@ -56,6 +53,7 @@ namespace Atom
         std::condition_variable             m_CmdBufferProcessingCV;
         std::mutex                          m_CmdBufferProcessingMutex;
         std::thread                         m_CmdBufferProcessingThread;
+        Ref<Fence>                          m_CmdBufferProcessingFence;
 
     };
 }

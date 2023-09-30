@@ -9,10 +9,10 @@
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/SwapChain.h"
 #include "Atom/Renderer/Pipeline.h"
-#include "Atom/Renderer/Framebuffer.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/ResourceBarrier.h"
+#include "Atom/Renderer/RenderSurface.h"
 
 #include <glm\gtc\type_ptr.hpp>
 
@@ -56,68 +56,62 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::BeginRenderPass(const Framebuffer* framebuffer, bool clear)
+    void CommandBuffer::BeginRenderPass(const Vector<RenderSurface*> renderTargets, bool clear)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        if (renderTargets.empty())
+            return;
 
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
         rtvHandles.reserve(AttachmentPoint::NumColorAttachments);
 
         D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle{ 0 };
 
-        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
+        for (const RenderSurface* renderTarget : renderTargets)
         {
-            if (auto attachment = framebuffer->GetAttachment((AttachmentPoint)i))
+            if (renderTarget)
             {
-                bool isDepth = i == AttachmentPoint::Depth;
+                bool isDepth = renderTarget->GetFormat() == TextureFormat::Depth24Stencil8 || renderTarget->GetFormat() == TextureFormat::Depth32;
 
-                if (i == AttachmentPoint::Depth)
+                if (isDepth)
                 {
-                    m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
                     if (clear)
                     {
                         D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH;
 
-                        if (attachment->GetFormat() == TextureFormat::Depth24Stencil8)
+                        if (renderTarget->GetFormat() == TextureFormat::Depth24Stencil8)
                             clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
 
-                        const auto& clearVal = attachment->GetClearValue().DepthStencil;
-                        m_CommandList->ClearDepthStencilView(attachment->GetDSV()->GetDescriptor(), clearFlags, clearVal.DepthValue, clearVal.StencilValue, 0, nullptr);
+                        const auto& clearVal = renderTarget->GetClearValue().DepthStencil;
+                        m_CommandList->ClearDepthStencilView(renderTarget->GetDSV()->GetDescriptor(), clearFlags, clearVal.DepthValue, clearVal.StencilValue, 0, nullptr);
                     }
 
-                    dsvHandle = attachment->GetDSV()->GetDescriptor();
+                    dsvHandle = renderTarget->GetDSV()->GetDescriptor();
                 }
                 else
                 {
-                    m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-
                     if (clear)
-                        m_CommandList->ClearRenderTargetView(attachment->GetRTV()->GetDescriptor(), glm::value_ptr(attachment->GetClearValue().Color), 0, nullptr);
+                        m_CommandList->ClearRenderTargetView(renderTarget->GetRTV()->GetDescriptor(), glm::value_ptr(renderTarget->GetClearValue().Color), 0, nullptr);
 
-                    rtvHandles.push_back(attachment->GetRTV()->GetDescriptor());
+                    rtvHandles.push_back(renderTarget->GetRTV()->GetDescriptor());
                 }
             }
         }
 
-        m_CommandList->RSSetViewports(1, &framebuffer->GetViewport());
-        m_CommandList->RSSetScissorRects(1, &framebuffer->GetScissorRect());
+        D3D12_VIEWPORT viewport = {};
+        viewport.TopLeftX = 0;
+        viewport.TopLeftY = 0;
+        viewport.Width = renderTargets[0]->GetWidth();
+        viewport.Height = renderTargets[0]->GetHeight();
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+
+        D3D12_RECT scissorRect = { 0, 0, (s32)renderTargets[0]->GetWidth(), (s32)renderTargets[0]->GetHeight() };
+
+        m_CommandList->RSSetViewports(1, &viewport);
+        m_CommandList->RSSetScissorRects(1, &scissorRect);
         m_CommandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), false, dsvHandle.ptr != 0 ? &dsvHandle : nullptr);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::EndRenderPass(const Framebuffer* framebuffer)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        for (u32 i = 0; i < AttachmentPoint::NumAttachments; i++)
-        {
-            bool isDepth = i == AttachmentPoint::Depth;
-            if(auto attachment = framebuffer->GetAttachment((AttachmentPoint)i))
-                m_ResourceStateTracker.AddTransition(attachment->GetTexture()->GetD3DResource().Get(), isDepth ? D3D12_RESOURCE_STATE_DEPTH_READ : D3D12_RESOURCE_STATE_COMMON);
-        }
-
-        m_ResourceStateTracker.CommitBarriers();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -1,24 +1,31 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/RenderGraph/Resource.h"
+#include "Atom/Renderer/RenderGraph/ResourceID.h"
 #include "Atom/Renderer/RenderGraph/RenderSurfaceResource.h"
 #include "Atom/Renderer/RenderGraph/TextureResource.h"
 
 namespace Atom
 {
-#define DEFINE_VIEW_CLASS(viewClassName, returnType, readOnly) \
+#define DEFINE_VIEW_CLASS(viewClassName, resourceType, hwResourceType, readOnly, flagsType, flags) \
     struct viewClassName \
     { \
-        using ReturnType = returnType; \
+        using ResourceType = resourceType; \
+        using HWResourceType = hwResourceType; \
         inline static const char* ViewClassName = #viewClassName; \
         inline static constexpr bool ReadOnly = readOnly; \
+        inline static constexpr flagsType RequiredFlags = flags; \
     }
 
-    DEFINE_VIEW_CLASS(TextureUAV, Texture, false);
-    DEFINE_VIEW_CLASS(TextureSRV, Texture, true);
-    DEFINE_VIEW_CLASS(SurfaceRTV, RenderSurface, false);
-    DEFINE_VIEW_CLASS(SurfaceDSV, RenderSurface, false);
+    DEFINE_VIEW_CLASS(TextureUAV, TextureResource, Texture, false, TextureFlags, TextureFlags::UnorderedAccess);
+    DEFINE_VIEW_CLASS(TextureSRV, TextureResource, Texture, true, TextureFlags, TextureFlags::ShaderResource);
+    DEFINE_VIEW_CLASS(SurfaceRTV, RenderSurfaceResource, RenderSurface, false, TextureFlags, TextureFlags::RenderTarget);
+    DEFINE_VIEW_CLASS(SurfaceDSV_RW, RenderSurfaceResource, RenderSurface, false, TextureFlags, TextureFlags::DepthStencil);
+    DEFINE_VIEW_CLASS(SurfaceDSV_RO, RenderSurfaceResource, RenderSurface, true, TextureFlags, TextureFlags::DepthStencil);
+    DEFINE_VIEW_CLASS(SurfaceSRV, RenderSurfaceResource, Texture, true, TextureFlags, TextureFlags::ShaderResource);
+
+    template<typename ViewClass>
+    class ResourceView;
 
     class IResourceView
     {
@@ -27,26 +34,28 @@ namespace Atom
         virtual const char* GetName() const = 0;
         virtual ResourceID GetResourceID() const = 0;
 
-        template<typename ResourceType, typename ViewClass>
-        bool IsResourceViewType() { return dynamic_cast<ResourceView<ResourceType, ViewClass>*>(this); }
+        template<typename ViewClass>
+        ResourceView<ViewClass>* As() { return dynamic_cast<ResourceView<ViewClass>*>(this); }
     };
 
-    class RenderGraph;
+    class ResourceScheduler;
 
-    template<typename ResourceType, typename ViewClass>
+    template<typename ViewClass>
     class ResourceView : public IResourceView
     {
     public:
-        ResourceView(const ResourceType* resource)
-            : m_Resource(resource) {}
+        ResourceView(ResourceID resourceID, ResourceScheduler& resourceScheduler)
+            : m_ResourceID(resourceID), m_ResourceScheduler(resourceScheduler) {}
 
         virtual bool IsReadOnly() const override { return ViewClass::ReadOnly; }
         virtual const char* GetName() const override { return ViewClass::ViewClassName; }
-        virtual ResourceID GetResourceID() const override { return m_Resource->GetID(); }
+        virtual ResourceID GetResourceID() const override { return m_ResourceID; }
 
-        typename const ViewClass::ReturnType* GetData() const { return GetData<ViewClass>(TextureView::AllMips, TextureView::AllSlices); }
-        typename const ViewClass::ReturnType* GetData(u32 mip, u32 slice) const;
+        typename ViewClass::HWResourceType* GetData() const;
+        typename ViewClass::HWResourceType* GetData(u32 mip, u32 slice) const;
+
     private:
-        const ResourceType* m_Resource;
+        ResourceID         m_ResourceID;
+        ResourceScheduler& m_ResourceScheduler;
     };
 }

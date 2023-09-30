@@ -2,12 +2,11 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
+#include "Atom/Renderer/Texture.h"
 #include "Shader.h"
 
 namespace Atom
 {
-    class Framebuffer;
-
     class Pipeline
     {
     public:
@@ -95,11 +94,26 @@ namespace Atom
         Lines
     };
 
+    enum AttachmentPoint : u8
+    {
+        Color0,
+        Color1,
+        Color2,
+        Color3,
+        Color4,
+        Color5,
+        Color6,
+        Color7,
+        Depth,
+        NumColorAttachments = Depth,
+        NumAttachments
+    };
+
     struct GraphicsPipelineDescription
     {
         GraphicsPipelineLayout Layout;
         Ref<GraphicsShader>    Shader;
-        Ref<Framebuffer>       Framebuffer;
+        Vector<TextureFormat>  RenderTargetFormats;
         Topology               Topology;
         bool                   EnableDepthTest;
         bool                   EnableBlend;
@@ -115,7 +129,7 @@ namespace Atom
 
         const GraphicsPipelineLayout& GetLayout() const;
         Ref<GraphicsShader> GetShader() const;
-        Ref<Framebuffer> GetFramebuffer() const;
+        TextureFormat GetRenderTargetFormat(AttachmentPoint attachmentPoint) const;
         Topology GetTopology() const;
         bool IsDepthTestingEnabled() const;
         bool IsBlendingEnabled() const;

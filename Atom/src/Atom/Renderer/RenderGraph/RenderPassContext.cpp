@@ -1,78 +1,113 @@
 #include "atompch.h"
 #include "RenderPassContext.h"
 
+#include "Atom/Renderer/RenderGraph/ResourceScheduler.h"
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderPassContext::RenderPassContext(const RenderPass& pass, Vector<Scope<IResourceView>>&& inputs, Vector<Scope<IResourceView>>&& outputs)
-        : m_CommandBuffer(CreateRef<CommandBuffer>(pass.GetQueueType(), pass.GetName().c_str())), m_Inputs(std::move(inputs)), m_Outputs(std::move(outputs))
+    RenderPassContext::RenderPassContext(RenderPassID passID, Ref<CommandBuffer> cmdBuffer, const ResourceScheduler& resourceScheduler, const SceneFrameData& sceneData)
+        : m_PassID(passID), m_CommandBuffer(cmdBuffer), m_ResourceScheduler(resourceScheduler), m_SceneData(sceneData)
     {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureResource, TextureUAV>& RenderPassContext::GetUA(ResourceID_UA id) const
+    ResourceView<TextureUAV>* RenderPassContext::GetUA(ResourceID_UA id) const
     {
-        const IResourceView* view = FindOutput(id);
+        IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No UAV found for resource");
-        return *(ResourceView<TextureResource, TextureUAV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<TextureUAV>(), "View type mismatch");
+        return dynamic_cast<ResourceView<TextureUAV>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<TextureResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_UA id) const
+    ResourceView<TextureSRV>* RenderPassContext::GetSR(ResourceID_UA id) const
     {
-        const IResourceView* view = FindInput(id);
+        IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<TextureResource, TextureSRV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<TextureSRV>(), "View type mismatch");
+        return dynamic_cast<ResourceView<TextureSRV>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<RenderSurfaceResource, SurfaceRTV>& RenderPassContext::GetRT(ResourceID_RT id) const
+    ResourceView<SurfaceRTV>* RenderPassContext::GetRT(ResourceID_RT id) const
     {
-        const IResourceView* view = FindOutput(id);
+        IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No RTV found for resource");
-        return *(ResourceView<RenderSurfaceResource, SurfaceRTV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<SurfaceRTV>(), "View type mismatch");
+        return dynamic_cast<ResourceView<SurfaceRTV>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<RenderSurfaceResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_RT id) const
+    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(ResourceID_RT id) const
     {
-        const IResourceView* view = FindInput(id);
+        IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<RenderSurfaceResource, TextureSRV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<SurfaceSRV>(), "View type mismatch");
+        return dynamic_cast<ResourceView<SurfaceSRV>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<RenderSurfaceResource, SurfaceDSV>& RenderPassContext::GetDS(ResourceID_DS id) const
+    ResourceView<SurfaceDSV_RW>* RenderPassContext::GetDS_RW(ResourceID_DS id) const
     {
-        const IResourceView* view = FindOutput(id);
+        IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No DSV found for resource");
-        return *(ResourceView<RenderSurfaceResource, SurfaceDSV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<SurfaceDSV_RW>(), "View type mismatch");
+        return dynamic_cast<ResourceView<SurfaceDSV_RW>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ResourceView<RenderSurfaceResource, TextureSRV>& RenderPassContext::GetSR(ResourceID_DS id) const
+    ResourceView<SurfaceDSV_RO>* RenderPassContext::GetDS_RO(ResourceID_DS id) const
     {
-        const IResourceView* view = FindInput(id);
+        IResourceView* view = FindOutput(id);
+        ATOM_ENGINE_ASSERT(view, "No DSV found for resource");
+        ATOM_ENGINE_ASSERT(view->As<SurfaceDSV_RO>(), "View type mismatch");
+        return dynamic_cast<ResourceView<SurfaceDSV_RO>*>(view);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(ResourceID_DS id) const
+    {
+        IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
-        return *(ResourceView<RenderSurfaceResource, TextureSRV>*)view;
+        ATOM_ENGINE_ASSERT(view->As<SurfaceSRV>(), "View type mismatch");
+        return dynamic_cast<ResourceView<SurfaceSRV>*>(view);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const IResourceView* RenderPassContext::FindInput(ResourceID id) const
+    Ref<ConstantBuffer> RenderPassContext::GetFrameConstantBuffer() const
     {
-        for (const auto& view : m_Inputs)
+        return m_ResourceScheduler.GetFrameResources().ConstantBuffer;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const DescriptorAllocation& RenderPassContext::GetFrameResourceTable() const
+    {
+        return m_ResourceScheduler.GetFrameResources().ResourceTable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const DescriptorAllocation& RenderPassContext::GetFrameSamplerTable() const
+    {
+        return m_ResourceScheduler.GetFrameResources().SamplerTable;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    IResourceView* RenderPassContext::FindInput(ResourceID id) const
+    {
+        for (const auto& view : m_ResourceScheduler.GetPassInputs(m_PassID))
             if (view->GetResourceID() == id)
-                return view.get();
+                return view;
 
         return nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const IResourceView* RenderPassContext::FindOutput(ResourceID id) const
+    IResourceView* RenderPassContext::FindOutput(ResourceID id) const
     {
-        for (const auto& view : m_Outputs)
+        for (const auto& view : m_ResourceScheduler.GetPassOutputs(m_PassID))
             if (view->GetResourceID() == id)
-                return view.get();
+                return view;
 
         return nullptr;
     }

@@ -1,134 +1,95 @@
 #include "atompch.h"
 #include "RenderPassBuilder.h"
 
-#include "Atom/Renderer/RenderGraph/RenderGraph.h"
-#include "Atom/Renderer/RenderGraph/ResourceView.h"
+#include "Atom/Renderer/RenderGraph/ResourceScheduler.h"
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderPassBuilder::RenderPassBuilder(RenderGraph& graph, RenderPassID passID)
-        : m_Graph(graph), m_PassID(passID)
+    RenderPassBuilder::RenderPassBuilder(RenderPassID passID, ResourceScheduler& resourceScheduler)
+        : m_ResourceScheduler(resourceScheduler), m_PassID(passID)
     {
+        ATOM_ENGINE_ASSERT(m_PassID != UINT16_MAX);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderPassContext* RenderPassBuilder::Finalize()
+    void RenderPassBuilder::NewUA(ResourceID_UA id, const ResourceID_UA::ResourceType::ResourceDescType& description)
     {
-        return new RenderPassContext(m_Graph.GetRenderPass(m_PassID), std::move(m_Inputs), std::move(m_Outputs));
+        m_ResourceScheduler.CreateResource<ResourceID_UA::ResourceType>(id, description)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<TextureUAV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderPassBuilder::NewUA(ResourceID_UA id, const TextureDescription& description)
+    void RenderPassBuilder::NewUA(ResourceID_UA id, ResourceID_UA::ResourceType::HWResourceType* externalResource)
     {
-        const auto& resource = m_Graph.CreateResource<TextureResource>(id, description);
-        resource->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<TextureResource, TextureUAV>>(resource.get()));
+        m_ResourceScheduler.CreateResource<ResourceID_UA::ResourceType>(id, externalResource)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<TextureUAV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderPassBuilder::NewRT(ResourceID_RT id, const TextureDescription& description)
+    void RenderPassBuilder::NewRT(ResourceID_RT id, const ResourceID_RT::ResourceType::ResourceDescType& description)
     {
-        const auto& resource = m_Graph.CreateResource<RenderSurfaceResource>(id, description);
-        resource->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceRTV>>(resource.get()));
+        m_ResourceScheduler.CreateResource<ResourceID_RT::ResourceType>(id, description)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<SurfaceRTV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderPassBuilder::NewDS(ResourceID_DS id, const TextureDescription& description)
+    void RenderPassBuilder::NewRT(ResourceID_RT id, ResourceID_RT::ResourceType::HWResourceType* externalResource)
     {
-        const auto& resource = m_Graph.CreateResource<RenderSurfaceResource>(id, description);
-        resource->SetProducerPassID(m_PassID);
-        m_Outputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
+        m_ResourceScheduler.CreateResource<ResourceID_RT::ResourceType>(id, externalResource)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<SurfaceRTV>(m_PassID, id);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void RenderPassBuilder::NewDS(ResourceID_DS id, const ResourceID_DS::ResourceType::ResourceDescType& description)
+    {
+        m_ResourceScheduler.CreateResource<ResourceID_DS::ResourceType>(id, description)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<SurfaceDSV_RW>(m_PassID, id);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void RenderPassBuilder::NewDS(ResourceID_DS id, ResourceID_DS::ResourceType::HWResourceType* externalResource)
+    {
+        m_ResourceScheduler.CreateResource<ResourceID_DS::ResourceType>(id, externalResource)->SetProducerPassID(m_PassID);
+        m_ResourceScheduler.CreateResourceView<SurfaceDSV_RW>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Read(ResourceID_UA id)
     {
-        ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
-        if (!HasInput(id))
-        {
-            const auto& resource = m_Graph.GetResource<TextureResource>(id);
-            m_Inputs.push_back(CreateScope<ResourceView<TextureResource, TextureSRV>>(resource.get()));
-        }
+        m_ResourceScheduler.CreateResourceView<TextureSRV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Read(ResourceID_RT id)
     {
-        ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
-        if (!HasInput(id))
-        {
-            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
-            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, TextureSRV>>(resource.get()));
-        }
+        m_ResourceScheduler.CreateResourceView<SurfaceSRV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Read(ResourceID_DS id, bool isSRV)
     {
-        ATOM_ENGINE_ASSERT(!HasOutput(id), "Resource already added as an output!");
-        if (!HasInput(id))
-        {
-            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
-            if (isSRV)
-                m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, TextureSRV>>(resource.get()));
-            else
-                m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
-            
-        }
+        if(isSRV)
+            m_ResourceScheduler.CreateResourceView<SurfaceSRV>(m_PassID, id);
+        else
+            m_ResourceScheduler.CreateResourceView<SurfaceDSV_RO>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Write(ResourceID_UA id)
     {
-        ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
-        if (!HasOutput(id))
-        {
-            const auto& resource = m_Graph.GetResource<TextureResource>(id);
-            m_Inputs.push_back(CreateScope<ResourceView<TextureResource, TextureUAV>>(resource.get()));
-        }
+        m_ResourceScheduler.CreateResourceView<TextureUAV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Write(ResourceID_RT id)
     {
-        ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
-        if (!HasOutput(id))
-        {
-            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
-            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceRTV>>(resource.get()));
-        }
+        m_ResourceScheduler.CreateResourceView<SurfaceRTV>(m_PassID, id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void RenderPassBuilder::Write(ResourceID_DS id)
     {
-        ATOM_ENGINE_ASSERT(!HasInput(id), "Resource already added as an input!");
-        if (!HasOutput(id))
-        {
-            const auto& resource = m_Graph.GetResource<RenderSurfaceResource>(id);
-            m_Inputs.push_back(CreateScope<ResourceView<RenderSurfaceResource, SurfaceDSV>>(resource.get()));
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    bool RenderPassBuilder::HasInput(ResourceID id) const
-    {
-        for (const auto& view : m_Inputs)
-            if (view->GetResourceID() == id)
-                return true;
-
-        return false;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    bool RenderPassBuilder::HasOutput(ResourceID id) const
-    {
-        for (const auto& view : m_Outputs)
-            if (view->GetResourceID() == id)
-                return true;
-
-        return false;
+        m_ResourceScheduler.CreateResourceView<SurfaceDSV_RW>(m_PassID, id);
     }
 }
