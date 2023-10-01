@@ -71,7 +71,7 @@ namespace Atom
         cmdBuffer->BeginRenderPass({ sceneColorOutput, depthBuffer }, true);
         cmdBuffer->SetGraphicsPipeline(pipeline);
         cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable().GetBaseGpuDescriptor(), context.GetFrameSamplerTable().GetBaseGpuDescriptor());
+        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
 
         Renderer::RenderFullscreenQuad(cmdBuffer, nullptr);
     }

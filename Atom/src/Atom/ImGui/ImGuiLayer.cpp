@@ -192,7 +192,7 @@ namespace Atom
 
             Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
             commandBuffer->Begin();
-            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), ResourceState::RenderTarget);
             commandBuffer->BeginRenderPass({ Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get() }, m_ClearRenderTarget);
 
             u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
@@ -279,8 +279,8 @@ namespace Atom
                         const D3D12_RECT r = { (LONG)clipMin.x, (LONG)clipMin.y, (LONG)clipMax.x, (LONG)clipMax.y };
                         Texture* texture = (Texture*)pcmd->GetTexID();
                         commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
-                        commandBuffer->TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ);
-                        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, GetTextureHandle(texture).GetBaseGpuDescriptor(), m_SamplerDescriptor.GetBaseGpuDescriptor());
+                        commandBuffer->TransitionResource(texture, ResourceState::GenericRead);
+                        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, GetTextureHandle(texture), m_SamplerDescriptor);
                         commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
@@ -289,7 +289,7 @@ namespace Atom
                 globalVtxOffset += cmdList->VtxBuffer.Size;
             }
 
-            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), D3D12_RESOURCE_STATE_PRESENT);
+            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), ResourceState::Present);
             commandBuffer->End();
 
             gfxQueue->ExecuteCommandList(commandBuffer);

@@ -25,13 +25,19 @@ namespace Atom
     class TransitionBarrier : public ResourceBarrier
     {
     public:
-        TransitionBarrier(const HWResource* resource, ResourceState beforeState, ResourceState afterState);
+        TransitionBarrier(const HWResource* resource, ResourceState beforeState, ResourceState afterState, u32 subresource = UINT32_MAX);
+
+        void SetBeforeState(ResourceState state);
+        void SetAfterState(ResourceState state);
+        void SetSubresource(u32 subresource);
 
         inline ResourceState GetBeforeState() const { return m_BeforeState; }
         inline ResourceState GetAfterState() const { return m_AfterState; }
+        inline u32 GetSubresource() const { return m_Subresource; }
     private:
         ResourceState m_BeforeState;
         ResourceState m_AfterState;
+        u32           m_Subresource;
     };
 
     class UAVBarrier : public ResourceBarrier
@@ -44,6 +50,8 @@ namespace Atom
     {
     public:
         AliasingBarrier(const HWResource* resource, const HWResource* aliasingResource);
+
+        void SetAliasingResource(const HWResource* resource);
 
         inline const HWResource* GetAliasingResource() const { return m_AliasingResource; }
     private:

@@ -79,8 +79,7 @@ namespace Atom
         // TODO: Handle this case in the render graph
         if (m_RenderToSwapChain)
         {
-            TransitionBarrier barrier{ Application::Get().GetWindow().GetSwapChain()->GetBackBuffer()->GetTexture().get(), ResourceState::RenderTarget, ResourceState::Common};
-            cmdBuffer->ApplyBarriers({ &barrier });
+            cmdBuffer->TransitionResource(Application::Get().GetWindow().GetSwapChain()->GetBackBuffer()->GetTexture().get(), ResourceState::Present);
         }
     }
 }

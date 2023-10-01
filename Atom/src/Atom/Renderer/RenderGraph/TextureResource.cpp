@@ -90,18 +90,18 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     bool TextureResource::CanDecayToCommonStateFromState(ResourceState state) const
     {
-        return IsSet(state & ResourceState::NonPixelShaderRead) ||
-            IsSet(state & ResourceState::PixelShaderRead) ||
-            IsSet(state & ResourceState::CopySource);
+        return IsSet(state, ResourceState::NonPixelShaderRead) ||
+            IsSet(state, ResourceState::PixelShaderRead) ||
+            IsSet(state, ResourceState::CopySource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     bool TextureResource::CanPromoteFromCommonStateToState(ResourceState state) const
     {
-        return IsSet(state & ResourceState::NonPixelShaderRead) || 
-            IsSet(state & ResourceState::PixelShaderRead) || 
-            IsSet(state & ResourceState::CopySource) || 
-            IsSet(state & ResourceState::CopyDestination);
+        return IsSet(state, ResourceState::NonPixelShaderRead) || 
+            IsSet(state, ResourceState::PixelShaderRead) || 
+            IsSet(state, ResourceState::CopySource) || 
+            IsSet(state, ResourceState::CopyDestination);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

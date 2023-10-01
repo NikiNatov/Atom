@@ -205,7 +205,6 @@ namespace Atom
 
         if (!deferredRelease)
         {
-            ResourceStateTracker::RemoveGlobalResourceState(resource);
             resource->Release();
             return;
         }
@@ -231,7 +230,6 @@ namespace Atom
         // Release resources
         for (auto resource : m_DeferredReleaseResources[frameIndex])
         {
-            ResourceStateTracker::RemoveGlobalResourceState(resource);
             resource->Release();
         }
 

@@ -109,7 +109,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     bool TextureAsset::IsGpuWritable() const
     {
-        return IsSet(m_TextureResource->GetFlags() & TextureFlags::UnorderedAccess);
+        return IsSet(m_TextureResource->GetFlags(), TextureFlags::UnorderedAccess);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

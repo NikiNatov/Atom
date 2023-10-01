@@ -358,7 +358,7 @@ namespace Atom
                     if (!transitionBarrier)
                     {
                         // Implicit transition
-                        if (IsSet(newState & ResourceState::UnorderedAccess))
+                        if (IsSet(newState, ResourceState::UnorderedAccess))
                             depGroup.UAVBarriers[m_Passes[passID]->m_DependencyGroupExecutionIndex].emplace_back(resource->GetHWResource());
                     }
                     else
@@ -409,9 +409,7 @@ namespace Atom
 
             RenderPassEvent passEvent;
             passEvent.PassID = passID;
-            passEvent.PrePassCmdBuffer = cmdQueue->GetCommandBuffer();
             passEvent.PassCmdBuffer = cmdQueue->GetCommandBuffer();
-            passEvent.PostPassCmdBuffer = cmdQueue->GetCommandBuffer();
 
             u32 queueIdx = u32(passQueueType);
             if (m_Passes[passID]->m_SignalRequired)
@@ -567,7 +565,10 @@ namespace Atom
 
             event.CmdBuffer->Begin();
             PIXBeginEvent(event.CmdBuffer->GetCommandList().Get(), 0, fmt::format("RedirectedTransitions_DepGroup{}", event.DepGroupIndex).c_str());
-            event.CmdBuffer->ApplyBarriers(redirectedBarriers);
+
+            for (TransitionBarrier& barrier : m_DependencyGroups[event.DepGroupIndex].RedirectedTransitionBarriers)
+                event.CmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
+
             PIXEndEvent(event.CmdBuffer->GetCommandList().Get());
             event.CmdBuffer->End();
         }
@@ -587,30 +588,16 @@ namespace Atom
             DependencyGroup& depGroup = m_DependencyGroups[pass->m_DependencyGroupIndex];
             u32 passIdxInGroup = pass->m_DependencyGroupExecutionIndex;
 
-            // Record transitions
-            Vector<ResourceBarrier*> barriers;
-            barriers.reserve(depGroup.TransitionBarriers[passIdxInGroup].size() + depGroup.UAVBarriers[passIdxInGroup].size());
-
-            for (TransitionBarrier& barrier : depGroup.TransitionBarriers[passIdxInGroup])
-                barriers.push_back(&barrier);
-
-            for (UAVBarrier& barrier : depGroup.UAVBarriers[passIdxInGroup])
-                barriers.push_back(&barrier);
-
-            event.PrePassCmdBuffer->Begin();
-
-            if (!barriers.empty())
-            {
-                PIXBeginEvent(event.PrePassCmdBuffer->GetCommandList().Get(), 0, fmt::format("{}_Barriers", pass->m_Name.c_str()).c_str());
-                event.PrePassCmdBuffer->ApplyBarriers(barriers);
-                PIXEndEvent(event.PrePassCmdBuffer->GetCommandList().Get());
-            }
-
-            event.PrePassCmdBuffer->End();
-
             // Record render commands
             event.PassCmdBuffer->Begin();
             PIXBeginEvent(event.PassCmdBuffer->GetCommandList().Get(), 0, pass->m_Name.c_str());
+
+            for (TransitionBarrier& barrier : depGroup.TransitionBarriers[passIdxInGroup])
+                event.PassCmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
+
+            for (UAVBarrier& barrier : depGroup.UAVBarriers[passIdxInGroup])
+                event.PassCmdBuffer->AddUAVBarrier(barrier.GetResource());
+
             event.PassCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
 
             RenderPassContext passContext(pass->m_ID, event.PassCmdBuffer, m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()], m_SceneRenderer.GetSceneFrameData());
@@ -678,14 +665,8 @@ namespace Atom
                             cmdQueue->WaitFence(passEventPtr->WaitFences[i], passEventPtr->WaitFenceValues[i]);
                     }
 
-                    if (passEventPtr->PrePassCmdBuffer)
-                        cmdBufferBatches[queueIdx].push_back(passEventPtr->PrePassCmdBuffer);
-
                     if (passEventPtr->PassCmdBuffer)
                         cmdBufferBatches[queueIdx].push_back(passEventPtr->PassCmdBuffer);
-
-                    //if (passEventPtr->PostPassCmdBuffer)
-                    //    cmdBufferBatches[queueIdx].push_back(passEventPtr->PostPassCmdBuffer);
 
                     if (passEventPtr->SignalFence)
                     {

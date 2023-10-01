@@ -21,7 +21,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureUAV::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), TextureUAV::RequiredFlags));
         return view;
     }
 
@@ -41,7 +41,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & TextureSRV::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), TextureSRV::RequiredFlags));
         return view;
     }
 
@@ -61,7 +61,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceRTV::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), SurfaceRTV::RequiredFlags));
         return view;
     }
 
@@ -81,7 +81,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceDSV_RW::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), SurfaceDSV_RW::RequiredFlags));
         return view;
     }
 
@@ -101,7 +101,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceDSV_RO::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), SurfaceDSV_RO::RequiredFlags));
         return view;
     }
 
@@ -121,7 +121,7 @@ namespace Atom
         ATOM_ENGINE_ASSERT(resource->IsAllocated(), "Resource not allocated!");
         auto* view = resource->GetView(mip, slice);
         ATOM_ENGINE_ASSERT(view);
-        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags() & SurfaceSRV::RequiredFlags));
+        ATOM_ENGINE_ASSERT(IsSet(view->GetFlags(), SurfaceSRV::RequiredFlags));
         return view->GetTexture().get();
     }
 }

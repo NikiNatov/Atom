@@ -21,7 +21,7 @@ namespace Atom
 
         if (resource->GetType() == TextureType::Texture2D)
         {
-            if (IsSet(resource->GetFlags() & TextureFlags::CubeMap))
+            if (IsSet(resource->GetFlags(), TextureFlags::CubeMap))
             {
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
                 srvDesc.TextureCube.MostDetailedMip = description.FirstMip;
@@ -94,7 +94,7 @@ namespace Atom
 
         if (resource->GetType() == TextureType::Texture2D)
         {
-            if (IsSet(resource->GetFlags() & TextureFlags::CubeMap) || description.ArraySize > 1)
+            if (IsSet(resource->GetFlags(), TextureFlags::CubeMap) || description.ArraySize > 1)
             {
                 uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
                 uavDesc.Texture2DArray.MipSlice = description.FirstMip;
@@ -157,7 +157,7 @@ namespace Atom
 
         if (resource->GetTexture()->GetType() == TextureType::Texture2D)
         {
-            if (IsSet(resource->GetFlags() & TextureFlags::CubeMap) || description.ArraySize > 1)
+            if (IsSet(resource->GetFlags(), TextureFlags::CubeMap) || description.ArraySize > 1)
             {
                 rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
                 rtvDesc.Texture2DArray.MipSlice = description.FirstMip;
@@ -220,7 +220,7 @@ namespace Atom
         D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
         dsvDesc.Format = Utils::AtomTextureFormatToDSVFormat(resource->GetFormat());
 
-        if (IsSet(resource->GetFlags() & TextureFlags::CubeMap) || description.ArraySize > 1)
+        if (IsSet(resource->GetFlags(), TextureFlags::CubeMap) || description.ArraySize > 1)
         {
             dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
             dsvDesc.Texture2DArray.MipSlice = description.FirstMip;

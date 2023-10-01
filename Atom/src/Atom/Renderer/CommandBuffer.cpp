@@ -20,15 +20,12 @@ namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     CommandBuffer::CommandBuffer(CommandQueueType type, const char* debugName)
-        : m_ResourceStateTracker(*this)
+        : m_QueueType(type)
     {
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_Allocator)));
-        DXCall(d3dDevice->CreateCommandAllocator(Utils::AtomCommandQueueTypeToD3D12(type), IID_PPV_ARGS(&m_PendingAllocator)));
-
         DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_CommandList)));
-        DXCall(d3dDevice->CreateCommandList1(0, Utils::AtomCommandQueueTypeToD3D12(type), D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&m_PendingCommandList)));
 
 #if defined (ATOM_DEBUG)
         String name = debugName;
@@ -47,11 +44,11 @@ namespace Atom
         DXCall(m_Allocator->Reset());
         DXCall(m_CommandList->Reset(m_Allocator.Get(), NULL));
 
-        DXCall(m_PendingAllocator->Reset());
-        DXCall(m_PendingCommandList->Reset(m_PendingAllocator.Get(), NULL));
+        m_PendingBarriers.clear();
+        m_ResourceBarriers.clear();
+        m_ResourceStates.clear();
 
         m_UploadBuffers.clear();
-        m_ResourceStateTracker.ClearStates();
         m_IsRecording = true;
     }
 
@@ -115,34 +112,57 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::ApplyBarriers(const Vector<ResourceBarrier*>& barriers)
+    void CommandBuffer::TransitionResource(const HWResource* resource, ResourceState state, u32 subresource)
     {
-        Vector<D3D12_RESOURCE_BARRIER> d3dBarriers;
-        d3dBarriers.reserve(barriers.size());
+        ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        for (const auto* barrier : barriers)
-            d3dBarriers.push_back(barrier->GetD3DBarrier());
+        Ref<TransitionBarrier> barrier = CreateRef<TransitionBarrier>(resource, ResourceState::Common, state, subresource);
 
-        if (d3dBarriers.size())
+        auto stateEntry = m_ResourceStates.find(resource);
+        if (stateEntry != m_ResourceStates.end())
         {
-            m_CommandList->ResourceBarrier(d3dBarriers.size(), d3dBarriers.data());
+            // Resource was already used on that command list so get the current state
+            ResourceStateTracker::TrackedResourceState& currentTrackedState = stateEntry->second;
+
+            if (subresource == UINT32_MAX && !currentTrackedState.GetSubresourceStates().empty())
+            {
+                for (auto& [subresource, beforeState] : currentTrackedState.GetSubresourceStates())
+                {
+                    if (beforeState != state)
+                    {
+                        Ref<TransitionBarrier> subresourceBarrier = CreateRef<TransitionBarrier>(*barrier);
+                        subresourceBarrier->SetBeforeState(beforeState);
+                        subresourceBarrier->SetSubresource(subresource);
+                        m_ResourceBarriers.push_back(subresourceBarrier);
+                    }
+                }
+            }
+            else
+            {
+                auto beforeState = currentTrackedState.GetState(subresource);
+                if (beforeState != state)
+                {
+                    barrier->SetBeforeState(beforeState);
+                    m_ResourceBarriers.push_back(barrier);
+                }
+            }
         }
+        else
+        {
+            // Resource is being used for the first time on this command list so add transition to pending barriers
+            m_PendingBarriers.push_back(barrier);
+        }
+
+        // Update the current tracked resource state
+        m_ResourceStates[resource].SetState(state, subresource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state, u32 subresource)
+    void CommandBuffer::AddUAVBarrier(const HWResource* resource)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), state, subresource);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::AddUAVBarrier(const Texture* texture)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        m_ResourceStateTracker.AddUAVBarrier(texture->GetD3DResource().Get());
+        m_ResourceBarriers.push_back(CreateRef<UAVBarrier>(resource));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -150,16 +170,24 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.CommitBarriers();
+        if (!m_ResourceBarriers.empty())
+        {
+            Vector<D3D12_RESOURCE_BARRIER> d3dBarriers;
+            d3dBarriers.reserve(m_ResourceBarriers.size());
+
+            for (auto& barrier : m_ResourceBarriers)
+                d3dBarriers.push_back(barrier->GetD3DBarrier());
+
+            m_CommandList->ResourceBarrier(d3dBarriers.size(), d3dBarriers.data());
+        }
+
+        m_ResourceBarriers.clear();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::SetVertexBuffer(const VertexBuffer* vertexBuffer)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        if(!vertexBuffer->IsDynamic())
-            m_ResourceStateTracker.AddTransition(vertexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
         m_CommandList->IASetVertexBuffers(0, 1, &vertexBuffer->GetVertexBufferView());
     }
@@ -168,9 +196,6 @@ namespace Atom
     void CommandBuffer::SetIndexBuffer(const IndexBuffer* indexBuffer)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        if (!indexBuffer->IsDynamic())
-            m_ResourceStateTracker.AddTransition(indexBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
         m_CommandList->IASetIndexBuffer(&indexBuffer->GetIndexBufferView());
     }
@@ -207,9 +232,6 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
         ATOM_ENGINE_ASSERT(bindPoint != ShaderBindPoint::Material && bindPoint != ShaderBindPoint::Instance, "Material and Instance bind points use root constants");
 
-        if (!constantBuffer->IsDynamic())
-            m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
         const auto& shaderConstants = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetConstants(bindPoint);
         ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
 
@@ -222,9 +244,6 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_IsRecording);
         ATOM_ENGINE_ASSERT(m_CurrentComputePipeline, "No compute pipeline is bound");
         ATOM_ENGINE_ASSERT(bindPoint != ShaderBindPoint::Material && bindPoint != ShaderBindPoint::Instance, "Material and Instance bind points use root constants");
-
-        if (!constantBuffer->IsDynamic())
-            m_ResourceStateTracker.AddTransition(constantBuffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
         const auto& shaderConstants = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetConstants(bindPoint);
         ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
@@ -259,7 +278,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable)
+    void CommandBuffer::SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
         ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
@@ -267,19 +286,19 @@ namespace Atom
         const auto& resourceDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
         ATOM_ENGINE_ASSERT(resourceDescriptorTable.RootParameterIndex != UINT32_MAX);
 
-        m_CommandList->SetGraphicsRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable);
+        m_CommandList->SetGraphicsRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
 
-        if (samplerTable.ptr != 0)
+        if (samplerTable.IsValid())
         {
             const auto& samplerDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetSamplerDescriptorTable(bindPoint);
             ATOM_ENGINE_ASSERT(samplerDescriptorTable.RootParameterIndex != UINT32_MAX);
 
-            m_CommandList->SetGraphicsRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable);
+            m_CommandList->SetGraphicsRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable.GetBaseGpuDescriptor());
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetComputeDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable)
+    void CommandBuffer::SetComputeDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
         ATOM_ENGINE_ASSERT(m_CurrentComputePipeline, "No compute pipeline is bound");
@@ -287,14 +306,14 @@ namespace Atom
         const auto& resourceDescriptorTable = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
         ATOM_ENGINE_ASSERT(resourceDescriptorTable.RootParameterIndex != UINT32_MAX);
 
-        m_CommandList->SetComputeRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable);
+        m_CommandList->SetComputeRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
 
-        if (samplerTable.ptr != 0)
+        if (samplerTable.IsValid())
         {
             const auto& samplerDescriptorTable = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetSamplerDescriptorTable(bindPoint);
             ATOM_ENGINE_ASSERT(samplerDescriptorTable.RootParameterIndex != UINT32_MAX);
 
-            m_CommandList->SetComputeRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable);
+            m_CommandList->SetComputeRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable.GetBaseGpuDescriptor());
         }
     }
 
@@ -316,7 +335,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadBufferData(const void* data, const Buffer* buffer)
+    void CommandBuffer::UploadBufferData(const Buffer* buffer, const void* data)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
@@ -339,14 +358,14 @@ namespace Atom
             subresourceData.RowPitch = buffer->GetSize();
             subresourceData.SlicePitch = subresourceData.RowPitch;
 
-            m_ResourceStateTracker.AddTransition(buffer->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-            m_ResourceStateTracker.CommitBarriers();
+            TransitionResource(buffer, ResourceState::CopyDestination);
+            CommitBarriers();
             UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
         }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadTextureData(const void* data, const Texture* texture, u32 mip, u32 arraySlice)
+    void CommandBuffer::UploadTextureData(const Texture* texture, const void* data, u32 mip, u32 arraySlice)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
@@ -374,8 +393,8 @@ namespace Atom
             subresourceData.RowPitch = ((width * Utils::GetTextureFormatSize(texture->GetFormat()) + 255) / 256) * 256;
             subresourceData.SlicePitch = height * subresourceData.RowPitch;
 
-            m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-            m_ResourceStateTracker.CommitBarriers();
+            TransitionResource(texture, ResourceState::CopyDestination);
+            CommitBarriers();
             UpdateSubresources<1>(m_CommandList.Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, subresourceIdx, 1, &subresourceData);
         }
     }
@@ -395,8 +414,8 @@ namespace Atom
 
         Ref<ReadbackBuffer> readbackBuffer = CreateRef<ReadbackBuffer>(readbackBufferDesc, "Readback Buffer");
 
-        m_ResourceStateTracker.AddTransition(texture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-        m_ResourceStateTracker.CommitBarriers();
+        TransitionResource(texture, ResourceState::CopySource);
+        CommitBarriers();
 
         u32 width = glm::max(texture->GetWidth() >> mip, 1u);
         u32 height = glm::max(texture->GetHeight() >> mip, 1u);
@@ -420,13 +439,13 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.AddTransition(srcTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-        m_ResourceStateTracker.AddTransition(dstTexture->GetD3DResource().Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+        TransitionResource(srcTexture, ResourceState::CopySource);
+        TransitionResource(dstTexture, ResourceState::CopyDestination);
 
         CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstTexture->GetD3DResource().Get(), subresource);
         CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);
 
-        m_ResourceStateTracker.CommitBarriers();
+        CommitBarriers();
         m_CommandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, nullptr);
     }
 
@@ -435,7 +454,7 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.CommitBarriers();
+        CommitBarriers();
         m_CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, startVertex, startInstance);
     }
 
@@ -444,7 +463,7 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.CommitBarriers();
+        CommitBarriers();
         m_CommandList->Dispatch(threadCountX, threadCountY, threadCountZ);
     }
 
@@ -453,13 +472,64 @@ namespace Atom
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        m_ResourceStateTracker.CommitBarriers();
+        // Commit any resource barriers left
+        CommitBarriers();
         DXCall(m_CommandList->Close());
 
-        m_ResourceStateTracker.CommitPendingBarriers();
-        m_ResourceStateTracker.UpdateGlobalStates();
-        DXCall(m_PendingCommandList->Close());
-
         m_IsRecording = false;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    Ref<CommandBuffer> CommandBuffer::GetPendingBarriersCommandBuffer()
+    {
+        // Resolve pending barriers first
+        Vector<D3D12_RESOURCE_BARRIER> resolvedBarriers;
+        resolvedBarriers.reserve(m_PendingBarriers.size());
+
+        for (auto& pendingBarrier : m_PendingBarriers)
+        {
+            const auto& globalTrackedState = ResourceStateTracker::GetGlobalResourceState(pendingBarrier->GetResource());
+
+            if (pendingBarrier->GetSubresource() == UINT32_MAX && !globalTrackedState.GetSubresourceStates().empty())
+            {
+                for (auto& [subresource, beforeState] : globalTrackedState.GetSubresourceStates())
+                {
+                    if (beforeState != pendingBarrier->GetAfterState())
+                    {
+                        D3D12_RESOURCE_BARRIER resolvedBarrier = pendingBarrier->GetD3DBarrier();
+                        resolvedBarrier.Transition.StateBefore = Utils::AtomResourceStateToD3D12(beforeState);
+                        resolvedBarrier.Transition.Subresource = subresource;
+
+                        resolvedBarriers.push_back(resolvedBarrier);
+                    }
+                }
+            }
+            else
+            {
+                auto beforeState = globalTrackedState.GetState(pendingBarrier->GetSubresource());
+                if (beforeState != pendingBarrier->GetAfterState())
+                {
+                    D3D12_RESOURCE_BARRIER resolvedBarrier = pendingBarrier->GetD3DBarrier();
+                    resolvedBarrier.Transition.StateBefore = Utils::AtomResourceStateToD3D12(beforeState);
+
+                    resolvedBarriers.push_back(resolvedBarrier);
+                }
+            }
+        }
+
+        m_PendingBarriers.clear();
+
+        if (!resolvedBarriers.empty())
+        {
+            // Create a separate cmd list for the pending barriers
+            Ref<CommandBuffer> pendingBarriersCmdBuffer = Device::Get().GetCommandQueue(m_QueueType)->GetCommandBuffer();
+            pendingBarriersCmdBuffer->Begin();
+            pendingBarriersCmdBuffer->m_CommandList->ResourceBarrier(resolvedBarriers.size(), resolvedBarriers.data());
+            pendingBarriersCmdBuffer->End();
+
+            return pendingBarriersCmdBuffer;
+        }
+
+        return nullptr;
     }
 }

@@ -47,29 +47,29 @@
 #define IMPL_ENUM_OPERATORS(EnumType) \
 static EnumType operator&(EnumType a, EnumType b) \
 { \
-    return (EnumType)((u8)a & (u8)b); \
+    return (EnumType)((u32)a & (u32)b); \
 } \
 static EnumType operator|(EnumType a, EnumType b) \
 { \
-    return (EnumType)((u8)a | (u8)b); \
+    return (EnumType)((u32)a | (u32)b); \
 } \
 static EnumType operator~(EnumType a) \
 { \
-    return (EnumType)(~(u8)a); \
+    return (EnumType)(~(u32)a); \
 } \
 static EnumType& operator|=(EnumType& a, EnumType b) \
 { \
-    a = (EnumType)((u8)a | (u8)b); \
+    a = (EnumType)((u32)a | (u32)b); \
     return a; \
 } \
 static EnumType& operator&=(EnumType& a, EnumType b) \
 { \
-    a = (EnumType)((u8)a & (u8)b); \
+    a = (EnumType)((u32)a & (u32)b); \
     return a; \
 } \
-static bool IsSet(EnumType flags) \
+static bool IsSet(EnumType flags, EnumType value) \
 { \
-    return (u8)flags != 0; \
+    return ((u32)flags & (u32)value) == (u32)value; \
 } \
 
 // Asserts

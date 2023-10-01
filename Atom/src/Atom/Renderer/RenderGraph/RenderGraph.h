@@ -73,9 +73,7 @@ namespace Atom
         {
             RenderPassID PassID;
 
-            Ref<CommandBuffer> PrePassCmdBuffer;
             Ref<CommandBuffer> PassCmdBuffer;
-            Ref<CommandBuffer> PostPassCmdBuffer;
 
             Ref<Fence> SignalFence;
             u64 SignalFenceValue;

@@ -39,12 +39,13 @@ namespace Atom
         DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
-        ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), initialState);
+        ResourceStateTracker::AddGlobalResourceState(this, m_Description.InitialState);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Buffer::~Buffer()
     {
+        ResourceStateTracker::RemoveGlobalResourceState(this);
         Device::Get().ReleaseResource(m_D3DResource.Detach(), true);
     }
 

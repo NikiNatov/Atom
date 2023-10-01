@@ -8,6 +8,8 @@
 #include "Device.h"
 #include "Renderer.h"
 #include "Fence.h"
+#include "ResourceBarrier.h"
+#include "ResourceStateTracker.h"
 
 namespace Atom
 {
@@ -81,18 +83,43 @@ namespace Atom
             return;
 
         Vector<ID3D12CommandList*> commandListArray;
+        commandListArray.reserve(commandBuffers.size() * 2);
+
+        Vector<Ref<CommandBuffer>> queuedCmdBuffers;
+        queuedCmdBuffers.reserve(commandBuffers.size() * 2);
 
         for (auto& buffer : commandBuffers)
         {
-            commandListArray.push_back(buffer->GetPendingCommandList().Get());
+            Ref<CommandBuffer> pendingBarriersCmdBuffer = buffer->GetPendingBarriersCommandBuffer();
+
+            if (pendingBarriersCmdBuffer)
+            {
+                queuedCmdBuffers.push_back(pendingBarriersCmdBuffer);
+                commandListArray.push_back(pendingBarriersCmdBuffer->GetCommandList().Get());
+            }
+
+            queuedCmdBuffers.push_back(buffer);
             commandListArray.push_back(buffer->GetCommandList().Get());
+
+            // Update global resource states
+            for (auto& [resource, trackedState] : buffer->GetResourceStates())
+            {
+                if (trackedState.GetSubresourceStates().empty())
+                {
+                    ResourceStateTracker::UpdateGlobalResourceState(resource, trackedState.GetState());
+                    continue;
+                }
+
+                for (auto& [subresource, state] : trackedState.GetSubresourceStates())
+                    ResourceStateTracker::UpdateGlobalResourceState(resource, trackedState.GetState(subresource), subresource);
+            }
         }
 
         m_D3DCommandQueue->ExecuteCommandLists(commandListArray.size(), commandListArray.data());
         u64 fenceValue = m_CmdBufferProcessingFence->IncrementTargetValue();
         SignalFence(m_CmdBufferProcessingFence, fenceValue);
 
-        for (auto& buffer : commandBuffers)
+        for (auto& buffer : queuedCmdBuffers)
         {
             m_InFlightCmdBuffers.Emplace(buffer, fenceValue);
         }

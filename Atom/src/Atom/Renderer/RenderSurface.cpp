@@ -19,10 +19,10 @@ namespace Atom
         viewDesc.FirstSlice = 0;
         viewDesc.ArraySize = description.Type == TextureType::Texture3D ? description.Depth : description.ArraySize;
 
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::RenderTarget))
-            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::DepthStencil))
-            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::RenderTarget))
+            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::DepthStencil))
+            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -40,10 +40,10 @@ namespace Atom
         viewDesc.FirstSlice = sliceIndex == TextureView::AllSlices ? 0 : sliceIndex;
         viewDesc.ArraySize = m_Texture->GetType() == TextureType::Texture3D ? m_Texture->GetDepth() : m_Texture->GetArraySize();
 
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::RenderTarget))
-            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::DepthStencil))
-            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::RenderTarget))
+            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::DepthStencil))
+            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -58,10 +58,10 @@ namespace Atom
         viewDesc.FirstSlice = 0;
         viewDesc.ArraySize = m_Texture->GetType() == TextureType::Texture3D ? m_Texture->GetDepth() : m_Texture->GetArraySize();
 
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::RenderTarget))
-            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Texture->GetFlags() & TextureFlags::DepthStencil))
-            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::RenderTarget))
+            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Texture->GetFlags(), TextureFlags::DepthStencil))
+            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -145,7 +145,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     bool RenderSurface::IsSwapChainBuffer() const
     {
-        return IsSet(m_Texture->GetFlags() & TextureFlags::SwapChainBuffer);
+        return IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

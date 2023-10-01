@@ -202,7 +202,7 @@ namespace Atom
                     ResourceState::CopyDestination |
                     ResourceState::CopySource;
 
-                return !IsSet(state & ~allowedStates);
+                return !IsSet(state, ~allowedStates);
             }
             else if (queue == CommandQueueType::Compute)
             {
@@ -213,9 +213,9 @@ namespace Atom
                     ResourceState::CopySource |
                     ResourceState::UnorderedAccess |
                     ResourceState::RaytracingAccelerationStructure |
-                    ResourceState::ConstantBuffer;
+                    ResourceState::VertexConstantBuffer;
 
-                return !IsSet(state & ~allowedStates);
+                return !IsSet(state, ~allowedStates);
             }
             else
             {

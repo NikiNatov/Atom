@@ -7,28 +7,28 @@ namespace Atom
     RenderSurfaceResource::RenderSurfaceResource(ResourceID_RT id, const ResourceDescType& description)
         : Resource(id, false), m_Description(description), m_ExternalResource(nullptr), m_ViewData(nullptr)
     {
-        ATOM_ENGINE_ASSERT(IsSet(m_Description.Flags & TextureFlags::RenderTarget));
+        ATOM_ENGINE_ASSERT(IsSet(m_Description.Flags, TextureFlags::RenderTarget));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     RenderSurfaceResource::RenderSurfaceResource(ResourceID_DS id, const ResourceDescType& description)
         : Resource(id, false), m_Description(description), m_ExternalResource(nullptr), m_ViewData(nullptr)
     {
-        ATOM_ENGINE_ASSERT(IsSet(m_Description.Flags & TextureFlags::DepthStencil));
+        ATOM_ENGINE_ASSERT(IsSet(m_Description.Flags, TextureFlags::DepthStencil));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     RenderSurfaceResource::RenderSurfaceResource(ResourceID_RT id, HWResourceType* externalResource)
         : Resource(id, true), m_Description(externalResource->GetTexture()->GetDescription()), m_ExternalResource(externalResource), m_ViewData(nullptr)
     {
-        ATOM_ENGINE_ASSERT(IsSet(m_ExternalResource->GetFlags() & TextureFlags::RenderTarget));
+        ATOM_ENGINE_ASSERT(IsSet(m_ExternalResource->GetFlags(), TextureFlags::RenderTarget));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     RenderSurfaceResource::RenderSurfaceResource(ResourceID_DS id, HWResourceType* externalResource)
         : Resource(id, true), m_Description(externalResource->GetTexture()->GetDescription()), m_ExternalResource(externalResource), m_ViewData(nullptr)
     {
-        ATOM_ENGINE_ASSERT(IsSet(m_ExternalResource->GetFlags() & TextureFlags::DepthStencil));
+        ATOM_ENGINE_ASSERT(IsSet(m_ExternalResource->GetFlags(), TextureFlags::DepthStencil));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -84,18 +84,18 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     bool RenderSurfaceResource::CanDecayToCommonStateFromState(ResourceState state) const
     {
-        return IsSet(state & ResourceState::NonPixelShaderRead) ||
-            IsSet(state & ResourceState::PixelShaderRead) ||
-            IsSet(state & ResourceState::CopySource);
+        return IsSet(state, ResourceState::NonPixelShaderRead) ||
+            IsSet(state, ResourceState::PixelShaderRead) ||
+            IsSet(state, ResourceState::CopySource);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     bool RenderSurfaceResource::CanPromoteFromCommonStateToState(ResourceState state) const
     {
-        return IsSet(state & ResourceState::NonPixelShaderRead) ||
-            IsSet(state & ResourceState::PixelShaderRead) ||
-            IsSet(state & ResourceState::CopySource) ||
-            IsSet(state & ResourceState::CopyDestination);
+        return IsSet(state, ResourceState::NonPixelShaderRead) ||
+            IsSet(state, ResourceState::PixelShaderRead) ||
+            IsSet(state, ResourceState::CopySource) ||
+            IsSet(state, ResourceState::CopyDestination);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

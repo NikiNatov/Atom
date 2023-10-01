@@ -12,13 +12,35 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    TransitionBarrier::TransitionBarrier(const HWResource* resource, ResourceState beforeState, ResourceState afterState)
-        : ResourceBarrier(resource), m_BeforeState(beforeState), m_AfterState(afterState)
+    TransitionBarrier::TransitionBarrier(const HWResource* resource, ResourceState beforeState, ResourceState afterState, u32 subresource)
+        : ResourceBarrier(resource), m_BeforeState(beforeState), m_AfterState(afterState), m_Subresource(subresource)
     {
         m_D3DBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         m_D3DBarrier.Transition.pResource = m_Resource->GetD3DResource().Get();
         m_D3DBarrier.Transition.StateBefore = Utils::AtomResourceStateToD3D12(m_BeforeState);
         m_D3DBarrier.Transition.StateAfter = Utils::AtomResourceStateToD3D12(m_AfterState);
+        m_D3DBarrier.Transition.Subresource = subresource;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void TransitionBarrier::SetBeforeState(ResourceState state)
+    {
+        m_BeforeState = state;
+        m_D3DBarrier.Transition.StateBefore = Utils::AtomResourceStateToD3D12(m_BeforeState);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void TransitionBarrier::SetAfterState(ResourceState state)
+    {
+        m_AfterState = state;
+        m_D3DBarrier.Transition.StateAfter = Utils::AtomResourceStateToD3D12(m_AfterState);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void TransitionBarrier::SetSubresource(u32 subresource)
+    {
+        m_Subresource = subresource;
+        m_D3DBarrier.Transition.Subresource = m_Subresource;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -35,6 +57,13 @@ namespace Atom
     {
         m_D3DBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
         m_D3DBarrier.Aliasing.pResourceBefore = m_Resource->GetD3DResource().Get();
+        m_D3DBarrier.Aliasing.pResourceAfter = m_AliasingResource->GetD3DResource().Get();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void AliasingBarrier::SetAliasingResource(const HWResource* resource)
+    {
+        m_Resource = resource;
         m_D3DBarrier.Aliasing.pResourceAfter = m_AliasingResource->GetD3DResource().Get();
     }
 }

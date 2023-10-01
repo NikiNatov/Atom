@@ -89,7 +89,7 @@ namespace Atom
         // Render animated meshes
         cmdBuffer->SetGraphicsPipeline(animatedMeshPipeline);
         cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable().GetBaseGpuDescriptor(), context.GetFrameSamplerTable().GetBaseGpuDescriptor());
+        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
 
         const auto& animatedMeshes = context.GetSceneData().AnimatedMeshes;
         for (u32 i = 0; i < context.GetSceneData().AnimatedMeshes.size(); i++)
@@ -102,7 +102,7 @@ namespace Atom
         // Render static meshes
         cmdBuffer->SetGraphicsPipeline(staticMeshPipeline);
         cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable().GetBaseGpuDescriptor(), context.GetFrameSamplerTable().GetBaseGpuDescriptor());
+        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
 
         const auto& staticMeshes = context.GetSceneData().StaticMeshes;
         for (u32 i = 0; i < staticMeshes.size(); i++)

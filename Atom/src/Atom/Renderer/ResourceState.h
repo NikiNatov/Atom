@@ -7,7 +7,7 @@ namespace Atom
     enum class ResourceState : u32
     {
         Common                          = 0,
-        ConstantBuffer                  = BIT(0),
+        VertexConstantBuffer            = BIT(0),
         IndexBuffer                     = BIT(1),
         RenderTarget                    = BIT(2),
         UnorderedAccess                 = BIT(3),
@@ -24,7 +24,7 @@ namespace Atom
         RaytracingAccelerationStructure = BIT(14),
 
         Present = Common,
-        GenericRead = ConstantBuffer | IndexBuffer | NonPixelShaderRead | PixelShaderRead | IndirectArgument | CopySource,
+        GenericRead = VertexConstantBuffer | IndexBuffer | NonPixelShaderRead | PixelShaderRead | IndirectArgument | CopySource,
         AnyShaderRead = PixelShaderRead | NonPixelShaderRead,
         Predication = IndirectArgument
     };

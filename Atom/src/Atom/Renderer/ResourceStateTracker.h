@@ -3,24 +3,28 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 
+#include "Atom/Renderer/ResourceState.h"
+
 namespace Atom
 {
     class CommandBuffer;
+    class HWResource;
+    class ResourceBarrier;
+    class TransitionBarrier;
 
     class ResourceStateTracker
     {
     public:
         class TrackedResourceState
         {
-            friend class ResourceStateTracker;
         public:
-            TrackedResourceState(D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON)
+            TrackedResourceState(ResourceState state = ResourceState::Common)
                 : m_State(state)
             {}
 
-            void SetState(D3D12_RESOURCE_STATES state, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+            void SetState(ResourceState state, u32 subresource = UINT32_MAX)
             {
-                if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+                if (subresource == UINT32_MAX)
                 {
                     m_State = state;
                     m_SubresourceStates.clear();
@@ -31,9 +35,9 @@ namespace Atom
                 }
             }
 
-            D3D12_RESOURCE_STATES GetState(u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+            ResourceState GetState(u32 subresource = UINT32_MAX) const
             {
-                if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+                if (subresource == UINT32_MAX)
                 {
                     return m_State;
                 }
@@ -46,30 +50,22 @@ namespace Atom
 
                 return m_State;
             }
-        private:
-            D3D12_RESOURCE_STATES           m_State;
-            Map<u32, D3D12_RESOURCE_STATES> m_SubresourceStates;
-        };
-    public:
-        ResourceStateTracker(CommandBuffer& commandBuffer);
-        ~ResourceStateTracker();
 
-        void AddTransition(ID3D12Resource* resource, D3D12_RESOURCE_STATES afterState, u32 subresourceIndex = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-        void AddUAVBarrier(ID3D12Resource* resource);
-        void CommitPendingBarriers();
-        void CommitBarriers();
-        void UpdateGlobalStates();
-        void ClearStates();
+            inline const Map<u32, ResourceState>& GetSubresourceStates() const { return m_SubresourceStates; }
+        private:
+            ResourceState           m_State;
+            Map<u32, ResourceState> m_SubresourceStates;
+        };
+
+        using ResourceStateMap = HashMap<const HWResource*, TrackedResourceState>;
+
     public:
-        static void AddGlobalResourceState(ID3D12Resource* resource, D3D12_RESOURCE_STATES state);
-        static void RemoveGlobalResourceState(ID3D12Resource* resource);
+        static void AddGlobalResourceState(const HWResource* resource, ResourceState state);
+        static void RemoveGlobalResourceState(const HWResource* resource);
+        static void UpdateGlobalResourceState(const HWResource* resource, ResourceState state, u32 subresource = UINT32_MAX);
+        static const TrackedResourceState& GetGlobalResourceState(const HWResource* resource);
     private:
-        CommandBuffer&                                        m_CommandBuffer;
-        Vector<D3D12_RESOURCE_BARRIER>                        m_PendingBarriers;
-        Vector<D3D12_RESOURCE_BARRIER>                        m_ResourceBarriers;
-        HashMap<ID3D12Resource*, TrackedResourceState>        m_ResourceStates;
-    private:
-        static HashMap<ID3D12Resource*, TrackedResourceState> ms_GlobalStates;
-        static std::mutex                                     ms_GlobalMutex;
+        inline static ResourceStateMap ms_GlobalStates;
+        inline static std::mutex       ms_GlobalMutex;
     };
 }

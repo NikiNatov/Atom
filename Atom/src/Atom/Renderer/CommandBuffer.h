@@ -4,8 +4,8 @@
 #include "Atom/Core/DirectX12/DirectX12.h"
 
 #include "Atom/Renderer/ShaderLayout.h"
-
-#include "ResourceStateTracker.h"
+#include "Atom/Renderer/ResourceStateTracker.h"
+#include "Atom/Renderer/DescriptorHeap.h"
 
 namespace Atom
 {
@@ -32,9 +32,8 @@ namespace Atom
 
         void Begin();
         void BeginRenderPass(const Vector<RenderSurface*> renderTargets, bool clear = false);
-        void ApplyBarriers(const Vector<ResourceBarrier*>& barriers);
-        void TransitionResource(const Texture* texture, D3D12_RESOURCE_STATES state, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-        void AddUAVBarrier(const Texture* texture);
+        void TransitionResource(const HWResource* resource, ResourceState state, u32 subresource = UINT32_MAX);
+        void AddUAVBarrier(const HWResource* resource);
         void CommitBarriers();
         void SetVertexBuffer(const VertexBuffer* vertexBuffer);
         void SetIndexBuffer(const IndexBuffer* indexBuffer);
@@ -44,28 +43,34 @@ namespace Atom
         void SetComputeConstants(ShaderBindPoint bindPoint, const ConstantBuffer* constantBuffer);
         void SetGraphicsConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants);
         void SetComputeConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants);
-        void SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = D3D12_GPU_DESCRIPTOR_HANDLE{ 0 });
-        void SetComputeDescriptorTables(ShaderBindPoint bindPoint, D3D12_GPU_DESCRIPTOR_HANDLE resourceTable, D3D12_GPU_DESCRIPTOR_HANDLE samplerTable = D3D12_GPU_DESCRIPTOR_HANDLE{ 0 });
+        void SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable = DescriptorAllocation());
+        void SetComputeDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable = DescriptorAllocation());
         void SetDescriptorHeaps(const GPUDescriptorHeap* resourceHeap, const GPUDescriptorHeap* samplerHeap);
-        void UploadBufferData(const void* data, const Buffer* buffer);
-        void UploadTextureData(const void* data, const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
+        void UploadBufferData(const Buffer* buffer, const void* data);
+        void UploadTextureData(const Texture* texture, const void* data, u32 mip = 0, u32 arraySlice = 0);
         Ref<ReadbackBuffer> ReadbackTextureData(const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
-        void CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+        void CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource = UINT32_MAX);
         void DrawIndexed(u32 indexCount, u32 instanceCount = 1, u32 startIndex = 0, u32 startVertex = 0, u32 startInstance = 0);
         void Dispatch(u32 threadCountX, u32 threadCountY, u32 threadCountZ);
         void End();
 
+        Ref<CommandBuffer> GetPendingBarriersCommandBuffer();
+
+        inline CommandQueueType GetQueueType() const { return m_QueueType; }
+        inline const ResourceStateTracker::ResourceStateMap& GetResourceStates() const { return m_ResourceStates; }
         inline ComPtr<ID3D12GraphicsCommandList6> GetCommandList() const { return m_CommandList; }
-        inline ComPtr<ID3D12GraphicsCommandList6> GetPendingCommandList() const { return m_PendingCommandList; }
     private:
-        ComPtr<ID3D12CommandAllocator>     m_Allocator;
-        ComPtr<ID3D12GraphicsCommandList6> m_CommandList;
-        ComPtr<ID3D12CommandAllocator>     m_PendingAllocator;
-        ComPtr<ID3D12GraphicsCommandList6> m_PendingCommandList;
-        ResourceStateTracker               m_ResourceStateTracker;
-        Vector<ComPtr<ID3D12Resource>>     m_UploadBuffers;
-        const GraphicsPipeline*            m_CurrentGraphicsPipeline = nullptr;
-        const ComputePipeline*             m_CurrentComputePipeline = nullptr;
-        bool                               m_IsRecording = false;
+        CommandQueueType                       m_QueueType;
+        ComPtr<ID3D12CommandAllocator>         m_Allocator;
+        ComPtr<ID3D12GraphicsCommandList6>     m_CommandList;
+
+        Vector<Ref<TransitionBarrier>>         m_PendingBarriers;
+        Vector<Ref<ResourceBarrier>>           m_ResourceBarriers;
+        ResourceStateTracker::ResourceStateMap m_ResourceStates;
+
+        Vector<ComPtr<ID3D12Resource>>         m_UploadBuffers;
+        const GraphicsPipeline*                m_CurrentGraphicsPipeline = nullptr;
+        const ComputePipeline*                 m_CurrentComputePipeline = nullptr;
+        bool                                   m_IsRecording = false;
     };
 }

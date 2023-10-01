@@ -17,11 +17,11 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_Description.Width && m_Description.Height && m_Description.Depth && m_Description.ArraySize, "Texture dimensions cannot be 0!");
         ATOM_ENGINE_ASSERT(m_Description.MipLevels, "Texture mip levels cannot be 0!");
 
-        bool isShaderResource = IsSet(m_Description.Flags & TextureFlags::ShaderResource);
-        bool isRenderTarget = IsSet(m_Description.Flags & TextureFlags::RenderTarget);
-        bool isDepthStencil = IsSet(m_Description.Flags & TextureFlags::DepthStencil);
-        bool isUnorderedAccess = IsSet(m_Description.Flags & TextureFlags::UnorderedAccess);
-        bool isCubeMap = IsSet(m_Description.Flags & TextureFlags::CubeMap);
+        bool isShaderResource = IsSet(m_Description.Flags, TextureFlags::ShaderResource);
+        bool isRenderTarget = IsSet(m_Description.Flags, TextureFlags::RenderTarget);
+        bool isDepthStencil = IsSet(m_Description.Flags, TextureFlags::DepthStencil);
+        bool isUnorderedAccess = IsSet(m_Description.Flags, TextureFlags::UnorderedAccess);
+        bool isCubeMap = IsSet(m_Description.Flags, TextureFlags::CubeMap);
 
         ATOM_ENGINE_ASSERT(!isCubeMap || m_Description.Type == TextureType::Texture2D, "Cube maps must be of type Texture2D!");
         ATOM_ENGINE_ASSERT(!isCubeMap || m_Description.ArraySize == 6, "Cube maps must have array size of 6!");
@@ -86,7 +86,7 @@ namespace Atom
         DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
-        ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), initialState);
+        ResourceStateTracker::AddGlobalResourceState(this, m_Description.InitialState);
 
         // Create views
         TextureViewDescription viewDesc;
@@ -95,10 +95,10 @@ namespace Atom
         viewDesc.FirstSlice = 0;
         viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -125,10 +125,10 @@ namespace Atom
         viewDesc.FirstSlice = sliceIndex == TextureView::AllSlices ? 0 : sliceIndex;
         viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -154,11 +154,11 @@ namespace Atom
         m_Description.Flags |= desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ? TextureFlags::UnorderedAccess : TextureFlags::None;
         m_Description.Flags |= additionalFlags;
 
-        bool isShaderResource = IsSet(m_Description.Flags & TextureFlags::ShaderResource);
-        bool isRenderTarget = IsSet(m_Description.Flags & TextureFlags::RenderTarget);
-        bool isDepthStencil = IsSet(m_Description.Flags & TextureFlags::DepthStencil);
-        bool isUnorderedAccess = IsSet(m_Description.Flags & TextureFlags::UnorderedAccess);
-        bool isCubeMap = IsSet(m_Description.Flags & TextureFlags::CubeMap);
+        bool isShaderResource = IsSet(m_Description.Flags, TextureFlags::ShaderResource);
+        bool isRenderTarget = IsSet(m_Description.Flags, TextureFlags::RenderTarget);
+        bool isDepthStencil = IsSet(m_Description.Flags, TextureFlags::DepthStencil);
+        bool isUnorderedAccess = IsSet(m_Description.Flags, TextureFlags::UnorderedAccess);
+        bool isCubeMap = IsSet(m_Description.Flags, TextureFlags::CubeMap);
 
         ATOM_ENGINE_ASSERT(!isCubeMap || m_Description.Type == TextureType::Texture2D, "Cube maps must be of type Texture2D!");
         ATOM_ENGINE_ASSERT(!isCubeMap || m_Description.ArraySize == 6, "Cube maps must have array size of 6!");
@@ -181,7 +181,7 @@ namespace Atom
         DXCall(m_D3DResource->SetName(STRING_TO_WSTRING(name).c_str()));
 #endif
 
-        ResourceStateTracker::AddGlobalResourceState(m_D3DResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+        ResourceStateTracker::AddGlobalResourceState(this, ResourceState::Common);
 
         // Create views
         TextureViewDescription viewDesc;
@@ -190,17 +190,20 @@ namespace Atom
         viewDesc.FirstSlice = 0;
         viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
-        if (IsSet(m_Description.Flags & TextureFlags::ShaderResource))
-            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
-        if (IsSet(m_Description.Flags & TextureFlags::UnorderedAccess))
-            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::ShaderResource))
+            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+        if (IsSet(m_Description.Flags, TextureFlags::UnorderedAccess))
+            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Texture::~Texture()
     {
-        if(!m_IsAlias)
-            Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+        if (!m_IsAlias)
+        {
+            ResourceStateTracker::RemoveGlobalResourceState(this);
+            Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -215,7 +218,7 @@ namespace Atom
     {
         if (this != &rhs)
         {
-            Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags & TextureFlags::SwapChainBuffer));
+            Device::Get().ReleaseResource(m_D3DResource.Detach(), !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
 
             m_D3DResource = std::move(rhs.m_D3DResource);
             m_Description = std::move(rhs.m_Description);

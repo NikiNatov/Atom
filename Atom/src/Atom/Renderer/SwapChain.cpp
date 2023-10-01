@@ -89,7 +89,7 @@ namespace Atom
 
             for (u32 i = 0; i < m_BackBuffers.size(); i++)
             {
-                ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetTexture()->GetD3DResource().Get());
+                ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetTexture().get());
                 m_BackBuffers[i].reset();
             }
 
