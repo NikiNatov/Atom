@@ -635,7 +635,7 @@ namespace Atom
         textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
         Ref<Texture> texture = CreateRef<Texture>(textureDesc, sourcePath.stem().string().c_str());
-        Renderer::UploadTextureData(decodedData.data(), texture);
+        Renderer::UploadTextureData(texture, decodedData.data());
         Renderer::GenerateMips(texture);
 
         if (!importSettings.IsCubeMap)
@@ -662,7 +662,7 @@ namespace Atom
         textureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
 
         Ref<Texture> texture = CreateRef<Texture>(textureDesc, name.c_str());
-        Renderer::UploadTextureData(decodedData.data(), texture);
+        Renderer::UploadTextureData(texture, decodedData.data());
         Renderer::GenerateMips(texture);
 
         if (!importSettings.IsCubeMap)

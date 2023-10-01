@@ -34,7 +34,7 @@ namespace Atom
             for (u32 mip = 0; mip < description.MipLevels; mip++)
             {
                 u32 subresource = D3D12CalcSubresource(mip, 0, 0, description.MipLevels, 1);
-                Renderer::UploadTextureData(pixelData[subresource].data(), m_TextureResource, mip);
+                Renderer::UploadTextureData(m_TextureResource, pixelData[subresource].data(), mip);
 
                 if (m_CpuReadable)
                     m_PixelData[subresource] = pixelData[subresource];
@@ -47,7 +47,7 @@ namespace Atom
                 for (u32 mip = 0; mip < description.MipLevels; mip++)
                 {
                     u32 subresource = D3D12CalcSubresource(mip, slice, 0, description.MipLevels, description.ArraySize);
-                    Renderer::UploadTextureData(pixelData[subresource].data(), m_TextureResource, mip, slice);
+                    Renderer::UploadTextureData(m_TextureResource, pixelData[subresource].data(), mip, slice);
 
                     if (m_CpuReadable)
                         m_PixelData[subresource] = pixelData[subresource];
@@ -77,7 +77,7 @@ namespace Atom
                 for (u32 mip = 0; mip < m_TextureResource->GetMipLevels(); mip++)
                 {
                     u32 subresource = Texture::CalculateSubresource(mip, 0, m_TextureResource->GetMipLevels(), 1);
-                    Renderer::UploadTextureData(m_PixelData[subresource].data(), m_TextureResource, mip);
+                    Renderer::UploadTextureData(m_TextureResource, m_PixelData[subresource].data(), mip);
 
                     if (makeNonReadable)
                         m_PixelData[subresource].clear();
@@ -90,7 +90,7 @@ namespace Atom
                     for (u32 mip = 0; mip < m_TextureResource->GetMipLevels(); mip++)
                     {
                         u32 subresource = Texture::CalculateSubresource(mip, slice, m_TextureResource->GetMipLevels(), m_TextureResource->GetArraySize());
-                        Renderer::UploadTextureData(m_PixelData[subresource].data(), m_TextureResource, mip, slice);
+                        Renderer::UploadTextureData(m_TextureResource, m_PixelData[subresource].data(), mip, slice);
 
                         if (makeNonReadable)
                             m_PixelData[subresource].clear();

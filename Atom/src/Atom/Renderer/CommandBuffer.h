@@ -46,10 +46,8 @@ namespace Atom
         void SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable = DescriptorAllocation());
         void SetComputeDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable = DescriptorAllocation());
         void SetDescriptorHeaps(const GPUDescriptorHeap* resourceHeap, const GPUDescriptorHeap* samplerHeap);
-        void UploadBufferData(const Buffer* buffer, const void* data);
-        void UploadTextureData(const Texture* texture, const void* data, u32 mip = 0, u32 arraySlice = 0);
-        Ref<ReadbackBuffer> ReadbackTextureData(const Texture* texture, u32 mip = 0, u32 arraySlice = 0);
         void CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource = UINT32_MAX);
+        void CopyTexture(const Texture* srcTexture, const Buffer* dstBuffer, u32 subresource = UINT32_MAX);
         void DrawIndexed(u32 indexCount, u32 instanceCount = 1, u32 startIndex = 0, u32 startVertex = 0, u32 startInstance = 0);
         void Dispatch(u32 threadCountX, u32 threadCountY, u32 threadCountZ);
         void End();
@@ -68,7 +66,6 @@ namespace Atom
         Vector<Ref<ResourceBarrier>>           m_ResourceBarriers;
         ResourceStateTracker::ResourceStateMap m_ResourceStates;
 
-        Vector<ComPtr<ID3D12Resource>>         m_UploadBuffers;
         const GraphicsPipeline*                m_CurrentGraphicsPipeline = nullptr;
         const ComputePipeline*                 m_CurrentComputePipeline = nullptr;
         bool                                   m_IsRecording = false;

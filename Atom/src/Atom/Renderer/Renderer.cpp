@@ -2,6 +2,7 @@
 #include "Renderer.h"
 
 #include "Atom/Core/Application.h"
+#include "Atom/Core/DirectX12/DirectX12Utils.h"
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/Texture.h"
@@ -103,7 +104,7 @@ namespace Atom
         vbDesc.IsDynamic = false;
 
         ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB(Renderer)");
-        UploadBufferData(quadVertices, ms_FullscreenQuadVB.get());
+        UploadBufferData(ms_FullscreenQuadVB, quadVertices);
 
         u16 quadIndices[] = { 0, 1, 2, 2, 3, 0 };
 
@@ -113,7 +114,7 @@ namespace Atom
         ibDesc.IsDynamic = false;
 
         ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB(Renderer)");
-        UploadBufferData(quadIndices, ms_FullscreenQuadIB.get());
+        UploadBufferData(ms_FullscreenQuadIB, quadIndices);
 
         // Create error texture
         {
@@ -126,7 +127,7 @@ namespace Atom
             ms_ErrorTexture = CreateRef<Texture>(errorTextureDesc, "ErrorTexture(Renderer)");
 
             const byte errorTextureData[] = { 0xFF, 0x00, 0xFF, 0xFF };
-            UploadTextureData(errorTextureData, ms_ErrorTexture);
+            UploadTextureData(ms_ErrorTexture, errorTextureData);
         }
 
         // Create black texture and black texture cube
@@ -145,10 +146,10 @@ namespace Atom
             ms_BlackTextureCube = CreateRef<Texture>(blackTextureDesc, "BlackTextureCube(Renderer)");
 
             const byte blackTextureData[] = { 0x00, 0x00, 0x00, 0xFF }; // Just 1 pixel of black color
-            UploadTextureData(blackTextureData, ms_BlackTexture);
+            UploadTextureData(ms_BlackTexture, blackTextureData);
 
             for(u32 face = 0; face < 6; face++)
-                UploadTextureData(blackTextureData, ms_BlackTextureCube, 0, face);
+                UploadTextureData(ms_BlackTextureCube, blackTextureData, 0, face);
         }
 
         // Generate BRDF texture
@@ -531,37 +532,95 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::UploadBufferData(const void* srcData, const Buffer* buffer)
+    void Renderer::UploadBufferData(Ref<Buffer> buffer, const void* srcData)
     {
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadBufferData(buffer, srcData);
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer);
+        if (srcData)
+        {
+            u32 bufferSize = GetRequiredIntermediateSize(buffer->GetD3DResource().Get(), 0, 1);
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
+
+#if defined (ATOM_DEBUG)
+            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
+#endif
+            D3D12_SUBRESOURCE_DATA subresourceData = {};
+            subresourceData.pData = srcData;
+            subresourceData.RowPitch = buffer->GetSize();
+            subresourceData.SlicePitch = subresourceData.RowPitch;
+
+            CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->TransitionResource(buffer.get(), ResourceState::CopyDestination);
+            copyCommandBuffer->CommitBarriers();
+            UpdateSubresources<1>(copyCommandBuffer->GetCommandList().Get(), buffer->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
+            copyCommandBuffer->End();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
+            copyQueue->Flush();
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::UploadTextureData(const void* srcData, Ref<Texture> texture, u32 mip, u32 slice)
+    void Renderer::UploadTextureData(Ref<Texture> texture, const void* srcData, u32 mip, u32 slice)
     {
-        CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
-        Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
-        copyCommandBuffer->Begin();
-        copyCommandBuffer->UploadTextureData(texture.get(), srcData, mip, slice);
-        copyCommandBuffer->End();
-        copyQueue->ExecuteCommandList(copyCommandBuffer);
+        if (srcData)
+        {
+            u32 subresourceIdx = Texture::CalculateSubresource(mip, slice, texture->GetMipLevels(), texture->GetArraySize());
+            u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+            CD3DX12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
+            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
+
+#if defined (ATOM_DEBUG)
+            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
+#endif
+
+            u32 width = glm::max(texture->GetWidth() >> mip, 1u);
+            u32 height = glm::max(texture->GetHeight() >> mip, 1u);
+
+            D3D12_SUBRESOURCE_DATA subresourceData = {};
+            subresourceData.pData = srcData;
+            subresourceData.RowPitch = ((width * Utils::GetTextureFormatSize(texture->GetFormat()) + 255) / 256) * 256;
+            subresourceData.SlicePitch = height * subresourceData.RowPitch;
+
+            CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
+            Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
+            copyCommandBuffer->Begin();
+            copyCommandBuffer->TransitionResource(texture.get(), ResourceState::CopyDestination);
+            copyCommandBuffer->CommitBarriers();
+            UpdateSubresources<1>(copyCommandBuffer->GetCommandList().Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, subresourceIdx, 1, &subresourceData);
+            copyCommandBuffer->End();
+            copyQueue->ExecuteCommandList(copyCommandBuffer);
+            copyQueue->Flush();
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Ref<ReadbackBuffer> Renderer::ReadbackTextureData(Ref<Texture> texture, u32 mip, u32 slice)
     {
+        u32 subresourceIdx = Texture::CalculateSubresource(mip, slice, texture->GetMipLevels(), texture->GetArraySize());
+
+        BufferDescription readbackBufferDesc;
+        readbackBufferDesc.ElementSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
+        readbackBufferDesc.ElementCount = 1;
+        readbackBufferDesc.IsDynamic = true;
+
+        Ref<ReadbackBuffer> readbackBuffer = CreateRef<ReadbackBuffer>(readbackBufferDesc, "Readback Buffer");
+
         CommandQueue* copyQueue = Device::Get().GetCommandQueue(CommandQueueType::Copy);
         Ref<CommandBuffer> copyCommandBuffer = copyQueue->GetCommandBuffer();
         copyCommandBuffer->Begin();
-        Ref<ReadbackBuffer> readbackBuffer = copyCommandBuffer->ReadbackTextureData(texture.get(), mip, slice);
+        copyCommandBuffer->TransitionResource(texture.get(), ResourceState::CopySource);
+        copyCommandBuffer->CommitBarriers();
+        copyCommandBuffer->CopyTexture(texture.get(), readbackBuffer.get(), subresourceIdx);
         copyCommandBuffer->End();
         copyQueue->ExecuteCommandList(copyCommandBuffer);
         copyQueue->Flush();
+
         return readbackBuffer;
     }
 

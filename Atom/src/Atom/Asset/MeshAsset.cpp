@@ -52,7 +52,7 @@ namespace Atom
                 vbDesc.IsDynamic = false;
 
                 m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
-                Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+                Renderer::UploadBufferData(m_VertexBuffer, vertices.data());
             }
         }
         else
@@ -80,7 +80,7 @@ namespace Atom
                 vbDesc.IsDynamic = false;
 
                 m_VertexBuffer = CreateRef<VertexBuffer>(vbDesc, "VB");
-                Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+                Renderer::UploadBufferData(m_VertexBuffer, vertices.data());
             }
         }
 
@@ -92,7 +92,7 @@ namespace Atom
             ibDesc.IsDynamic = false;
 
             m_IndexBuffer = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U32, "IB");
-            Renderer::UploadBufferData(desc.Indices.data(), m_IndexBuffer.get());
+            Renderer::UploadBufferData(m_IndexBuffer, desc.Indices.data());
         }
 
         if (m_IsReadable)
@@ -188,7 +188,7 @@ namespace Atom
                 }
 
                 if (vertices.size())
-                    Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+                    Renderer::UploadBufferData(m_VertexBuffer, vertices.data());
             }
             else
             {
@@ -225,7 +225,7 @@ namespace Atom
                 }
 
                 if (vertices.size())
-                    Renderer::UploadBufferData(vertices.data(), m_VertexBuffer.get());
+                    Renderer::UploadBufferData(m_VertexBuffer, vertices.data());
             }
 
             if (!m_IndexBuffer || m_IndexBuffer->GetElementCount() != m_Indices.size())
@@ -246,7 +246,7 @@ namespace Atom
             }
 
             if(m_Indices.size())
-                Renderer::UploadBufferData(m_Indices.data(), m_IndexBuffer.get());
+                Renderer::UploadBufferData(m_IndexBuffer, m_Indices.data());
 
             if (makeNonReadable)
             {

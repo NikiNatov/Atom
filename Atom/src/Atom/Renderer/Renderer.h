@@ -41,8 +41,8 @@ namespace Atom
         static Ref<Texture> CreateIrradianceMap(Ref<Texture> environmentMap, u32 mapSize, const char* debugName);
         static Ref<Texture> CreateBRDFTexture();
         static void GenerateMips(Ref<Texture> texture);
-        static void UploadBufferData(const void* srcData, const Buffer* buffer);
-        static void UploadTextureData(const void* srcData, Ref<Texture> texture, u32 mip = 0, u32 slice = 0);
+        static void UploadBufferData(Ref<Buffer> buffer, const void* srcData);
+        static void UploadTextureData(Ref<Texture> texture, const void* srcData, u32 mip = 0, u32 slice = 0);
         static Ref<ReadbackBuffer> ReadbackTextureData(Ref<Texture> texture, u32 mip = 0, u32 slice = 0);
         static void EndFrame();
 

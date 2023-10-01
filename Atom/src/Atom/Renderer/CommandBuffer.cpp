@@ -48,7 +48,6 @@ namespace Atom
         m_ResourceBarriers.clear();
         m_ResourceStates.clear();
 
-        m_UploadBuffers.clear();
         m_IsRecording = true;
     }
 
@@ -335,114 +334,26 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadBufferData(const Buffer* buffer, const void* data)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        if (data)
-        {
-            u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-            u32 bufferSize = GetRequiredIntermediateSize(buffer->GetD3DResource().Get(), 0, 1);
-            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
-
-            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
-            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
-
-#if defined (ATOM_DEBUG)
-            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
-#endif
-            m_UploadBuffers.push_back(uploadBuffer);
-
-            D3D12_SUBRESOURCE_DATA subresourceData = {};
-            subresourceData.pData = data;
-            subresourceData.RowPitch = buffer->GetSize();
-            subresourceData.SlicePitch = subresourceData.RowPitch;
-
-            TransitionResource(buffer, ResourceState::CopyDestination);
-            CommitBarriers();
-            UpdateSubresources<1>(m_CommandList.Get(), buffer->GetD3DResource().Get(), uploadBuffer.Get(), 0, 0, 1, &subresourceData);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::UploadTextureData(const Texture* texture, const void* data, u32 mip, u32 arraySlice)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        if (data)
-        {
-            u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-            u32 subresourceIdx = Texture::CalculateSubresource(mip, arraySlice, texture->GetMipLevels(), texture->GetArraySize());
-            u32 bufferSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
-            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
-
-            CD3DX12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-            ComPtr<ID3D12Resource> uploadBuffer = nullptr;
-            DXCall(Device::Get().GetD3DDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
-
-#if defined (ATOM_DEBUG)
-            DXCall(uploadBuffer->SetName(L"Upload Buffer"));
-#endif
-            m_UploadBuffers.push_back(uploadBuffer);
-
-            u32 width = glm::max(texture->GetWidth() >> mip, 1u);
-            u32 height = glm::max(texture->GetHeight() >> mip, 1u);
-
-            D3D12_SUBRESOURCE_DATA subresourceData = {};
-            subresourceData.pData = data;
-            subresourceData.RowPitch = ((width * Utils::GetTextureFormatSize(texture->GetFormat()) + 255) / 256) * 256;
-            subresourceData.SlicePitch = height * subresourceData.RowPitch;
-
-            TransitionResource(texture, ResourceState::CopyDestination);
-            CommitBarriers();
-            UpdateSubresources<1>(m_CommandList.Get(), texture->GetD3DResource().Get(), uploadBuffer.Get(), 0, subresourceIdx, 1, &subresourceData);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<ReadbackBuffer> CommandBuffer::ReadbackTextureData(const Texture* texture, u32 mip, u32 arraySlice)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-
-        u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
-        u32 subresourceIdx = Texture::CalculateSubresource(mip, arraySlice, texture->GetMipLevels(), texture->GetArraySize());
-
-        BufferDescription readbackBufferDesc;
-        readbackBufferDesc.ElementSize = GetRequiredIntermediateSize(texture->GetD3DResource().Get(), subresourceIdx, 1);
-        readbackBufferDesc.ElementCount = 1;
-        readbackBufferDesc.IsDynamic = true;
-
-        Ref<ReadbackBuffer> readbackBuffer = CreateRef<ReadbackBuffer>(readbackBufferDesc, "Readback Buffer");
-
-        TransitionResource(texture, ResourceState::CopySource);
-        CommitBarriers();
-
-        u32 width = glm::max(texture->GetWidth() >> mip, 1u);
-        u32 height = glm::max(texture->GetHeight() >> mip, 1u);
-
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT bufferFootprint = {};
-        bufferFootprint.Footprint.Width = width;
-        bufferFootprint.Footprint.Height = height;
-        bufferFootprint.Footprint.Depth = 1;
-        bufferFootprint.Footprint.RowPitch = ((width * Utils::GetTextureFormatSize(texture->GetFormat()) + 255) / 256) * 256;
-        bufferFootprint.Footprint.Format = Utils::AtomTextureFormatToD3D12(texture->GetFormat());
-
-        CD3DX12_TEXTURE_COPY_LOCATION copySrc(texture->GetD3DResource().Get(), subresourceIdx);
-        CD3DX12_TEXTURE_COPY_LOCATION copyDst(readbackBuffer->GetD3DResource().Get(), bufferFootprint);
-        m_CommandList->CopyTextureRegion(&copyDst, 0, 0, 0, &copySrc, nullptr);
-
-        return readbackBuffer;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     void CommandBuffer::CopyTexture(const Texture* srcTexture, const Texture* dstTexture, u32 subresource)
     {
         ATOM_ENGINE_ASSERT(m_IsRecording);
 
-        TransitionResource(srcTexture, ResourceState::CopySource);
-        TransitionResource(dstTexture, ResourceState::CopyDestination);
-
         CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstTexture->GetD3DResource().Get(), subresource);
+        CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);
+
+        CommitBarriers();
+        m_CommandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, nullptr);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void CommandBuffer::CopyTexture(const Texture* srcTexture, const Buffer* dstBuffer, u32 subresource)
+    {
+        ATOM_ENGINE_ASSERT(m_IsRecording);
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT bufferFootprint = {};
+        Device::Get().GetD3DDevice()->GetCopyableFootprints(&srcTexture->GetD3DResource()->GetDesc(), subresource, 1, 0, &bufferFootprint, nullptr, nullptr, nullptr);
+
+        CD3DX12_TEXTURE_COPY_LOCATION dstLocation(dstBuffer->GetD3DResource().Get(), bufferFootprint);
         CD3DX12_TEXTURE_COPY_LOCATION srcLocation(srcTexture->GetD3DResource().Get(), subresource);
 
         CommitBarriers();

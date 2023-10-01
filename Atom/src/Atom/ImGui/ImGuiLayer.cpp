@@ -349,7 +349,7 @@ namespace Atom
         fontTextureDesc.Height = height;
 
         m_FontTexture = CreateRef<Texture>(fontTextureDesc, "ImGuiFontTexture");
-        Renderer::UploadTextureData(pixels, m_FontTexture);
+        Renderer::UploadTextureData(m_FontTexture, pixels);
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
 
