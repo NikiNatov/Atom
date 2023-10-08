@@ -55,8 +55,10 @@ namespace Atom
         void SetViewportSize(u32 width, u32 height);
         void Render();
 
+        void OnImGuiRender();
+
         inline const SceneFrameData& GetSceneFrameData() const { return m_FrameData[Renderer::GetCurrentFrameIndex()]; }
-        inline const Texture* GetFinalImage() const { return m_RenderGraph.GetFinalOutput(); }
+        inline const Texture* GetFinalImage() const { return dynamic_cast<Texture*>(m_RenderGraph.GetFinalOutput()->GetHWResource()); }
         inline u32 GetViewportWidth() const { return m_ViewportWidth; }
         inline u32 GetViewportHeight() const { return m_ViewportHeight; }
     private:

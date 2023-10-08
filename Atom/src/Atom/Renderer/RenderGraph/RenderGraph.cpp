@@ -3,14 +3,12 @@
 
 #include "Atom/Renderer/ResourceBarrier.h"
 #include "Atom/Renderer/Device.h"
-#include "Atom/Renderer/Renderer.h"
 
 #include "Atom/Renderer/RenderGraph/RenderPassBuilder.h"
 #include "Atom/Renderer/RenderGraph/RenderPassContext.h"
 #include "Atom/Renderer/RenderGraph/ResourceView.h"
 
 #include "Atom/Scene/SceneRenderer.h"
-
 
 #include <pix3.h>
 
@@ -72,13 +70,13 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const Texture* RenderGraph::GetFinalOutput() const
+    const RenderSurfaceResource* RenderGraph::GetFinalOutput() const
     {
         const ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()];
         const IResourceView* finalOutputView = resourceScheduler.GetPassOutputs(m_OrderedPasses.back())[0];
-        HWResource* finalOutputTexture = resourceScheduler.GetResource(finalOutputView->GetResourceID())->GetHWResource();
-
-        return dynamic_cast<Texture*>(finalOutputTexture);
+        const RenderSurfaceResource* finalOutput = resourceScheduler.GetResource(finalOutputView->GetResourceID())->As<RenderSurfaceResource>();
+        ATOM_ENGINE_ASSERT(finalOutput);
+        return finalOutput;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -171,6 +169,7 @@ namespace Atom
         RenderPassID prevPassPerQueue[u32(CommandQueueType::NumTypes)] = { UINT16_MAX, UINT16_MAX, UINT16_MAX };
         u32 globalExecutionIndex = 0;
 
+        ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()];
         for (DependencyGroup& depGroup : m_DependencyGroups)
         {
             u32 dependencyGroupExecutionIndex = 0;
@@ -194,7 +193,7 @@ namespace Atom
                 prevPassPerQueue[queueType] = passID;
 
                 // Track all resources read by the current pass
-                for (const auto& input : m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()].GetPassInputs(passID))
+                for (const auto& input : resourceScheduler.GetPassInputs(passID))
                 {
                     resourcesReadByQueues[input->GetResourceID()].insert(m_Passes[passID]->m_QueueType);
                 }
@@ -213,6 +212,11 @@ namespace Atom
                 }
             }
         }
+
+        // Validate final pass outputs
+        const auto& finalOutputViews = resourceScheduler.GetPassOutputs(m_OrderedPasses.back());
+        ATOM_ENGINE_ASSERT(finalOutputViews.size() == 1, "Final pass must contain only 1 output");
+        ATOM_ENGINE_ASSERT(resourceScheduler.GetResource(finalOutputViews[0]->GetResourceID())->As<RenderSurfaceResource>(), "Final pass output must be a RenderSurfaceResource");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

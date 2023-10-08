@@ -5,6 +5,7 @@
 #include "Atom/Renderer/CommandQueue.h"
 #include "Atom/Renderer/ResourceState.h"
 #include "Atom/Renderer/Fence.h"
+#include "Atom/Renderer/Renderer.h"
 
 #include "Atom/Renderer/RenderGraph/RenderPass.h"
 #include "Atom/Renderer/RenderGraph/ResourceScheduler.h"
@@ -33,16 +34,13 @@ namespace Atom
             m_Passes.emplace_back(pass);
         }
 
-        template<typename RenderPassType>
-        const RenderPassType* GetRenderPass(RenderPassID passID)
-        {
-            ATOM_ENGINE_ASSERT(passID < m_Passes.size());
-            return dynamic_cast<RenderPassType*>(m_Passes[passID]);
-        }
+        const RenderSurfaceResource* GetFinalOutput() const;
 
-        const Texture* GetFinalOutput() const;
-        const Vector<RenderPass*>& GetRenderPasses() const { return m_Passes; }
-        const SceneRenderer& GetSceneRenderer() const { return m_SceneRenderer; }
+        inline const SceneRenderer& GetSceneRenderer() const { return m_SceneRenderer; }
+        inline const RenderPass* GetRenderPass(RenderPassID passID) const { return m_Passes[passID]; }
+        inline const Vector<RenderPass*>& GetRenderPasses() const { return m_Passes; }
+        inline const Vector<RenderPassID>& GetOrderedPasses() const { return m_OrderedPasses; }
+        inline const ResourceScheduler& GetResourceScheduler() const { return m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()]; }
     private:
         struct DependencyGroup
         {

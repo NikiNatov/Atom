@@ -226,6 +226,8 @@ namespace Atom
         m_EntityInspectorPanel.SetEntity(selectedEntity);
         m_EntityInspectorPanel.OnImGuiRender();
 
+        m_Renderer->OnImGuiRender();
+
         // Render scene viewport
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport", 0, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);

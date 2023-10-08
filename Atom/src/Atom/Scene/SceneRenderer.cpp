@@ -11,6 +11,8 @@
 #include "Atom/Renderer/RenderPasses/GeometryPass.h"
 #include "Atom/Renderer/RenderPasses/CompositePass.h"
 
+#include <imgui.h>
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -135,5 +137,41 @@ namespace Atom
 
         m_RenderGraph.Build();
         m_RenderGraph.Execute();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void SceneRenderer::OnImGuiRender()
+    {
+        ImGui::Begin("Scene Renderer");
+
+        for (RenderPassID passID : m_RenderGraph.GetOrderedPasses())
+        {
+            if (ImGui::CollapsingHeader(m_RenderGraph.GetRenderPass(passID)->GetName().c_str()))
+            {
+                const ResourceScheduler& resourceScheduler = m_RenderGraph.GetResourceScheduler();
+                for (const IResourceView* outputView : resourceScheduler.GetPassOutputs(passID))
+                {
+                    Resource* resource = resourceScheduler.GetResource(outputView->GetResourceID());
+
+                    ImGui::Columns(2);
+                    ImGui::SetColumnWidth(0, 150.0f);
+                    ImGui::Text(resource->GetName());
+                    ImGui::NextColumn();
+                    ImGui::PushItemWidth(-1);
+
+                    if (resource->As<TextureResource>() || resource->As<RenderSurfaceResource>())
+                    {
+                        ImGui::ImageButton((ImTextureID)resource->GetHWResource(), { 256.0f, 256.0f }, { 0.0f, 0.0f });
+                    }
+
+                    ImGui::PopItemWidth();
+                    ImGui::Columns(1);
+
+                    ImGui::Separator();
+                }
+            }
+        }
+
+        ImGui::End();
     }
 }
