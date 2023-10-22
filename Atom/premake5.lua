@@ -67,6 +67,11 @@ project "Atom"
 		"/bigobj"
 	}
 
+	prebuildcommands
+	{
+		"%{wks.location}/tools/AtomSIGCompiler/bin/AtomSIGCompiler.exe -sigInputDir %{prj.location}/shaders/sig -sigOutputDir %{prj.location}/shaders/autogen"
+	}
+
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"

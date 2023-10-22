@@ -101,3 +101,23 @@ workspace "Atom"
 	include "Atom"
 	include "AtomEditor"
 	include "AtomRuntime"
+
+workspace "AtomSIGCompiler"
+	architecture "x64"
+	startproject "AtomSIGCompiler"
+	location "tools/%{wks.name}"
+
+	configurations 
+	{
+		"Debug",
+		"Release"
+	}
+
+	flags
+	{
+		"MultiProcessorCompile"
+	}
+
+	outputdir = "%{cfg.buildcfg} - %{cfg.system}"
+
+	include "tools/AtomSIGCompiler"
