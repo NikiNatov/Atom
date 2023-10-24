@@ -54,17 +54,20 @@ namespace Atom
             Vector<TransitionBarrier>         RedirectedTransitionBarriers;
         };
 
+        struct FenceSignal
+        {
+            Ref<Fence> Fence = nullptr;
+            u64 FenceValue;
+        };
+
         struct RedirectedTransitionsEvent
         {
             u32 DepGroupIndex;
 
             Ref<CommandBuffer> CmdBuffer;
 
-            Ref<Fence> SignalFence;
-            u64 SignalFenceValue;
-
-            Vector<Ref<Fence>> WaitFences;
-            Vector<u64> WaitFenceValues;
+            FenceSignal Signal;
+            Vector<FenceSignal*> SignalsToWait;
         };
 
         struct RenderPassEvent
@@ -73,11 +76,8 @@ namespace Atom
 
             Ref<CommandBuffer> PassCmdBuffer;
 
-            Ref<Fence> SignalFence;
-            u64 SignalFenceValue;
-
-            Vector<Ref<Fence>> WaitFences;
-            Vector<u64> WaitFenceValues;
+            FenceSignal Signal;
+            Vector<FenceSignal*> SignalsToWait;
         };
 
         using RenderGraphEvent = std::variant<RedirectedTransitionsEvent, RenderPassEvent>;

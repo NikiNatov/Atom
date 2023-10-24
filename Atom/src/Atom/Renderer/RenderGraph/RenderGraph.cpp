@@ -418,13 +418,13 @@ namespace Atom
             u32 queueIdx = u32(passQueueType);
             if (m_Passes[passID]->m_SignalRequired)
             {
-                passEvent.SignalFence = m_QueueFences[queueIdx];
+                passEvent.Signal.Fence = m_QueueFences[queueIdx];
             }
 
             for (RenderPassID syncPassID : m_Passes[passID]->m_SyncPasses)
             {
-                u32 syncPassQueueIdx = u32(m_Passes[syncPassID]->m_QueueType);
-                passEvent.WaitFences.push_back(m_QueueFences[syncPassQueueIdx]);
+                RenderPassEvent& syncPassEvent = std::get<RenderPassEvent>(*m_RenderPassEvents[syncPassID]);
+                passEvent.SignalsToWait.push_back(&syncPassEvent.Signal);
             }
 
             m_RenderGraphEvents[queueIdx].emplace_back(passEvent);
@@ -485,7 +485,7 @@ namespace Atom
             RedirectedTransitionsEvent transitionEvent;
             transitionEvent.DepGroupIndex = depGroup.GroupIndex;
             transitionEvent.CmdBuffer = Device::Get().GetCommandQueue(mostCompetentQueue)->GetCommandBuffer();
-            transitionEvent.SignalFence = m_QueueFences[u32(mostCompetentQueue)];
+            transitionEvent.Signal.Fence = m_QueueFences[u32(mostCompetentQueue)];
 
             // By default we insert redirected transitions to the beginning of the event list before all passes, unless we have specific dependency group we need to wait for
             RenderGraphEventListIt insertIt = m_RenderGraphEvents[u32(mostCompetentQueue)].begin();
@@ -520,13 +520,13 @@ namespace Atom
                     RenderPassEvent& passEvent = std::get<RenderPassEvent>(*m_RenderPassEvents[syncPassID]);
 
                     // Create a signal fence for the pass event if it doesn't have one
-                    if (!passEvent.SignalFence)
+                    if (!passEvent.Signal.Fence)
                     {
-                        passEvent.SignalFence = m_QueueFences[u32(queueToWait)];
+                        passEvent.Signal.Fence = m_QueueFences[u32(queueToWait)];
                     }
 
                     // Make the redirected transitions event to wait for the pass event to signal
-                    transitionEvent.WaitFences.push_back(passEvent.SignalFence);
+                    transitionEvent.SignalsToWait.push_back(&passEvent.Signal);
                 }
 
                 // Insert the redirected transitions event after the last pass on the most competent queue
@@ -546,7 +546,7 @@ namespace Atom
 
                 RenderPassID waitingPassID = depGroup.PassesPerQueue[u32(waitingQueue)].front();
                 RenderPassEvent& waitingPassEvent = std::get<RenderPassEvent>(*m_RenderPassEvents[waitingPassID]);
-                waitingPassEvent.WaitFences.push_back(transitionEvent.SignalFence);
+                waitingPassEvent.SignalsToWait.push_back(&transitionEvent.Signal);
             }
 
             RenderGraphEventListIt transitionEventIt = m_RenderGraphEvents[u32(mostCompetentQueue)].emplace(insertIt, transitionEvent);
@@ -622,12 +622,12 @@ namespace Atom
             {
                 if (RedirectedTransitionsEvent* transitionEventPtr = std::get_if<RedirectedTransitionsEvent>(&event))
                 {
-                    transitionEventPtr->SignalFenceValue = m_QueueFences[queueIdx]->IncrementTargetValue();
+                    transitionEventPtr->Signal.FenceValue = m_QueueFences[queueIdx]->IncrementTargetValue();
                 }
                 else if (RenderPassEvent* passEventPtr = std::get_if<RenderPassEvent>(&event))
                 {
-                    if (passEventPtr->SignalFence)
-                        passEventPtr->SignalFenceValue = m_QueueFences[queueIdx]->IncrementTargetValue();
+                    if (passEventPtr->Signal.Fence)
+                        passEventPtr->Signal.FenceValue = m_QueueFences[queueIdx]->IncrementTargetValue();
                 }
             }
         }
@@ -643,40 +643,40 @@ namespace Atom
             {
                 if (RedirectedTransitionsEvent* transitionEventPtr = std::get_if<RedirectedTransitionsEvent>(&event))
                 {
-                    if (!transitionEventPtr->WaitFences.empty())
+                    if (!transitionEventPtr->SignalsToWait.empty())
                     {
                         // If we have fences to wait for, execute the current cmd buffer batch and wait
                         cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
                         cmdBufferBatches[queueIdx].clear();
 
-                        for (u32 i = 0; i < transitionEventPtr->WaitFences.size(); i++)
-                            cmdQueue->WaitFence(transitionEventPtr->WaitFences[i], transitionEventPtr->WaitFenceValues[i]);
+                        for (u32 i = 0; i < transitionEventPtr->SignalsToWait.size(); i++)
+                            cmdQueue->WaitFence(transitionEventPtr->SignalsToWait[i]->Fence, transitionEventPtr->SignalsToWait[i]->FenceValue);
                     }
 
                     // Execute redirected transitions and signal fence
                     cmdQueue->ExecuteCommandList(transitionEventPtr->CmdBuffer);
-                    cmdQueue->SignalFence(transitionEventPtr->SignalFence, transitionEventPtr->SignalFenceValue);
+                    cmdQueue->SignalFence(transitionEventPtr->Signal.Fence, transitionEventPtr->Signal.FenceValue);
                 }
                 else if (RenderPassEvent* passEventPtr = std::get_if<RenderPassEvent>(&event))
                 {
-                    if (!passEventPtr->WaitFences.empty())
+                    if (!passEventPtr->SignalsToWait.empty())
                     {
                         // If we have fences to wait for, flush the current cmd buffer batch and wait
                         cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
                         cmdBufferBatches[queueIdx].clear();
 
-                        for (u32 i = 0; i < passEventPtr->WaitFences.size(); i++)
-                            cmdQueue->WaitFence(passEventPtr->WaitFences[i], passEventPtr->WaitFenceValues[i]);
+                        for (u32 i = 0; i < passEventPtr->SignalsToWait.size(); i++)
+                            cmdQueue->WaitFence(passEventPtr->SignalsToWait[i]->Fence, passEventPtr->SignalsToWait[i]->FenceValue);
                     }
 
                     if (passEventPtr->PassCmdBuffer)
                         cmdBufferBatches[queueIdx].push_back(passEventPtr->PassCmdBuffer);
 
-                    if (passEventPtr->SignalFence)
+                    if (passEventPtr->Signal.Fence)
                     {
                         // If we have fences to signal, flush the current cmd buffer batch and signal
                         cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
-                        cmdQueue->SignalFence(passEventPtr->SignalFence, passEventPtr->SignalFenceValue);
+                        cmdQueue->SignalFence(passEventPtr->Signal.Fence, passEventPtr->Signal.FenceValue);
 
                         cmdBufferBatches[queueIdx].clear();
                     }
