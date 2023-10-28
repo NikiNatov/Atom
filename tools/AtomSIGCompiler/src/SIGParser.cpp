@@ -233,12 +233,18 @@ namespace SIGCompiler
 
             if (!sig.GetResources().empty())
             {
-                ss << "\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(NumROResources + NumRWResources);\n";
+                if (bindPoint == SIGBindPoint::Material)
+                    ss << "\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(NumROResources + NumRWResources);\n";
+                else
+                    ss << "\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(NumROResources + NumRWResources);\n";
             }
 
             if (!sig.GetSamplers().empty())
             {
-                ss << "\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(NumROSamplers);\n";
+                if (bindPoint == SIGBindPoint::Material)
+                    ss << "\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(NumROSamplers);\n";
+                else
+                    ss << "\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(NumROSamplers);\n";
             }
 
             ss << "\t\t}\n\n";
@@ -249,12 +255,14 @@ namespace SIGCompiler
 
             if (!sig.GetResources().empty())
             {
-                ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(m_ResourceTable), true);\n";
+                if (bindPoint == SIGBindPoint::Material)
+                    ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(m_ResourceTable), true);\n";
             }
 
             if (!sig.GetSamplers().empty())
             {
-                ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerTable), true);\n";
+                if (bindPoint == SIGBindPoint::Material)
+                    ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerTable), true);\n";
             }
 
             ss << "\t\t}\n\n";
