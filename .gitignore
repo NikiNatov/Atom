@@ -12,3 +12,6 @@ bin-int/
 **.sln
 **.vcxproj
 **.vcxproj.filters
+
+# Autogen files
+**/autogen/

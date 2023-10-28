@@ -9,44 +9,57 @@
 
 namespace Atom
 {
+    enum class ShaderType
+    {
+        None = 0,
+        Graphics,
+        Compute,
+    };
+
     class Shader
     {
     public:
         virtual ~Shader() = default;
 
         inline const String& GetName() const { return m_Name; }
-        inline const std::filesystem::path& GetFilepath() const { return m_Filepath; }
-        inline u64 GetHash() const { return std::hash<String>{}(m_Filepath.string()); }
         inline const ShaderLayout& GetShaderLayout() const { return m_ShaderLayout; }
+        inline ShaderType GetShaderType() const { return m_ShaderType; }
     protected:
-        Shader(const std::filesystem::path& filepath);
+        Shader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData);
+        Shader(const String& name, const Vector<byte>& csData);
     protected:
-        String                m_Name;
-        std::filesystem::path m_Filepath;
-        ShaderLayout          m_ShaderLayout;
+        String       m_Name;
+        ShaderType   m_ShaderType;
+        ShaderLayout m_ShaderLayout;
     };
 
     class GraphicsShader : public Shader
     {
     public:
-        GraphicsShader(const std::filesystem::path& filepath);
+        GraphicsShader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData);
         ~GraphicsShader();
 
-        inline ComPtr<ID3DBlob> GetVSData() const { return m_VSData; }
-        inline ComPtr<ID3DBlob> GetPSData() const { return m_PSData; }
+        inline const Vector<byte>& GetVSData() const { return m_VSData; }
+        inline const Vector<byte>& GetPSData() const { return m_PSData; }
+        inline const D3D12_SHADER_BYTECODE& GetD3DVSByteCode() const { return m_D3DVSByteCode; }
+        inline const D3D12_SHADER_BYTECODE& GetD3DPSByteCode() const { return m_D3DPSByteCode; }
     private:
-        ComPtr<ID3DBlob> m_VSData;
-        ComPtr<ID3DBlob> m_PSData;
+        Vector<byte>          m_VSData;
+        Vector<byte>          m_PSData;
+        D3D12_SHADER_BYTECODE m_D3DVSByteCode;
+        D3D12_SHADER_BYTECODE m_D3DPSByteCode;
     };
 
     class ComputeShader : public Shader
     {
     public:
-        ComputeShader(const std::filesystem::path& filepath);
+        ComputeShader(const String& name, const Vector<byte>& csData);
         ~ComputeShader();
 
-        inline ComPtr<ID3DBlob> GetCSData() const { return m_CSData; }
+        inline const Vector<byte>& GetCSData() const { return m_CSData; }
+        inline const D3D12_SHADER_BYTECODE& GetD3DCSByteCode() const { return m_D3DCSByteCode; }
     private:
-        ComPtr<ID3DBlob> m_CSData;
+        Vector<byte>          m_CSData;
+        D3D12_SHADER_BYTECODE m_D3DCSByteCode;
     };
 }

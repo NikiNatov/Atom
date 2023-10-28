@@ -1,47 +1,33 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Renderer/ShaderCompiler.h"
 
 namespace Atom
 {
-    class Shader;
-
     class ShaderLibrary
     {
     public:
         ShaderLibrary() = default;
         ~ShaderLibrary() = default;
 
-        template<typename ShaderType>
-        void Add(const String& name, const Ref<ShaderType>& shader)
+        Ref<GraphicsShader> LoadGraphicsShader(const std::filesystem::path& filepath)
         {
-            bool exists = Exists(name);
-            ATOM_ENGINE_ASSERT(!exists, "Shader with that name already exists!");
+            Ref<GraphicsShader> shader = ShaderCompiler::CompileGraphicsShader(filepath);
 
-            if (!exists)
-                m_ShaderMap[name] = shader;
-        }
+            if(shader)
+                Add<GraphicsShader>(shader);
 
-        template<typename ShaderType>
-        void Add(const Ref<ShaderType>& shader)
-        {
-            auto& name = shader->GetName();
-            Add(name, shader);
-        }
-
-        template<typename ShaderType>
-        Ref<ShaderType> Load(const String& name, const std::filesystem::path& filepath)
-        {
-            Ref<ShaderType> shader = CreateRef<ShaderType>(filepath);
-            Add(name, shader);
             return shader;
         }
 
-        template<typename ShaderType>
-        Ref<ShaderType> Load(const std::filesystem::path& filepath)
+        Ref<ComputeShader> LoadComputeShader(const std::filesystem::path& filepath)
         {
-            Ref<ShaderType> shader = CreateRef<ShaderType>(filepath);
-            Add(shader);
+            Ref<ComputeShader> shader = ShaderCompiler::CompileComputeShader(filepath);
+
+            if (shader)
+                Add<ComputeShader>(shader);
+
             return shader;
         }
 
@@ -56,6 +42,16 @@ namespace Atom
 
         void Clear();
         bool Exists(const String& name) const;
+    private:
+        template<typename ShaderType>
+        void Add(const Ref<ShaderType>& shader)
+        {
+            bool exists = Exists(shader->GetName());
+            ATOM_ENGINE_ASSERT(!exists, "Shader with that name already exists!");
+
+            if (!exists)
+                m_ShaderMap[shader->GetName()] = shader;
+        }
     private:
         HashMap<String, Ref<Shader>> m_ShaderMap;
     };

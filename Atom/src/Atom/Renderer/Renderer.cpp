@@ -30,18 +30,19 @@ namespace Atom
             }
         }
 
-        // Load shaders
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRShader.hlsl");
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/MeshPBRAnimatedShader.hlsl");
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/SkyBoxShader.hlsl");
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/ImGuiShader.hlsl");
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/CompositeShader.hlsl");
-        ms_ShaderLibrary.Load<GraphicsShader>("resources/shaders/FullscreenQuadShader.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/GenerateMips.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/EquirectToCubeMap.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapPrefilter.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/CubeMapIrradiance.hlsl");
-        ms_ShaderLibrary.Load<ComputeShader>("resources/shaders/BRDFShader.hlsl");
+        // Compile and load shaders
+        ShaderCompiler::SetOutputDirectory("../Atom/shaders/bin");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/MeshPBRShader.hlsl");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/MeshPBRAnimatedShader.hlsl");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/SkyBoxShader.hlsl");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/ImGuiShader.hlsl");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/CompositeShader.hlsl");
+        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/FullscreenQuadShader.hlsl");
+        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/GenerateMips.hlsl");
+        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/EquirectToCubeMap.hlsl");
+        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/CubeMapPrefilter.hlsl");
+        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/CubeMapIrradiance.hlsl");
+        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/BRDFShader.hlsl");
 
         // Load pipelines
 

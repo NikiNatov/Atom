@@ -67,21 +67,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ShaderLayout::ShaderLayout()
-        : m_RootSignature(nullptr)
-    {
-        for (u32 i = 0; i < u32(ShaderBindPoint::NumBindPoints); i++)
-        {
-            ShaderBindPoint bindPoint = (ShaderBindPoint)i;
-            m_Constants[i].BindPoint = bindPoint;
-            m_ResourceDescriptorTables[i].BindPoint = bindPoint;
-            m_SamplerDescriptorTables[i].BindPoint = bindPoint;
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    ShaderLayout::ShaderLayout(const ComPtr<ID3DBlob>& vsDataBlob, const ComPtr<ID3DBlob>& psDataBlob)
-        : ShaderLayout()
+    ShaderLayout::ShaderLayout(const Vector<byte>& vsDataBlob, const Vector<byte>& psDataBlob)
     {
         Reflect(vsDataBlob);
         Reflect(psDataBlob);
@@ -90,8 +76,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ShaderLayout::ShaderLayout(const ComPtr<ID3DBlob>& csDataBlob)
-        : ShaderLayout()
+    ShaderLayout::ShaderLayout(const Vector<byte>& csDataBlob)
     {
         Reflect(csDataBlob);
         LogReflectionInfo();
@@ -104,10 +89,10 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void ShaderLayout::Reflect(const ComPtr<ID3DBlob>& shaderDataBlob)
+    void ShaderLayout::Reflect(const Vector<byte>& shaderDataBlob)
     {
         ComPtr<ID3D12ShaderReflection> reflection = nullptr;
-        DXCall(D3DReflect(shaderDataBlob->GetBufferPointer(), shaderDataBlob->GetBufferSize(), IID_PPV_ARGS(&reflection)));
+        DXCall(D3DReflect(shaderDataBlob.data(), shaderDataBlob.size(), IID_PPV_ARGS(&reflection)));
 
         D3D12_SHADER_DESC shaderDesc = {};
         DXCall(reflection->GetDesc(&shaderDesc));
@@ -298,7 +283,7 @@ namespace Atom
 
             if (!constants.Uniforms.empty())
             {
-                ATOM_ENGINE_INFO("\tConstants BindPoint={0}", Utils::ShaderBindPointToString(constants.BindPoint));
+                ATOM_ENGINE_INFO("\tConstants BindPoint={0}", Utils::ShaderBindPointToString((ShaderBindPoint)bindPoint));
                 for (const auto& uniform : constants.Uniforms)
                 {
                     ATOM_ENGINE_INFO("\t\t{0} {1}", Utils::ShaderDataTypeToString(uniform.Type), uniform.Name);
@@ -307,7 +292,7 @@ namespace Atom
 
             if (!resourceTable.Resources.empty())
             {
-                ATOM_ENGINE_INFO("\tResourceTable BindPoint={0}", Utils::ShaderBindPointToString(resourceTable.BindPoint));
+                ATOM_ENGINE_INFO("\tResourceTable BindPoint={0}", Utils::ShaderBindPointToString((ShaderBindPoint)bindPoint));
                 for (const auto& resource : resourceTable.Resources)
                 {
                     ATOM_ENGINE_INFO("\t\t{0} {1}: register{2}", Utils::ShaderResourceTypeToString(resource.Type), resource.Name, resource.Register);
@@ -316,7 +301,7 @@ namespace Atom
 
             if (!samplerTable.Resources.empty())
             {
-                ATOM_ENGINE_INFO("\tSamplerTable BindPoint={0}", Utils::ShaderBindPointToString(samplerTable.BindPoint));
+                ATOM_ENGINE_INFO("\tSamplerTable BindPoint={0}", Utils::ShaderBindPointToString((ShaderBindPoint)bindPoint));
                 for (const auto& resource : samplerTable.Resources)
                 {
                     ATOM_ENGINE_INFO("\t\t{0} {1}: register{2}", Utils::ShaderResourceTypeToString(resource.Type), resource.Name, resource.Register);

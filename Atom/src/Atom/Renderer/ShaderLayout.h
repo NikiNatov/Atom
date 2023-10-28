@@ -60,7 +60,6 @@ namespace Atom
 
         struct ShaderConstants
         {
-            ShaderBindPoint BindPoint;
             u32 RootParameterIndex = UINT32_MAX;
             u32 Register = UINT32_MAX;
             u32 TotalSize = 0;
@@ -69,15 +68,13 @@ namespace Atom
 
         struct ShaderDescriptorTable
         {
-            ShaderBindPoint BindPoint;
             u32 RootParameterIndex = UINT32_MAX;
             Vector<ShaderResource> Resources;
         };
 
     public:
-        ShaderLayout();
-        ShaderLayout(const ComPtr<ID3DBlob>& vsDataBlob, const ComPtr<ID3DBlob>& psDataBlob);
-        ShaderLayout(const ComPtr<ID3DBlob>& csDataBlob);
+        ShaderLayout(const Vector<byte>& vsDataBlob, const Vector<byte>& psDataBlob);
+        ShaderLayout(const Vector<byte>& csDataBlob);
         ~ShaderLayout();
 
         inline const ShaderConstants& GetConstants(ShaderBindPoint bindPoint) const { return m_Constants[(u32)bindPoint]; }
@@ -85,7 +82,7 @@ namespace Atom
         inline const ShaderDescriptorTable& GetSamplerDescriptorTable(ShaderBindPoint bindPoint) const { return m_SamplerDescriptorTables[(u32)bindPoint]; }
         inline ComPtr<ID3D12RootSignature> GetRootSignature() const { return m_RootSignature; }
     private:
-        void Reflect(const ComPtr<ID3DBlob>& shaderDataBlob);
+        void Reflect(const Vector<byte>& shaderDataBlob);
         void CreateRootSignature();
         void LogReflectionInfo();
     private:

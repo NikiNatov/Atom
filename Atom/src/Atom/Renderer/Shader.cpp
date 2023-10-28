@@ -11,36 +11,23 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    Shader::Shader(const std::filesystem::path& filepath)
-        : m_Name(filepath.stem().string()), m_Filepath(filepath)
+    Shader::Shader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData)
+        : m_Name(name), m_ShaderType(ShaderType::Graphics), m_ShaderLayout(vsData, psData)
     {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    GraphicsShader::GraphicsShader(const std::filesystem::path& filepath)
-        : Shader(filepath)
+    Shader::Shader(const String& name, const Vector<byte>& csData)
+        : m_Name(name), m_ShaderType(ShaderType::Compute), m_ShaderLayout(csData)
     {
-        auto d3dDevice = Device::Get().GetD3DDevice();
+    }
 
-#if defined(ATOM_DEBUG)
-        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-        UINT compileFlags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
-        ComPtr<ID3DBlob> errorBlob = nullptr;
-        WString filepathStr = filepath.wstring();
-
-        // Compile vertex shader
-        D3DCompileFromFile(filepathStr.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &m_VSData, &errorBlob);
-        ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
-        
-        // Compile pixel shader
-        D3DCompileFromFile(filepathStr.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &m_PSData, &errorBlob);
-        ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
-
-        // Reflect on the shader data and build resource set
-        ATOM_ENGINE_INFO("Shader \"{0}\" Resources:", m_Name);
-        m_ShaderLayout = ShaderLayout(m_VSData, m_PSData);
+    // -----------------------------------------------------------------------------------------------------------------------------
+    GraphicsShader::GraphicsShader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData)
+        : Shader(name, vsData, psData), m_VSData(vsData), m_PSData(psData)
+    {
+        m_D3DVSByteCode = { m_VSData.data(), m_VSData.size() };
+        m_D3DPSByteCode = { m_PSData.data(), m_PSData.size() };
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -49,25 +36,10 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ComputeShader::ComputeShader(const std::filesystem::path& filepath)
-        : Shader(filepath)
+    ComputeShader::ComputeShader(const String& name, const Vector<byte>& csData)
+        : Shader(name, csData), m_CSData(csData)
     {
-        auto d3dDevice = Device::Get().GetD3DDevice();
-
-#if defined(ATOM_DEBUG)
-        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-        UINT compileFlags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
-        ComPtr<ID3DBlob> errorBlob = nullptr;
-
-        // Compile compute shader
-        D3DCompileFromFile(filepath.wstring().c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CSMain", "cs_5_1", compileFlags, 0, &m_CSData, &errorBlob);
-        ATOM_ENGINE_ASSERT(!(errorBlob && errorBlob->GetBufferSize()), (char*)errorBlob->GetBufferPointer());
-
-        // Reflect on the shader data and build resource set
-        ATOM_ENGINE_INFO("Compute Shader \"{0}\" Resources:", m_Name);
-        m_ShaderLayout = ShaderLayout(m_CSData);
+        m_D3DCSByteCode = { m_CSData.data(), m_CSData.size() };
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
