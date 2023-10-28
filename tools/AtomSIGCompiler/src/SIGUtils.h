@@ -96,6 +96,23 @@ namespace SIGCompiler
             return false;
         }
 
+        static bool IsSIGResourceTexture(SIGResourceType type)
+        {
+            switch (type)
+            {
+            case SIGResourceType::Texture2D:
+            case SIGResourceType::Texture2DArray:
+            case SIGResourceType::Texture3D:
+            case SIGResourceType::TextureCube:
+            case SIGResourceType::RWTexture2D:
+            case SIGResourceType::RWTexture2DArray:
+            case SIGResourceType::RWTexture3D:
+                return true;
+            }
+
+            return false;
+        }
+
         static uint32_t GetSIGConstantSize(SIGConstantType type)
         {
             switch (type)

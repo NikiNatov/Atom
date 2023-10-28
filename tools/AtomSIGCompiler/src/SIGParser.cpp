@@ -231,22 +231,6 @@ namespace SIGCompiler
                 }
             }
 
-            if (!sig.GetResources().empty())
-            {
-                if (bindPoint == SIGBindPoint::Material)
-                    ss << "\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(NumROResources + NumRWResources);\n";
-                else
-                    ss << "\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(NumROResources + NumRWResources);\n";
-            }
-
-            if (!sig.GetSamplers().empty())
-            {
-                if (bindPoint == SIGBindPoint::Material)
-                    ss << "\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(NumROSamplers);\n";
-                else
-                    ss << "\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(NumROSamplers);\n";
-            }
-
             ss << "\t\t}\n\n";
 
             // Write destructor
@@ -256,13 +240,19 @@ namespace SIGCompiler
             if (!sig.GetResources().empty())
             {
                 if (bindPoint == SIGBindPoint::Material)
-                    ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(m_ResourceTable), true);\n";
+                {
+                    ss << "\t\t\tif (m_ResourceTable.IsValid())\n";
+                    ss << "\t\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(m_ResourceTable), true);\n";
+                }
             }
 
             if (!sig.GetSamplers().empty())
             {
                 if (bindPoint == SIGBindPoint::Material)
-                    ss << "\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerTable), true);\n";
+                {
+                    ss << "\t\t\tif (m_SamplerTable.IsValid())\n";
+                    ss << "\t\t\t\tDevice::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerTable), true);\n";
+                }
             }
 
             ss << "\t\t}\n\n";
@@ -295,12 +285,12 @@ namespace SIGCompiler
 
                 if (Utils::IsSIGResourceReadOnly(sigResource.Type))
                 {
-                    ss << "\t\t\tm_ResourceDescriptors[" << sigResource.ShaderRegister << "] = value->GetSRV()\n";
+                    ss << "\t\t\tm_ResourceDescriptors[" << sigResource.ShaderRegister << "] = value->GetSRV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
                     numROResources++;
                 }
                 else
                 {
-                    ss << "\t\t\tm_ResourceDescriptors[NumROResources + " << sigResource.ShaderRegister << "] = value->GetUAV()\n";
+                    ss << "\t\t\tm_ResourceDescriptors[NumROResources + " << sigResource.ShaderRegister << "] = value->GetUAV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
                     numRWResources++;
                 }
 
@@ -313,7 +303,7 @@ namespace SIGCompiler
             {
                 ss << "\t\tvoid Set" << sigSampler.Name << "(const Ref<TextureSampler>& value)\n";
                 ss << "\t\t{\n";
-                ss << "\t\t\tm_SamplerDescriptors[" << sigSampler.ShaderRegister << "] = value->GetDescriptor()\n";
+                ss << "\t\t\tm_SamplerDescriptors[" << sigSampler.ShaderRegister << "] = value->GetDescriptor();\n";
                 ss << "\t\t\tm_SamplersDirty = true;\n";
                 ss << "\t\t}\n\n";
             }
@@ -339,6 +329,8 @@ namespace SIGCompiler
             {
                 ss << "\t\t\tif (m_ResourcesDirty)\n";
                 ss << "\t\t\t{\n";
+                ss << "\t\t\t\tif (!m_ResourceTable.IsValid())\n";
+                ss << "\t\t\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Allocate" << (bindPoint == SIGBindPoint::Material ? "Persistent" : "Transient") << "(NumROResources + NumRWResources);\n\n";
                 ss << "\t\t\t\tDevice::Get().CopyDescriptors(m_ResourceTable, NumROResources + NumRWResources, m_ResourceDescriptors, DescriptorHeapType::ShaderResource);\n";
                 ss << "\t\t\t}\n";
             }
@@ -347,6 +339,8 @@ namespace SIGCompiler
             {
                 ss << "\t\t\tif (m_SamplersDirty)\n";
                 ss << "\t\t\t{\n";
+                ss << "\t\t\t\tif (!m_SamplerTable.IsValid())\n";
+                ss << "\t\t\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Allocate" << (bindPoint == SIGBindPoint::Material ? "Persistent" : "Transient") << "(NumSamplers);\n\n";
                 ss << "\t\t\t\tDevice::Get().CopyDescriptors(m_SamplerTable, NumSamplers, m_SamplerDescriptors, DescriptorHeapType::Sampler);\n";
                 ss << "\t\t\t}\n";
             }
@@ -359,7 +353,7 @@ namespace SIGCompiler
             ss << "\t\t\treturn " << Utils::SIGBindPointToCppString(bindPoint) << ";\n";
             ss << "\t\t}\n\n";
 
-            ss << "\t\tvirtual const byte* GetRootConstants() const override\n";
+            ss << "\t\tvirtual const byte* GetRootConstantsData() const override\n";
             ss << "\t\t{\n";
             ss << (sig.GetConstants().empty() || hasConstantBuffer ? "\t\t\treturn nullptr;\n" : "\t\t\treturn m_ConstantsData;\n");
             ss << "\t\t}\n\n";
@@ -399,12 +393,14 @@ namespace SIGCompiler
 
             if (!sig.GetResources().empty())
             {
+                ss << "\t\tDescriptorAllocation m_ResourceTable;\n";
                 ss << "\t\tD3D12_CPU_DESCRIPTOR_HANDLE m_ResourceDescriptors[NumROResources + NumRWResources];\n";
                 ss << "\t\tbool m_ResourcesDirty = false;\n";
             }
 
             if (!sig.GetSamplers().empty())
             {
+                ss << "\t\tDescriptorAllocation m_SamplerTable;\n";
                 ss << "\t\tD3D12_CPU_DESCRIPTOR_HANDLE m_SamplerDescriptors[NumSamplers];\n";
                 ss << "\t\tbool m_SamplersDirty = false;\n";
             }
@@ -412,7 +408,7 @@ namespace SIGCompiler
             ss << "\t};\n\n";
         }
 
-        ss << "}\n";
+        ss << "}}\n";
 
         // Create file on disk
         std::ofstream ofs(outputPath, std::ios::out | std::ios::trunc);
