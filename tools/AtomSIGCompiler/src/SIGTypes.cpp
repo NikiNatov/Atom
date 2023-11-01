@@ -47,7 +47,7 @@ namespace SIGCompiler
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool SIGDeclaration::AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType)
+    bool SIGDeclaration::AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType, uint32_t arraySize)
     {
         if (m_ExistingNames.find(name) != m_ExistingNames.end())
             return false;
@@ -55,23 +55,31 @@ namespace SIGCompiler
         SIGResource& sigResource = m_Resources.emplace_back();
         sigResource.Name = name;
         sigResource.Type = type;
-        sigResource.ShaderRegister = Utils::IsSIGResourceReadOnly(type) ? m_NumSRVs++ : m_NumUAVs++;
+        sigResource.ShaderRegister = Utils::IsSIGResourceReadOnly(type) ? m_NumSRVs : m_NumUAVs;
         sigResource.ReturnType = returnType;
+        sigResource.ArraySize = arraySize;
+
+        if (Utils::IsSIGResourceReadOnly(type))
+            m_NumSRVs += arraySize;
+        else
+            m_NumUAVs += arraySize;
 
         m_ExistingNames.insert(name);
         return true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool SIGDeclaration::AddSampler(const std::string& name)
+    bool SIGDeclaration::AddSampler(const std::string& name, uint32_t arraySize)
     {
         if (m_ExistingNames.find(name) != m_ExistingNames.end())
             return false;
 
         SIGSampler& sigSampler = m_Samplers.emplace_back();
         sigSampler.Name = name;
-        sigSampler.ShaderRegister = m_NumSamplers++;
+        sigSampler.ShaderRegister = m_NumSamplers;
+        sigSampler.ArraySize = arraySize;
 
+        m_NumSamplers += arraySize;
         m_ExistingNames.insert(name);
         return true;
     }

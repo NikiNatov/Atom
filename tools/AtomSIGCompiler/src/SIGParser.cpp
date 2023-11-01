@@ -150,10 +150,31 @@ namespace SIGCompiler
 
                 std::string sigResourceName = token.Value;
 
-                token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::SemiColon, "Syntax error: Expected a \";\"");
+                // Check for array
+                token = (++tokenizer).GetCurrentToken();
 
-                if (!m_CurrentSIGDeclaration->AddResource(sigResourceName, sigResourceType, sigResourceReturnType))
-                    throw std::exception(std::format("Syntax error: Resource name redefinition \"{}\"", sigResourceName.c_str()).c_str());
+                if (token.Type == SIGTokenType::LeftSquareBracket)
+                {
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::Number, "Syntax error: Expected array size value");
+
+                    int arraySize = atoi(token.Value.c_str());
+
+                    if(arraySize == 0)
+                        throw std::exception("Syntax error: Array size cannot be 0");
+
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::RightSquareBracket, "Syntax error: Expected a \"]\"");
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::SemiColon, "Syntax error: Expected a \";\"");
+
+                    if (!m_CurrentSIGDeclaration->AddResource(sigResourceName, sigResourceType, sigResourceReturnType, arraySize))
+                        throw std::exception(std::format("Syntax error: Resource name redefinition \"{}\"", sigResourceName.c_str()).c_str());
+                }
+                else if (token.Type == SIGTokenType::SemiColon)
+                {
+                    if (!m_CurrentSIGDeclaration->AddResource(sigResourceName, sigResourceType, sigResourceReturnType))
+                        throw std::exception(std::format("Syntax error: Resource name redefinition \"{}\"", sigResourceName.c_str()).c_str());
+                }
+                else
+                    throw std::exception("Syntax error: Expected a \";\"");
             }
             else if (token.Type == SIGTokenType::Sampler)
             {
@@ -164,10 +185,31 @@ namespace SIGCompiler
 
                 std::string sigSamplerName = token.Value;
 
-                token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::SemiColon, "Syntax error: Expected a \";\"");
+                // Check for array
+                token = (++tokenizer).GetCurrentToken();
 
-                if(!m_CurrentSIGDeclaration->AddSampler(sigSamplerName))
-                    throw std::exception(std::format("Syntax error: Sampler name redefinition \"{}\"", sigSamplerName.c_str()).c_str());
+                if (token.Type == SIGTokenType::LeftSquareBracket)
+                {
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::Number, "Syntax error: Expected array size value");
+
+                    int arraySize = atoi(token.Value.c_str());
+
+                    if (arraySize == 0)
+                        throw std::exception("Syntax error: Array size cannot be 0");
+
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::RightSquareBracket, "Syntax error: Expected a \"]\"");
+                    token = (++tokenizer).GetAndValidateCurrentToken(SIGTokenType::SemiColon, "Syntax error: Expected a \";\"");
+
+                    if (!m_CurrentSIGDeclaration->AddSampler(sigSamplerName, arraySize))
+                        throw std::exception(std::format("Syntax error: Sampler name redefinition \"{}\"", sigSamplerName.c_str()).c_str());
+                }
+                else if (token.Type == SIGTokenType::SemiColon)
+                {
+                    if (!m_CurrentSIGDeclaration->AddSampler(sigSamplerName))
+                        throw std::exception(std::format("Syntax error: Sampler name redefinition \"{}\"", sigSamplerName.c_str()).c_str());
+                }
+                else
+                    throw std::exception("Syntax error: Expected a \";\"");
             }
             else if (token.Type == SIGTokenType::RightCurlyBracket)
             {
@@ -278,20 +320,43 @@ namespace SIGCompiler
             // Write resources setters
             uint32_t numROResources = 0;
             uint32_t numRWResources = 0;
+            uint32_t numSamplers = 0;
             for (const SIGResource& sigResource : sig.GetResources())
             {
-                ss << "\t\tvoid Set" << sigResource.Name << "(const " << Utils::SIGResourceTypeToCppString(sigResource.Type) << "& value)\n";
+                ss << "\t\tvoid Set" << sigResource.Name;
+
+                if (sigResource.ArraySize > 1)
+                    ss << "AtIndex(u32 index, ";
+                else
+                    ss << "(";
+
+                ss << "const " << Utils::SIGResourceTypeToCppString(sigResource.Type) << "& value)\n";
                 ss << "\t\t{\n";
+
+                if (sigResource.ArraySize > 1)
+                    ss << "\t\t\tATOM_ENGINE_ASSERT(index < " << sigResource.ArraySize << ");\n";
 
                 if (Utils::IsSIGResourceReadOnly(sigResource.Type))
                 {
-                    ss << "\t\t\tm_ResourceDescriptors[" << sigResource.ShaderRegister << "] = value->GetSRV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
-                    numROResources++;
+                    ss << "\t\t\tm_ResourceDescriptors[" << sigResource.ShaderRegister;
+
+                    if (sigResource.ArraySize > 1)
+                        ss << " + index";
+
+                    ss << "] = value->GetSRV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
+
+                    numROResources += sigResource.ArraySize;
                 }
                 else
                 {
-                    ss << "\t\t\tm_ResourceDescriptors[NumROResources + " << sigResource.ShaderRegister << "] = value->GetUAV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
-                    numRWResources++;
+                    ss << "\t\t\tm_ResourceDescriptors[NumROResources + " << sigResource.ShaderRegister;
+
+                    if (sigResource.ArraySize > 1)
+                        ss << " + index";
+
+                    ss << "] = value->GetUAV()" << (Utils::IsSIGResourceTexture(sigResource.Type) ? "->GetDescriptor();\n" : ";\n");
+
+                    numRWResources += sigResource.ArraySize;
                 }
 
                 ss << "\t\t\tm_ResourcesDirty = true;\n";
@@ -301,11 +366,30 @@ namespace SIGCompiler
             // Write sampler setters
             for (const SIGSampler& sigSampler : sig.GetSamplers())
             {
-                ss << "\t\tvoid Set" << sigSampler.Name << "(const Ref<TextureSampler>& value)\n";
+                ss << "\t\tvoid Set" << sigSampler.Name;
+
+                if (sigSampler.ArraySize > 1)
+                    ss << "AtIndex(u32 index, ";
+                else
+                    ss << "(";
+
+                ss<< "const Ref<TextureSampler>& value)\n";
+
                 ss << "\t\t{\n";
-                ss << "\t\t\tm_SamplerDescriptors[" << sigSampler.ShaderRegister << "] = value->GetDescriptor();\n";
+
+                if (sigSampler.ArraySize > 1)
+                    ss << "\t\t\tATOM_ENGINE_ASSERT(index < " << sigSampler.ArraySize << ");\n";
+
+                ss << "\t\t\tm_SamplerDescriptors[" << sigSampler.ShaderRegister;
+
+                if (sigSampler.ArraySize > 1)
+                    ss << " + index";
+
+                ss << "] = value->GetDescriptor();\n";
                 ss << "\t\t\tm_SamplersDirty = true;\n";
                 ss << "\t\t}\n\n";
+
+                numSamplers += sigSampler.ArraySize;
             }
 
             // Write compile method
@@ -378,7 +462,7 @@ namespace SIGCompiler
             ss << "\t\tstatic const u32 ConstantsDataSize = " << currentByteOffset << ";\n";
             ss << "\t\tstatic const u32 NumROResources = " << numROResources << ";\n";
             ss << "\t\tstatic const u32 NumRWResources = " << numRWResources << ";\n";
-            ss << "\t\tstatic const u32 NumSamplers = " << sig.GetSamplers().size() << ";\n\n";
+            ss << "\t\tstatic const u32 NumSamplers = " << numSamplers << ";\n\n";
 
             if(!sig.GetConstants().empty())
             {
@@ -460,12 +544,22 @@ namespace SIGCompiler
                     ss << structTypePtr->GetName();
                 }
 
-                ss << "> " << sigResource.Name << ";\n";
+                ss << "> " << sigResource.Name;
+
+                if (sigResource.ArraySize > 1)
+                    ss << "[" << sigResource.ArraySize << "]";
+
+                ss << ";\n";
             }
 
             for (const SIGSampler& sigSampler : sig.GetSamplers())
             {
-                ss << "\tSamplerState " << sigSampler.Name << ";\n";
+                ss << "\tSamplerState " << sigSampler.Name;
+
+                if (sigSampler.ArraySize > 1)
+                    ss << "[" << sigSampler.ArraySize << "]";
+
+                ss << ";\n";
             }
 
             ss << "};\n\n";
@@ -502,8 +596,12 @@ namespace SIGCompiler
                         ss << structTypePtr->GetName();
                     }
 
-                    ss << "> " << sig.GetName() << "_" << sigResource.Name
-                        << " : register(" << (Utils::IsSIGResourceReadOnly(sigResource.Type) ? "t" : "u") << sigResource.ShaderRegister << ", " << Utils::SIGBindPointToHlslString(sig.GetBindPoint()) << ");\n";
+                    ss << "> " << sig.GetName() << "_" << sigResource.Name;
+
+                    if (sigResource.ArraySize > 1)
+                        ss << "[" << sigResource.ArraySize << "]";
+
+                    ss << " : register(" << (Utils::IsSIGResourceReadOnly(sigResource.Type) ? "t" : "u") << sigResource.ShaderRegister << ", " << Utils::SIGBindPointToHlslString(sig.GetBindPoint()) << ");\n";
                 }
 
                 ss << "\n";
@@ -516,7 +614,12 @@ namespace SIGCompiler
 
                 for (const SIGSampler& sigSampler : sig.GetSamplers())
                 {
-                    ss << "SamplerState " << sig.GetName() << "_" << sigSampler.Name << " : register(s" << sigSampler.ShaderRegister << ", " << Utils::SIGBindPointToHlslString(sig.GetBindPoint()) << ");\n";
+                    ss << "SamplerState " << sig.GetName() << "_" << sigSampler.Name;
+
+                    if (sigSampler.ArraySize > 1)
+                        ss << "[" << sigSampler.ArraySize << "]";
+
+                    ss << " : register(s" << sigSampler.ShaderRegister << ", " << Utils::SIGBindPointToHlslString(sig.GetBindPoint()) << ");\n";
                 }
 
                 ss << "\n";

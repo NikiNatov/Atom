@@ -63,12 +63,14 @@ namespace SIGCompiler
         SIGResourceType Type;
         uint32_t ShaderRegister;
         std::variant<SIGConstantType, SIGStructType> ReturnType;
+        uint32_t ArraySize;
     };
 
     struct SIGSampler
     {
         std::string Name;
         uint32_t ShaderRegister;
+        uint32_t ArraySize;
     };
 
     class SIGDeclaration
@@ -77,8 +79,8 @@ namespace SIGCompiler
         SIGDeclaration(const std::string& name, SIGBindPoint bindPoint);
 
         bool AddConstant(const std::string& name, SIGConstantType type);
-        bool AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType);
-        bool AddSampler(const std::string& name);
+        bool AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType, uint32_t arraySize = 1);
+        bool AddSampler(const std::string& name, uint32_t arraySize = 1);
 
         inline const std::string& GetName() const { return m_Name; }
         inline SIGBindPoint GetBindPoint() const { return m_BindPoint; }

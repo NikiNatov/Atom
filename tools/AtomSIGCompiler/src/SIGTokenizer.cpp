@@ -16,10 +16,13 @@ namespace SIGCompiler
         { SIGTokenType::ResourceType,      std::regex("Texture2DArray|Texture2D|Texture3D|TextureCube|StructuredBuffer|RWTexture2DArray|RWTexture2D|RWTexture3D|RWStructuredBuffer") },
         { SIGTokenType::Sampler,           std::regex("SamplerState") },
         { SIGTokenType::Identifier,        std::regex("[a-zA-Z_][a-zA-Z_0-9]*") },
+        { SIGTokenType::Number,            std::regex("[0-9]+") },
         { SIGTokenType::LeftAngleBracket,  std::regex("<") },
         { SIGTokenType::RightAngleBracket, std::regex(">") },
         { SIGTokenType::LeftCurlyBracket,  std::regex("\\{") },
         { SIGTokenType::RightCurlyBracket, std::regex("\\}") },
+        { SIGTokenType::LeftSquareBracket, std::regex("\\[") },
+        { SIGTokenType::RightSquareBracket,std::regex("\\]") },
         { SIGTokenType::SemiColon,         std::regex(";") }
     };
 

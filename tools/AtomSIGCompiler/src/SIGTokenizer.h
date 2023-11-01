@@ -16,10 +16,13 @@ namespace SIGCompiler
         ResourceType,
         Sampler,
         Identifier,
+        Number,
         LeftAngleBracket,
         RightAngleBracket,
         LeftCurlyBracket,
         RightCurlyBracket,
+        LeftSquareBracket,
+        RightSquareBracket,
         SemiColon,
     };
 
