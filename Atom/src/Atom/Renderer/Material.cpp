@@ -1,7 +1,7 @@
 #include "atompch.h"
 #include "Material.h"
 
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Renderer/Device.h"
 #include "Atom/Asset/AssetManager.h"
 
@@ -32,8 +32,6 @@ namespace Atom
             if (resource.Type == ShaderResourceType::Sampler)
                 m_Samplers[resource.Register] = nullptr;
         }
-
-        UpdateDescriptorTables();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -88,19 +86,17 @@ namespace Atom
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> textureDescriptors;
         textureDescriptors.reserve(m_Textures.size());
 
-        Ref<Texture> errorTexture = Renderer::GetErrorTexture();
         for (const auto& [_, texture] : m_Textures)
         {
-            textureDescriptors.push_back(texture ? texture->GetSRV()->GetDescriptor() : errorTexture->GetSRV()->GetDescriptor());
+            textureDescriptors.push_back(texture ? texture->GetSRV()->GetDescriptor() : EngineResources::ErrorTexture->GetSRV()->GetDescriptor());
         }
 
         Vector<D3D12_CPU_DESCRIPTOR_HANDLE> samplerDescriptors;
         samplerDescriptors.reserve(m_Samplers.size());
 
-        Ref<TextureSampler> defaultSampler = Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp);
         for (const auto& [_, sampler] : m_Samplers)
         {
-            samplerDescriptors.push_back(sampler ? sampler->GetDescriptor() : defaultSampler->GetDescriptor());
+            samplerDescriptors.push_back(sampler ? sampler->GetDescriptor() : EngineResources::LinearClampSampler->GetDescriptor());
         }
 
         Device::Get().CopyDescriptors(m_ResourceDescriptorTable, textureDescriptors.size(), textureDescriptors.data(), DescriptorHeapType::ShaderResource);

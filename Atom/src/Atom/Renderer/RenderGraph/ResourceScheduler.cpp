@@ -4,7 +4,7 @@
 #include "Atom/Scene/SceneRenderer.h"
 
 #include "Atom/Renderer/Device.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 
 #include "Atom/Renderer/RenderGraph/RenderGraph.h"
 
@@ -145,8 +145,8 @@ namespace Atom
 
         // Create resource descriptor tables for the frame
         Ref<TextureCube> envMapAsset = frameData.Lights->GetEnvironmentMap();
-        m_FrameResources.EnvironmentMap = envMapAsset ? envMapAsset->GetResource() : Renderer::GetBlackTextureCube();
-        m_FrameResources.IrradianceMap = frameData.Lights->GetIrradianceMap() ? frameData.Lights->GetIrradianceMap() : Renderer::GetBlackTextureCube();
+        m_FrameResources.EnvironmentMap = envMapAsset ? envMapAsset->GetResource() : EngineResources::BlackTextureCube;
+        m_FrameResources.IrradianceMap = frameData.Lights->GetIrradianceMap() ? frameData.Lights->GetIrradianceMap() : EngineResources::BlackTextureCube;
         m_FrameResources.BRDFMap = Renderer::GetBRDF();
 
         D3D12_CPU_DESCRIPTOR_HANDLE frameResourceDescriptors[] = {

@@ -1,7 +1,7 @@
 #include "atompch.h"
 #include "ImGuiWrapper.h"
 
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 
 #include <imgui.h>
 
@@ -97,27 +97,27 @@ namespace Atom
         // -----------------------------------------------------------------------------------------------------------------------------
         bool GUI::ImageButton(ScriptWrappers::Texture2D image, const glm::vec2& size, const glm::vec2& uv0, const glm::vec2& uv1)
         {
-            return ImGui::ImageButton(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)Renderer::GetErrorTexture().get(), ImVec2{size.x, size.y}, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
+            return ImGui::ImageButton(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)EngineResources::ErrorTexture.get(), ImVec2{size.x, size.y}, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         bool GUI::ImageButton(ScriptWrappers::Texture2D image, const glm::vec2& size, const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& offset)
         {
             ImGui::SetCursorPos(ImVec2{ offset.x, offset.y });
-            return ImGui::ImageButton(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)Renderer::GetErrorTexture().get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
+            return ImGui::ImageButton(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)EngineResources::ErrorTexture.get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         void GUI::Image(ScriptWrappers::Texture2D image, const glm::vec2& size, const glm::vec2& uv0, const glm::vec2& uv1)
         {
-            return ImGui::Image(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)Renderer::GetErrorTexture().get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
+            return ImGui::Image(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)EngineResources::ErrorTexture.get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
         void GUI::Image(ScriptWrappers::Texture2D image, const glm::vec2& size, const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& offset)
         {
             ImGui::SetCursorPos(ImVec2{ offset.x, offset.y });
-            return ImGui::Image(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)Renderer::GetErrorTexture().get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
+            return ImGui::Image(image.GetTexture() ? (ImTextureID)image.GetTexture().get() : (ImTextureID)EngineResources::ErrorTexture.get(), ImVec2{ size.x, size.y }, ImVec2{ uv0.x, uv0.y }, ImVec2{ uv1.x, uv1.y });
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------

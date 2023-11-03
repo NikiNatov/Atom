@@ -2,7 +2,7 @@
 
 #include "Atom/Asset/AssetManager.h"
 #include "Atom/Asset/AssetSerializer.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -49,7 +49,7 @@ namespace Atom
 						ImGui::PushItemWidth(-1);
 
 						Ref<TextureAsset> texture = m_Material->GetTexture(resource.Name.c_str());
-						ImGui::ImageButton(texture ? (ImTextureID)texture->GetResource().get() : (ImTextureID)Renderer::GetBlackTexture().get(), {64.0f, 64.0f}, {0.0f, 0.0f});
+						ImGui::ImageButton(texture ? (ImTextureID)texture->GetResource().get() : (ImTextureID)EngineResources::BlackTexture.get(), {64.0f, 64.0f}, {0.0f, 0.0f});
 
 						if (ImGui::BeginDragDropTarget())
 						{

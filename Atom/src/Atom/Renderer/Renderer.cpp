@@ -3,12 +3,8 @@
 
 #include "Atom/Core/Application.h"
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
-#include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/CommandQueue.h"
-#include "Atom/Renderer/Texture.h"
-#include "Atom/Renderer/Material.h"
-#include "Atom/Renderer/Buffer.h"
-#include "Atom/Renderer/LightEnvironment.h"
+#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Asset/MeshAsset.h"
 
 #include <pix3.h>
@@ -19,16 +15,6 @@ namespace Atom
     void Renderer::Initialize(const RendererConfig& config)
     {
         ms_Config = config;
-        
-        // Create samplers
-        ms_Samplers.reserve(u32(TextureFilter::NumFilters) * u32(TextureWrap::NumWraps));
-        for (u32 i = 0; i < u32(TextureFilter::NumFilters); i++)
-        {
-            for (u32 j = 0; j < u32(TextureWrap::NumWraps); j++)
-            {
-                ms_Samplers.push_back(CreateRef<TextureSampler>((TextureFilter)i, (TextureWrap)j));
-            }
-        }
 
         // Compile and load shaders
         ShaderCompiler::SetOutputDirectory("../Atom/shaders/bin");
@@ -81,106 +67,14 @@ namespace Atom
             ms_PipelineLibrary.Load<ComputePipeline>("BRDFPipeline", pipelineDesc);
         }
 
-        // Create fullscreen quad buffers
-        struct QuadVertex
-        {
-            glm::vec3 Position;
-            glm::vec2 TexCoord;
-
-            QuadVertex(f32 x, f32 y, f32 z, f32 u, f32 v)
-                : Position(x, y, z), TexCoord(u, v)
-            {}
-        };
-
-        QuadVertex quadVertices[] = {
-            QuadVertex(-1.0, -1.0, 0.0, 0.0, 1.0),
-            QuadVertex( 1.0, -1.0, 0.0, 1.0, 1.0),
-            QuadVertex( 1.0,  1.0, 0.0, 1.0, 0.0),
-            QuadVertex(-1.0,  1.0, 0.0, 0.0, 0.0)
-        };
-
-        BufferDescription vbDesc;
-        vbDesc.ElementCount = _countof(quadVertices);
-        vbDesc.ElementSize = sizeof(QuadVertex);
-        vbDesc.IsDynamic = false;
-
-        ms_FullscreenQuadVB = CreateRef<VertexBuffer>(vbDesc, "FullscreenQuadVB(Renderer)");
-        UploadBufferData(ms_FullscreenQuadVB, quadVertices);
-
-        u16 quadIndices[] = { 0, 1, 2, 2, 3, 0 };
-
-        BufferDescription ibDesc;
-        ibDesc.ElementCount = _countof(quadIndices);
-        ibDesc.ElementSize = sizeof(u16);
-        ibDesc.IsDynamic = false;
-
-        ms_FullscreenQuadIB = CreateRef<IndexBuffer>(ibDesc, IndexBufferFormat::U16, "FullscreenQuadIB(Renderer)");
-        UploadBufferData(ms_FullscreenQuadIB, quadIndices);
-
-        // Create error texture
-        {
-            TextureDescription errorTextureDesc;
-            errorTextureDesc.Width = 1;
-            errorTextureDesc.Height = 1;
-            errorTextureDesc.Format = TextureFormat::RGBA8;
-            errorTextureDesc.MipLevels = 1;
-
-            ms_ErrorTexture = CreateRef<Texture>(errorTextureDesc, "ErrorTexture(Renderer)");
-
-            const byte errorTextureData[] = { 0xFF, 0x00, 0xFF, 0xFF };
-            UploadTextureData(ms_ErrorTexture, errorTextureData);
-        }
-
-        // Create black texture and black texture cube
-        {
-            TextureDescription blackTextureDesc;
-            blackTextureDesc.Width = 1;
-            blackTextureDesc.Height = 1;
-            blackTextureDesc.Format = TextureFormat::RGBA8;
-            blackTextureDesc.MipLevels = 1;
-
-            ms_BlackTexture = CreateRef<Texture>(blackTextureDesc, "BlackTexture(Renderer)");
-
-            blackTextureDesc.ArraySize = 6;
-            blackTextureDesc.Flags |= TextureFlags::CubeMap;
-
-            ms_BlackTextureCube = CreateRef<Texture>(blackTextureDesc, "BlackTextureCube(Renderer)");
-
-            const byte blackTextureData[] = { 0x00, 0x00, 0x00, 0xFF }; // Just 1 pixel of black color
-            UploadTextureData(ms_BlackTexture, blackTextureData);
-
-            for(u32 face = 0; face < 6; face++)
-                UploadTextureData(ms_BlackTextureCube, blackTextureData, 0, face);
-        }
-
         // Generate BRDF texture
         ms_BRDFTexture = Renderer::CreateBRDFTexture();
 
-        // Create renderer materials
-        ms_DefaultMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
-        ms_DefaultMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        ms_DefaultMaterial->SetUniform("Metalness", 0.5f);
-        ms_DefaultMaterial->SetUniform("Roughness", 0.5f);
+        // Create common engine resources
+        EngineResources::Initialize();
 
-        // Create renderer materials
-        ms_DefaultMaterialAnimated = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
-        ms_DefaultMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        ms_DefaultMaterialAnimated->SetUniform("Metalness", 0.5f);
-        ms_DefaultMaterialAnimated->SetUniform("Roughness", 0.5f);
-
-        ms_ErrorMaterial = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
-        ms_ErrorMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
-        ms_ErrorMaterial->SetUniform("Metalness", 0.0f);
-        ms_ErrorMaterial->SetUniform("Roughness", 1.0f);
-
-        ms_ErrorMaterialAnimated = CreateRef<Material>(ms_ShaderLibrary.Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
-        ms_ErrorMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
-        ms_ErrorMaterialAnimated->SetUniform("Metalness", 0.0f);
-        ms_ErrorMaterialAnimated->SetUniform("Roughness", 1.0f);
-
-        // Wait for all copy/compute operations to complete before we continue
+        // Wait for all compute operations to complete before we continue
         Device::Get().GetCommandQueue(CommandQueueType::Compute)->Flush();
-        Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -188,17 +82,9 @@ namespace Atom
     {
         ms_PipelineLibrary.Clear();
         ms_ShaderLibrary.Clear();
-        ms_FullscreenQuadVB.reset();
-        ms_FullscreenQuadIB.reset();
         ms_BRDFTexture.reset();
-        ms_ErrorTexture.reset();
-        ms_BlackTexture.reset();
-        ms_BlackTextureCube.reset();
-        ms_DefaultMaterial.reset();
-        ms_DefaultMaterialAnimated.reset();
-        ms_ErrorMaterial.reset();
-        ms_ErrorMaterialAnimated.reset();
-        ms_Samplers.clear();
+
+        EngineResources::Shutdown();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -246,9 +132,9 @@ namespace Atom
             commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
         }
 
-        commandBuffer->SetVertexBuffer(ms_FullscreenQuadVB.get());
-        commandBuffer->SetIndexBuffer(ms_FullscreenQuadIB.get());
-        commandBuffer->DrawIndexed(ms_FullscreenQuadIB->GetElementCount(), 1, 0, 0, 0);
+        commandBuffer->SetVertexBuffer(EngineResources::QuadVertexBuffer.get());
+        commandBuffer->SetIndexBuffer(EngineResources::QuadIndexBuffer.get());
+        commandBuffer->DrawIndexed(EngineResources::QuadIndexBuffer->GetElementCount(), 1, 0, 0, 0);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -668,50 +554,31 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture> Renderer::GetErrorTexture()
-    {
-        return ms_ErrorTexture;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture> Renderer::GetBlackTexture()
-    {
-        return ms_BlackTexture;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture> Renderer::GetBlackTextureCube()
-    {
-        return ms_BlackTextureCube;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> Renderer::GetDefaultMaterial()
-    {
-        return ms_DefaultMaterial;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> Renderer::GetDefaultMaterialAnimated()
-    {
-        return ms_DefaultMaterialAnimated;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> Renderer::GetErrorMaterial()
-    {
-        return ms_ErrorMaterial;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> Renderer::GetErrorMaterialAnimated()
-    {
-        return ms_ErrorMaterialAnimated;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     Ref<TextureSampler> Renderer::GetSampler(TextureFilter filter, TextureWrap wrap)
     {
-        return ms_Samplers[u32(filter) * u32(TextureFilter::NumFilters) + u32(wrap)];
+        if (filter == TextureFilter::Linear)
+        {
+            if (wrap == TextureWrap::Clamp)
+                return EngineResources::LinearClampSampler;
+            else if (wrap == TextureWrap::Repeat)
+                return EngineResources::LinearRepeatSampler;
+        }
+        else if (filter == TextureFilter::Nearest)
+        {
+            if (wrap == TextureWrap::Clamp)
+                return EngineResources::NearestClampSampler;
+            else if (wrap == TextureWrap::Repeat)
+                return EngineResources::NearestRepeatSampler;
+        }
+        else if (filter == TextureFilter::Anisotropic)
+        {
+            if (wrap == TextureWrap::Clamp)
+                return EngineResources::AnisotropicClampSampler;
+            else if (wrap == TextureWrap::Repeat)
+                return EngineResources::AnisotropicRepeatSampler;
+        }
+
+        ATOM_ENGINE_ASSERT(false);
+        return EngineResources::LinearClampSampler;
     }
 }

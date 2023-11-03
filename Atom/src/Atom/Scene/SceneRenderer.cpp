@@ -3,6 +3,7 @@
 
 #include "Atom/Renderer/Device.h"
 #include "Atom/Renderer/Material.h"
+#include "Atom/Renderer/EngineResources.h"
 
 #include "Atom/Renderer/RenderGraph/RenderGraph.h"
 #include "Atom/Renderer/RenderGraph/RenderPassBuilder.h"
@@ -80,7 +81,7 @@ namespace Atom
             meshEntry.Mesh = mesh;
             meshEntry.SubmeshIndex = submeshIdx;
             meshEntry.Transform = transform;
-            meshEntry.Material = material ? material->GetResource() : Renderer::GetErrorMaterial();
+            meshEntry.Material = material ? material->GetResource() : EngineResources::ErrorMaterial;
         }
     }
 
@@ -104,7 +105,7 @@ namespace Atom
             meshEntry.Mesh = mesh;
             meshEntry.SubmeshIndex = submeshIdx;
             meshEntry.Transform = transform;
-            meshEntry.Material = material ? material->GetResource() : Renderer::GetErrorMaterialAnimated();
+            meshEntry.Material = material ? material->GetResource() : EngineResources::ErrorMaterialAnimated;
             meshEntry.BoneTransformIndex = m_FrameData[currentFrameIdx].BoneTransforms.size();
         }
 
