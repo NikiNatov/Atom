@@ -120,8 +120,8 @@ namespace Atom
     template<typename T>
     using Set = std::set<T>;
 
-    template<typename T>
-    using HashSet = std::unordered_set<T>;
+    template<typename T, typename Hash = std::hash<T>>
+    using HashSet = std::unordered_set<T, Hash>;
 
     template<typename Key, typename Val>
     using Map = std::map<Key, Val>;
@@ -129,8 +129,8 @@ namespace Atom
     template<typename Key, typename Val>
     using MultiMap = std::multimap<Key, Val>;
 
-    template<typename Key, typename Val>
-    using HashMap = std::unordered_map<Key, Val>;
+    template<typename Key, typename Val, typename Hash = std::hash<Key>>
+    using HashMap = std::unordered_map<Key, Val, Hash>;
 
     template<typename T>
     using Ref = std::shared_ptr<T>;

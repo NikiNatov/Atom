@@ -22,6 +22,7 @@ namespace Atom
         virtual ~Shader() = default;
 
         inline const String& GetName() const { return m_Name; }
+        inline u64 GetHash() const { return m_Hash; }
         inline const ShaderLayout& GetShaderLayout() const { return m_ShaderLayout; }
         inline ShaderType GetShaderType() const { return m_ShaderType; }
     protected:
@@ -29,6 +30,7 @@ namespace Atom
         Shader(const String& name, const Vector<byte>& csData);
     protected:
         String       m_Name;
+        u64          m_Hash;
         ShaderType   m_ShaderType;
         ShaderLayout m_ShaderLayout;
     };

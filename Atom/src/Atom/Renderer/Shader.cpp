@@ -1,6 +1,7 @@
 #include "atompch.h"
-
 #include "Shader.h"
+
+#include "Atom/Core/Hash.h"
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
 #include "Atom/Renderer/Device.h"
 
@@ -14,12 +15,26 @@ namespace Atom
     Shader::Shader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData)
         : m_Name(name), m_ShaderType(ShaderType::Graphics), m_ShaderLayout(vsData, psData)
     {
+        HashBuilder hashBuilder;
+
+        for (byte b : vsData)
+            hashBuilder.AddToHash(b);
+        for (byte b : psData)
+            hashBuilder.AddToHash(b);
+
+        m_Hash = hashBuilder.GetHash();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Shader::Shader(const String& name, const Vector<byte>& csData)
         : m_Name(name), m_ShaderType(ShaderType::Compute), m_ShaderLayout(csData)
     {
+        HashBuilder hashBuilder;
+
+        for (byte b : csData)
+            hashBuilder.AddToHash(b);
+
+        m_Hash = hashBuilder.GetHash();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
