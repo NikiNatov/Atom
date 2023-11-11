@@ -405,6 +405,7 @@ namespace SIGCompiler
                     ss << "\t\t\t\tvoid* data = m_ConstantBuffer->Map(0, 0);\n";
                     ss << "\t\t\t\tmemcpy(data, m_ConstantsData, ConstantsDataSize);\n";
                     ss << "\t\t\t\tm_ConstantBuffer->Unmap();\n";
+                    ss << "\t\t\t\tm_ConstantsDirty = false;\n";
                     ss << "\t\t\t}\n";
                 }
             }
@@ -416,6 +417,7 @@ namespace SIGCompiler
                 ss << "\t\t\t\tif (!m_ResourceTable.IsValid())\n";
                 ss << "\t\t\t\t\tm_ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Allocate" << (bindPoint == SIGBindPoint::Material ? "Persistent" : "Transient") << "(NumROResources + NumRWResources);\n\n";
                 ss << "\t\t\t\tDevice::Get().CopyDescriptors(m_ResourceTable, NumROResources + NumRWResources, m_ResourceDescriptors, DescriptorHeapType::ShaderResource);\n";
+                ss << "\t\t\t\tm_ResourcesDirty = false;\n";
                 ss << "\t\t\t}\n";
             }
 
@@ -426,6 +428,7 @@ namespace SIGCompiler
                 ss << "\t\t\t\tif (!m_SamplerTable.IsValid())\n";
                 ss << "\t\t\t\t\tm_SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Allocate" << (bindPoint == SIGBindPoint::Material ? "Persistent" : "Transient") << "(NumSamplers);\n\n";
                 ss << "\t\t\t\tDevice::Get().CopyDescriptors(m_SamplerTable, NumSamplers, m_SamplerDescriptors, DescriptorHeapType::Sampler);\n";
+                ss << "\t\t\t\tm_SamplersDirty = false;\n";
                 ss << "\t\t\t}\n";
             }
 
