@@ -85,11 +85,8 @@ namespace Atom
 
             AssetManager::UnloadUnusedAssets();
 
-            if (!m_Window->IsMinimized())
-            {
-                for (auto layer : m_LayerStack)
-                    layer->OnUpdate(ts);
-            }
+            for (auto layer : m_LayerStack)
+                layer->OnUpdate(ts);
 
             m_ImGuiLayer->BeginFrame();
 
