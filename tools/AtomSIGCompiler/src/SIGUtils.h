@@ -204,15 +204,15 @@ namespace SIGCompiler
         {
             switch (type)
             {
-            case SIGResourceType::Texture2D:          return "Ref<Texture>";
-            case SIGResourceType::Texture2DArray:     return "Ref<Texture>";
-            case SIGResourceType::Texture3D:          return "Ref<Texture>";
-            case SIGResourceType::TextureCube:        return "Ref<Texture>";
-            case SIGResourceType::StructuredBuffer:   return "Ref<StructuredBuffer>";
-            case SIGResourceType::RWTexture2D:        return "Ref<Texture>";
-            case SIGResourceType::RWTexture2DArray:   return "Ref<Texture>";
-            case SIGResourceType::RWTexture3D:        return "Ref<Texture>";
-            case SIGResourceType::RWStructuredBuffer: return "Ref<StructuredBuffer>";
+            case SIGResourceType::Texture2D:          return "Texture";
+            case SIGResourceType::Texture2DArray:     return "Texture";
+            case SIGResourceType::Texture3D:          return "Texture";
+            case SIGResourceType::TextureCube:        return "Texture";
+            case SIGResourceType::StructuredBuffer:   return "StructuredBuffer";
+            case SIGResourceType::RWTexture2D:        return "Texture";
+            case SIGResourceType::RWTexture2DArray:   return "Texture";
+            case SIGResourceType::RWTexture3D:        return "Texture";
+            case SIGResourceType::RWStructuredBuffer: return "StructuredBuffer";
             }
 
             return "";

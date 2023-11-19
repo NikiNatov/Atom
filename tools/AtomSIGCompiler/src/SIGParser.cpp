@@ -330,7 +330,7 @@ namespace SIGCompiler
                 else
                     ss << "(";
 
-                ss << "const " << Utils::SIGResourceTypeToCppString(sigResource.Type) << "& value)\n";
+                ss << "const " << Utils::SIGResourceTypeToCppString(sigResource.Type) << "* value)\n";
                 ss << "\t\t{\n";
 
                 if (sigResource.ArraySize > 1)
@@ -373,7 +373,7 @@ namespace SIGCompiler
                 else
                     ss << "(";
 
-                ss<< "const Ref<TextureSampler>& value)\n";
+                ss << "const TextureSampler* value)\n";
 
                 ss << "\t\t{\n";
 
