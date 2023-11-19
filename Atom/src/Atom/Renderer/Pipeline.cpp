@@ -131,7 +131,6 @@ namespace Atom
         m_D3DDescription.DepthStencilState = depthStencilState;
         m_D3DDescription.SampleMask = UINT_MAX;
         m_D3DDescription.PrimitiveTopologyType = Utils::AtomTopologyToD3D12(m_Description.Topology);
-        m_D3DDescription.NumRenderTargets = AttachmentPoint::NumColorAttachments;
 
         u32 currentRTVIdx = 0;
         for (TextureFormat targetFormat : m_Description.RenderTargetFormats)
@@ -142,6 +141,7 @@ namespace Atom
                 m_D3DDescription.RTVFormats[currentRTVIdx++] = Utils::AtomTextureFormatToRTVFormat(targetFormat);
         }
 
+        m_D3DDescription.NumRenderTargets = currentRTVIdx;
         m_D3DDescription.SampleDesc.Count = 1;
 
         DXCall(d3dDevice->CreateGraphicsPipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
