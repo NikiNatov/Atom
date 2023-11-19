@@ -44,10 +44,8 @@
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/Camera.h"
 #include "Atom/Renderer/EditorCamera.h"
-#include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/PipelineLibrary.h"
-#include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Renderer/RenderSurface.h"
 #include "Atom/Renderer/HWResource.h"
 
@@ -55,7 +53,6 @@
 #include "Atom/Scene/Components.h"
 #include "Atom/Scene/Entity.h"
 #include "Atom/Scene/Scene.h"
-#include "Atom/Scene/SceneRenderer.h"
 #include "Atom/Scene/SceneSerializer.h"
 
 // Tools

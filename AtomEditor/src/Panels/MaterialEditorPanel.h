@@ -11,8 +11,8 @@ namespace Atom
 		MaterialEditorPanel() = default;
 
 		void OnImGuiRender();
-		void SetMaterial(const Ref<MaterialAsset>& material);
+		void SetMaterial(const Ref<Material>& material);
 	private:
-		Ref<MaterialAsset> m_Material;
+		Ref<Material> m_Material;
 	};
 }

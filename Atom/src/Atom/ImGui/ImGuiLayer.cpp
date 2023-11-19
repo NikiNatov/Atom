@@ -5,7 +5,7 @@
 #include <backends/imgui_impl_dx12.h>
 
 #include "Atom/Core/Application.h"
-#include "Atom/Renderer/Renderer.h"
+
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/DescriptorHeap.h"
 #include "Atom/Renderer/CommandBuffer.h"
@@ -23,7 +23,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     ImGuiLayer::~ImGuiLayer()
     {
-        for(u32 i = 0; i < Renderer::GetFramesInFlight(); i++)
+        for(u32 i = 0; i < g_FramesInFlight; i++)
             for (auto& [_, descriptor] : m_TextureCache[i])
                 Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(descriptor), true);
 
@@ -135,7 +135,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DescriptorAllocation ImGuiLayer::GetTextureHandle(const Texture* texture)
     {
-        u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+        u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
 
         if (m_TextureCache[currentFrameIndex].find(texture) == m_TextureCache[currentFrameIndex].end())
         {
@@ -172,7 +172,7 @@ namespace Atom
         };
         memcpy(&transformCB.MVPMatrix, mvp, sizeof(mvp));
 
-        u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+        u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
         commandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
         commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
         commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
@@ -195,7 +195,7 @@ namespace Atom
             commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), ResourceState::RenderTarget);
             commandBuffer->BeginRenderPass({ Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get() }, m_ClearRenderTarget);
 
-            u32 currentFrameIndex = Renderer::GetCurrentFrameIndex();
+            u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
 
             // Reset the texture cache for current frame
             for (auto& [_, descriptor] : m_TextureCache[currentFrameIndex])
@@ -299,8 +299,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ImGuiLayer::CreateGraphicsObjects()
     {
-        u32 numFramesInFlight = Renderer::GetFramesInFlight();
-
         // Create sampler
         D3D12_SAMPLER_DESC defaultSamplerDesc = {};
         defaultSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -316,13 +314,9 @@ namespace Atom
         m_SamplerDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(1);
         Device::Get().GetD3DDevice()->CreateSampler(&defaultSamplerDesc, m_SamplerDescriptor.GetBaseCpuDescriptor());
 
-        // Create vertex and index buffers;
-        m_VertexBuffers.resize(numFramesInFlight, nullptr);
-        m_IndexBuffers.resize(numFramesInFlight, nullptr);
-
         // Create the pipeline
         GraphicsPipelineDescription pipelineDesc;
-        pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("ImGuiShader");
+        pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("ImGuiShader");
         pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA8 };
         pipelineDesc.EnableBlend = true;
         pipelineDesc.EnableDepthTest = false;
@@ -335,7 +329,7 @@ namespace Atom
             { "COLOR", ShaderDataType::Unorm4 },
         };
 
-        m_Pipeline = Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("ImGuiPipeline", pipelineDesc);
+        m_Pipeline = PipelineLibrary::Get().LoadGraphicsPipeline(pipelineDesc, "ImGuiPipeline");
 
         // Create font texture
         ImGuiIO& io = ImGui::GetIO();
@@ -352,9 +346,6 @@ namespace Atom
         Renderer::UploadTextureData(m_FontTexture, pixels);
 
         io.Fonts->SetTexID((ImTextureID)m_FontTexture.get());
-
-        // Create texture caches
-        m_TextureCache.resize(numFramesInFlight);
 
         // Wait until all copy operations are finished before rendering
         Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();

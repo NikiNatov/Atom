@@ -3,6 +3,10 @@
 
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/Device.h"
+#include "Atom/Renderer/ShaderLibrary.h"
+#include "Atom/Renderer/PipelineLibrary.h"
+
+#include "autogen/cpp/BRDFParams.h"
 
 namespace Atom
 {
@@ -46,25 +50,58 @@ namespace Atom
                 Renderer::UploadTextureData(BlackTextureCube, blackTextureData, 0, face);
         }
 
+        {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ShaderLibrary::Get().Get<ComputeShader>("BRDFShader");
+
+            Ref<ComputePipeline> brdfPipeline = PipelineLibrary::Get().LoadComputePipeline(pipelineDesc, "BRDFPipeline");
+
+            TextureDescription brdfTextureDesc;
+            brdfTextureDesc.Width = 256;
+            brdfTextureDesc.Height = 256;
+            brdfTextureDesc.Format = TextureFormat::RG16F;
+            brdfTextureDesc.MipLevels = 1;
+            brdfTextureDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
+            brdfTextureDesc.InitialState = ResourceState::UnorderedAccess;
+
+            BRDFTexture = CreateRef<Texture>(brdfTextureDesc, "EngineResources::BRDFTexture");
+
+            SIG::BRDFParams brdfParams;
+            brdfParams.SetBRDFTexture(BRDFTexture.get());
+            brdfParams.Compile();
+
+            GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+            CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+            Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
+            computeCmdBuffer->Begin();
+            computeCmdBuffer->SetComputePipeline(brdfPipeline.get());
+            computeCmdBuffer->SetDescriptorHeaps(resourceHeap, nullptr);
+            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, brdfParams.GetResourceTable());
+            computeCmdBuffer->Dispatch(glm::max(brdfTextureDesc.Width / 32, 1u), glm::max(brdfTextureDesc.Height / 32, 1u), 1);
+            computeCmdBuffer->TransitionResource(BRDFTexture.get(), ResourceState::Common);
+            computeCmdBuffer->End();
+            computeQueue->ExecuteCommandList(computeCmdBuffer);
+        }
+
         //===============================================================================================================//
         //                                                  Materials                                                    //
         //===============================================================================================================//
-        DefaultMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        DefaultMaterial = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
         DefaultMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         DefaultMaterial->SetUniform("Metalness", 0.5f);
         DefaultMaterial->SetUniform("Roughness", 0.5f);
 
-        DefaultMaterialAnimated = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        DefaultMaterialAnimated = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
         DefaultMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         DefaultMaterialAnimated->SetUniform("Metalness", 0.5f);
         DefaultMaterialAnimated->SetUniform("Roughness", 0.5f);
 
-        ErrorMaterial = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ErrorMaterial = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
         ErrorMaterial->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
         ErrorMaterial->SetUniform("Metalness", 0.0f);
         ErrorMaterial->SetUniform("Roughness", 1.0f);
 
-        ErrorMaterialAnimated = CreateRef<Material>(Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
+        ErrorMaterialAnimated = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRAnimatedShader"), MaterialFlags::DepthTested | MaterialFlags::TwoSided);
         ErrorMaterialAnimated->SetUniform("AlbedoColor", glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
         ErrorMaterialAnimated->SetUniform("Metalness", 0.0f);
         ErrorMaterialAnimated->SetUniform("Roughness", 1.0f);
@@ -114,6 +151,7 @@ namespace Atom
 
         // Wait for all upload operations to complete before we continue
         Device::Get().GetCommandQueue(CommandQueueType::Copy)->Flush();
+        Device::Get().GetCommandQueue(CommandQueueType::Compute)->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -123,6 +161,7 @@ namespace Atom
         BlackTexture = nullptr;
         BlackTextureCube = nullptr;
         ErrorTexture = nullptr;
+        BRDFTexture = nullptr;
 
         // Materials
         DefaultMaterial = nullptr;

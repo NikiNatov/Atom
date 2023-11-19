@@ -18,10 +18,10 @@ namespace Atom
             HWResourceType** SubresourceViews;
         };
     public:
-        RenderSurfaceResource(ResourceID_RT id, const ResourceDescType& description);
-        RenderSurfaceResource(ResourceID_DS id, const ResourceDescType& description);
-        RenderSurfaceResource(ResourceID_RT id, HWResourceType* externalResource);
-        RenderSurfaceResource(ResourceID_DS id, HWResourceType* externalResource);
+        RenderSurfaceResource(const ResourceID_RT& id, const ResourceDescType& description);
+        RenderSurfaceResource(const ResourceID_DS& id, const ResourceDescType& description);
+        RenderSurfaceResource(const ResourceID_RT& id, HWResourceType* externalResource);
+        RenderSurfaceResource(const ResourceID_DS& id, HWResourceType* externalResource);
         ~RenderSurfaceResource();
 
         virtual void Allocate() override;

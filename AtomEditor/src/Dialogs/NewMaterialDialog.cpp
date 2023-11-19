@@ -1,7 +1,7 @@
 #include "NewMaterialDialog.h"
 
 #include "Atom/Tools/ContentTools.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 
 #include <imgui.h>
 
@@ -75,7 +75,7 @@ namespace Atom
                 f32 importButtonWidth = (ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f;
                 if (ImGui::Button("Create", ImVec2(importButtonWidth, 32)))
                 {
-                    if (!m_MaterialName.empty() && Renderer::GetShaderLibrary().Exists(m_ShaderName))
+                    if (!m_MaterialName.empty() && ShaderLibrary::Get().Exists(m_ShaderName))
                     {
                         ContentTools::CreateMaterialAsset(m_ShaderName, std::filesystem::path("Materials") / (m_MaterialName + ".atmmat"));
                     }

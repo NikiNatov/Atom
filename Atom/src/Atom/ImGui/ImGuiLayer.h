@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Atom/Core/Core.h"
 #include "Atom/Core/Layer.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
+
 #include "Atom/Renderer/DescriptorHeap.h"
 
 namespace Atom
@@ -40,8 +42,8 @@ namespace Atom
         Ref<GraphicsPipeline>     m_Pipeline;
         Ref<Texture>              m_FontTexture;
         DescriptorAllocation      m_SamplerDescriptor;
-        Vector<Ref<VertexBuffer>> m_VertexBuffers;
-        Vector<Ref<IndexBuffer>>  m_IndexBuffers;
-        Vector<TextureCache>      m_TextureCache;
+        Ref<VertexBuffer>         m_VertexBuffers[g_FramesInFlight];
+        Ref<IndexBuffer>          m_IndexBuffers[g_FramesInFlight];
+        TextureCache              m_TextureCache[g_FramesInFlight];
     };
 }

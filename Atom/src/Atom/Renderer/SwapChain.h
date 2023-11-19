@@ -18,7 +18,6 @@ namespace Atom
         u32 GetWidth() const;
         u32 GetHeight() const;
         u32 GetCurrentBackBufferIndex() const;
-        u32 GetBackBufferCount() const;
         Ref<RenderSurface> GetBackBuffer() const;
         inline ComPtr<IDXGISwapChain4> GetDXGISwapChain() const { return m_DXGISwapChain; }
         inline const D3D12_VIEWPORT& GetViewport() const { return m_Viewport; }
@@ -33,8 +32,8 @@ namespace Atom
         D3D12_RECT                 m_ScissorRect;
         u32                        m_TearingSupported;
         u32                        m_BackBufferIndex;
-        Vector<Ref<RenderSurface>> m_BackBuffers;
+        Ref<RenderSurface>         m_BackBuffers[g_FramesInFlight];
         Ref<Fence>                 m_FrameFence;
-        Vector<u64>                m_FrameFenceValues;
+        u64                        m_FrameFenceValues[g_FramesInFlight];
     };
 }

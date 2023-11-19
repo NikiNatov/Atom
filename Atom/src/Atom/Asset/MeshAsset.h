@@ -80,7 +80,7 @@ namespace Atom
         inline void SetBoneWeights(const Vector<BoneWeight>& boneWeights) { m_BoneWeights = boneWeights; }
         inline void SetIndices(const Vector<u32>& indices) { m_Indices = indices; }
         inline void SetSubmeshes(const Vector<Submesh>& submeshes) { m_Submeshes = submeshes; }
-        inline void SetMaterial(u32 submeshIdx, Ref<MaterialAsset> material) { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); m_MaterialTable->SetMaterial(submeshIdx, material); }
+        inline void SetMaterial(u32 submeshIdx, Ref<Material> material) { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); m_MaterialTable->SetMaterial(submeshIdx, material); }
 
         inline const Vector<glm::vec3>& GetPositions() const { return m_Positions; }
         inline const Vector<glm::vec2>& GetUVs() const { return m_UVs; }
@@ -90,7 +90,7 @@ namespace Atom
         inline const Vector<BoneWeight>& GetBoneWeights() const { return m_BoneWeights; }
         inline const Vector<u32>& GetIndices() const { return m_Indices; }
         inline const Vector<Submesh>& GetSubmeshes() const { return m_Submeshes; }
-        inline const Ref<MaterialAsset> GetMaterial(u32 submeshIdx) const { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); return m_MaterialTable->GetMaterial(submeshIdx); }
+        inline const Ref<Material>& GetMaterial(u32 submeshIdx) const { ATOM_ENGINE_ASSERT(submeshIdx < m_Submeshes.size()); return m_MaterialTable->GetMaterial(submeshIdx); }
         inline const Ref<MaterialTable>& GetMaterialTable() const { return m_MaterialTable; }
         inline bool IsReadable() const { return m_IsReadable; }
         inline bool IsEmpty() const { return !m_VertexBuffer || !m_IndexBuffer || !m_Submeshes.size(); }

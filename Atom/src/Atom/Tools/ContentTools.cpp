@@ -5,6 +5,7 @@
 #include "Atom/Asset/AnimationControllerAsset.h"
 #include "Atom/Asset/MeshAsset.h"
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Scene/Scene.h"
 
 #include "stb_image.h"
@@ -514,7 +515,7 @@ namespace Atom
 
             String shaderName = importSettings.ImportAnimations && scene->mNumAnimations > 0 ? "MeshPBRAnimatedShader" : "MeshPBRShader";
             UUID materialUUID = ContentTools::CreateMaterialAsset(shaderName, std::filesystem::path("Materials") / materialName.C_Str());
-            Ref<MaterialAsset> materialAsset = AssetManager::GetAsset<MaterialAsset>(materialUUID, true);
+            Ref<Material> materialAsset = AssetManager::GetAsset<Material>(materialUUID, true);
 
             // Set albedo color
             aiColor4D albedo;
@@ -752,7 +753,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     UUID ContentTools::CreateMaterialAsset(const String& shaderName, const std::filesystem::path& filepath)
     {
-        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);
+        Ref<Material> asset = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>(shaderName), MaterialFlags::DepthTested);
         std::filesystem::path assetFullPath = AssetManager::GetAssetFullPath(filepath);
 
         if (!filepath.empty())

@@ -1,52 +1,116 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
-#include "Atom/Renderer/ShaderLibrary.h"
-#include "Atom/Renderer/PipelineLibrary.h"
+
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/TextureSampler.h"
 #include "Atom/Renderer/Buffer.h"
-#include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/CommandBuffer.h"
+#include "Atom/Renderer/Camera.h"
+#include "Atom/Renderer/EditorCamera.h"
+
+#include "Atom/Renderer/RenderGraph/RenderGraph.h"
+#include "Atom/Renderer/RenderGraph/ResourceScheduler.h"
+
+#include "Atom/Asset/MeshAsset.h"
+#include "Atom/Asset/MaterialAsset.h"
 
 namespace Atom
 {
-    class Mesh;
-
-    struct RendererConfig
+    enum class LightType
     {
-        u32 FramesInFlight = 3;
-        u32 MaxDescriptorsPerHeap = 2048;
+        DirLight,
+        PointLight,
+        SpotLight
+    };
+
+    struct Light
+    {
+        glm::vec4 Position;
+        glm::vec4 Direction;
+        glm::vec4 Color;
+        f32       Intensity;
+        f32       ConeAngle;
+        glm::vec3 AttenuationFactors;
+        LightType Type;
+    };
+
+    struct MeshEntry
+    {
+        Ref<Mesh>     Mesh;
+        u32           SubmeshIndex;
+        Ref<Material> Material;
+        glm::mat4     Transform;
+        u32           BoneTransformOffset = UINT32_MAX;
+    };
+
+    struct RendererSpecification
+    {
+        bool RenderToSwapChain = false;
     };
 
     class Renderer
     {
     public:
-        static void Initialize(const RendererConfig& config = RendererConfig());
-        static void Shutdown();
-        static void BeginFrame();
-        static void RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial);
-        static void RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Texture* texture);
+        struct RendererFrameData
+        {
+            glm::mat4             ViewMatrix = glm::mat4(1.0f);
+            glm::mat4             ProjectionMatrix = glm::mat4(1.0f);
+            glm::mat4             InvViewProjMatrix = glm::mat4(1.0f);
+            glm::vec3             CameraPosition = glm::vec3(0.0f);
+            f32                   CameraExposure = 0.5f;
+            u32                   ViewportWidth = 1;
+            u32                   ViewportHeight = 1;
+            Vector<Light>         Lights;
+            Vector<MeshEntry>     StaticMeshes;
+            Vector<MeshEntry>     AnimatedMeshes;
+            Vector<glm::mat4>     BoneTransforms;
+
+            // Per frame GPU resources
+            Ref<Texture>          EnvironmentMaps[g_FramesInFlight];
+            Ref<Texture>          IrradianceMaps[g_FramesInFlight];
+            Ref<StructuredBuffer> LightsGPUBuffers[g_FramesInFlight];
+            Ref<StructuredBuffer> BoneTransformsGPUBuffers[g_FramesInFlight];
+        };
+    public:
+        Renderer(const RendererSpecification& spec = RendererSpecification());
+
+        void BeginScene(const Camera& camera, const glm::mat4& cameraTransform, const Ref<Texture>& environmentMap, const Ref<Texture>& irradianceMap);
+        void BeginScene(const EditorCamera& editorCamera, const Ref<Texture>& environmentMap, const Ref<Texture>& irradianceMap);
+        void SubmitDirectionalLight(const glm::vec3& color, const glm::vec3& direction, f32 intensity);
+        void SubmitPointLight(const glm::vec3& color, const glm::vec3& position, f32 intensity, const glm::vec3& attenuationFactors);
+        void SubmitSpotLight(const glm::vec3& color, const glm::vec3& position, const glm::vec3& direction, f32 intensity, f32 coneAngle, const glm::vec3& attenuationFactors);
+        void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable);
+        void SubmitAnimatedMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, const Ref<Skeleton>& skeleton);
+        void SetViewportSize(u32 width, u32 height);
+        void Render();
+
+        void OnImGuiRender();
+
+        const Texture* GetFinalImage() const;
+        inline const RendererSpecification& GetSpecification() const { return m_Specification; }
+    public:
         static Ref<Texture> CreateEnvironmentMap(Ref<Texture> equirectTexture, u32 mapSize, const char* debugName);
         static Ref<Texture> CreateIrradianceMap(Ref<Texture> environmentMap, u32 mapSize, const char* debugName);
-        static Ref<Texture> CreateBRDFTexture();
         static void GenerateMips(Ref<Texture> texture);
         static void UploadBufferData(Ref<Buffer> buffer, const void* srcData);
         static void UploadTextureData(Ref<Texture> texture, const void* srcData, u32 mip = 0, u32 slice = 0);
         static Ref<ReadbackBuffer> ReadbackTextureData(Ref<Texture> texture, u32 mip = 0, u32 slice = 0);
-        static void EndFrame();
-
-        static const RendererConfig& GetConfig();
-        static u32 GetCurrentFrameIndex();
-        static u32 GetFramesInFlight();
-        static ShaderLibrary& GetShaderLibrary();
-        static PipelineLibrary& GetPipelineLibrary();
-        static Ref<Texture> GetBRDF();
         static Ref<TextureSampler> GetSampler(TextureFilter filter, TextureWrap wrap);
     private:
-        inline static RendererConfig              ms_Config;
-        inline static ShaderLibrary               ms_ShaderLibrary;
-        inline static PipelineLibrary             ms_PipelineLibrary;
-        inline static Ref<Texture>                ms_BRDFTexture;
+        void BuildRenderPasses();
+        void UpdateFrameGPUBuffers();
+        void RecordCommandBuffers();
+        void ExecuteCommandBuffers();
+    private:
+        static constexpr u32 MaxAnimatedMeshes = 1024;
+        static constexpr u32 MaxBonesPerMesh = 100;
+
+        RendererSpecification m_Specification;
+
+        ResourceScheduler     m_ResourceSchedulers[g_FramesInFlight];
+        RenderGraph           m_RenderGraph;
+        RendererFrameData     m_FrameData;
+        
     };
 }

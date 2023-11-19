@@ -8,28 +8,10 @@ namespace Atom
     class ShaderLibrary
     {
     public:
-        ShaderLibrary() = default;
-        ~ShaderLibrary() = default;
+        ShaderLibrary();
 
-        Ref<GraphicsShader> LoadGraphicsShader(const std::filesystem::path& filepath)
-        {
-            Ref<GraphicsShader> shader = ShaderCompiler::CompileGraphicsShader(filepath);
-
-            if(shader)
-                Add<GraphicsShader>(shader);
-
-            return shader;
-        }
-
-        Ref<ComputeShader> LoadComputeShader(const std::filesystem::path& filepath)
-        {
-            Ref<ComputeShader> shader = ShaderCompiler::CompileComputeShader(filepath);
-
-            if (shader)
-                Add<ComputeShader>(shader);
-
-            return shader;
-        }
+        Ref<GraphicsShader> LoadGraphicsShader(const std::filesystem::path& filepath);
+        Ref<ComputeShader> LoadComputeShader(const std::filesystem::path& filepath);
 
         template<typename ShaderType>
         Ref<ShaderType> Get(const String& name) const
@@ -42,6 +24,8 @@ namespace Atom
 
         void Clear();
         bool Exists(const String& name) const;
+    public:
+        inline static ShaderLibrary& Get() { return *ms_Instance; }
     private:
         template<typename ShaderType>
         void Add(const Ref<ShaderType>& shader)
@@ -54,5 +38,7 @@ namespace Atom
         }
     private:
         HashMap<String, Ref<Shader>> m_ShaderMap;
+    private:
+        inline static ShaderLibrary* ms_Instance = nullptr;
     };
 }

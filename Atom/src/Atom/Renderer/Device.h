@@ -56,9 +56,9 @@ namespace Atom
         Scope<GPUDescriptorHeap>          m_GpuSamplerHeap;
 
         // Resource release
-        Vector<Vector<ID3D12Resource*>>   m_DeferredReleaseResources;
+        Vector<ID3D12Resource*>           m_DeferredReleaseResources[g_FramesInFlight];
         std::mutex                        m_DeferredReleaseMutex;
     private:
-        static Device*                    ms_Instance;
+        inline static Device* ms_Instance = nullptr;
     };
 }

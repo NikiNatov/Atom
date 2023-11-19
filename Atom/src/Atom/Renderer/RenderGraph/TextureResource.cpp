@@ -4,13 +4,13 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    TextureResource::TextureResource(ResourceID_UA id, const ResourceDescType& description)
+    TextureResource::TextureResource(const ResourceID_UA& id, const ResourceDescType& description)
         : Resource(id, false), m_Description(description), m_ExternalResource(nullptr), m_ViewData(nullptr)
     {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    TextureResource::TextureResource(ResourceID_UA id, HWResourceType* externalResource)
+    TextureResource::TextureResource(const ResourceID_UA& id, HWResourceType* externalResource)
         : Resource(id, true), m_Description(externalResource->GetDescription()), m_ExternalResource(externalResource), m_ViewData(nullptr)
     {
     }

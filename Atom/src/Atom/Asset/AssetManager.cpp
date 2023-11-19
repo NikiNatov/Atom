@@ -6,7 +6,6 @@
 #include "Atom/Asset/AnimationControllerAsset.h"
 #include "Atom/Asset/MeshAsset.h"
 #include "Atom/Core/Application.h"
-#include "Atom/Renderer/Material.h"
 #include "Atom/Scene/Scene.h"
 
 namespace Atom
@@ -167,7 +166,7 @@ namespace Atom
         {
             case AssetType::Texture2D: asset = AssetSerializer::Deserialize<Texture2D>(metaData.AssetFilepath); break;
             case AssetType::TextureCube: asset = AssetSerializer::Deserialize<TextureCube>(metaData.AssetFilepath); break;
-            case AssetType::Material: asset = AssetSerializer::Deserialize<MaterialAsset>(metaData.AssetFilepath); break;
+            case AssetType::Material: asset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath); break;
             case AssetType::Mesh: asset = AssetSerializer::Deserialize<Mesh>(metaData.AssetFilepath); break;
             case AssetType::Scene: asset = AssetSerializer::Deserialize<Scene>(metaData.AssetFilepath); break;
             case AssetType::Animation: asset = AssetSerializer::Deserialize<Animation>(metaData.AssetFilepath); break;
@@ -222,11 +221,11 @@ namespace Atom
             }
             case AssetType::Material:
             {
-                Ref<MaterialAsset> materialAsset = AssetSerializer::Deserialize<MaterialAsset>(metaData.AssetFilepath);
+                Ref<Material> materialAsset = AssetSerializer::Deserialize<Material>(metaData.AssetFilepath);
                 result = materialAsset != nullptr;
 
                 if (result)
-                    *std::dynamic_pointer_cast<MaterialAsset>(ms_LoadedAssets[uuid]) = std::move(*materialAsset);
+                    *std::dynamic_pointer_cast<Material>(ms_LoadedAssets[uuid]) = std::move(*materialAsset);
 
                 break;
             }

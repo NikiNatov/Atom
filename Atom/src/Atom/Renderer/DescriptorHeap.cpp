@@ -1,10 +1,10 @@
 #include "atompch.h"
+#include "DescriptorHeap.h"
 
+#include "Atom/Core/Application.h"
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
 
-#include "DescriptorHeap.h"
 #include "Device.h"
-#include "Renderer.h"
 
 namespace Atom
 {
@@ -57,9 +57,6 @@ namespace Atom
     {
         // Add the hole rage of descriptors as free block
         AddBlock(0, m_Capacity);
-
-        // Create deferred release allocation array for each frame in flight
-        m_DeferredReleaseAllocations.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -97,7 +94,7 @@ namespace Atom
         if (m_Type == DescriptorAllocationType::Persistent)
         {
             std::lock_guard<std::mutex> lock(m_Mutex);
-            m_DeferredReleaseAllocations[Renderer::GetCurrentFrameIndex()].emplace_back(allocation);
+            m_DeferredReleaseAllocations[Application::Get().GetCurrentFrameIndex()].emplace_back(allocation);
         }
     }
 
@@ -207,9 +204,6 @@ namespace Atom
         {
             m_FreeSlots.push(i);
         }
-
-        // Create arrays for deferred release descriptors for each frame in flight
-        m_DeferredReleaseDescriptors.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -247,7 +241,7 @@ namespace Atom
 
             if (deferredRelease)
             {
-                m_DeferredReleaseDescriptors[Renderer::GetCurrentFrameIndex()].push_back(descriptorIndex);
+                m_DeferredReleaseDescriptors[Application::Get().GetCurrentFrameIndex()].push_back(descriptorIndex);
             }
             else
             {
@@ -278,14 +272,11 @@ namespace Atom
     // -------------------------------------------------- GPUDescriptorHeap --------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
     GPUDescriptorHeap::GPUDescriptorHeap(DescriptorHeapType type, u32 persistentBlockSize, u32 transientBlockSize, const char* debugName)
-        : DescriptorHeap(type, persistentBlockSize + transientBlockSize * Renderer::GetFramesInFlight(), true, debugName)
+        : DescriptorHeap(type, persistentBlockSize + transientBlockSize * g_FramesInFlight, true, debugName)
     {
-        u32 numFramesInFlight = Renderer::GetFramesInFlight();
-
         m_PersistentAllocator = CreateScope<DescriptorAllocator>(DescriptorAllocationType::Persistent, *this, 0, persistentBlockSize);
-        m_TransientAllocators.resize(numFramesInFlight);
 
-        for (u32 i = 0; i < numFramesInFlight; i++)
+        for (u32 i = 0; i < g_FramesInFlight; i++)
             m_TransientAllocators[i] = CreateScope<DescriptorAllocator>(DescriptorAllocationType::Transient, *this, persistentBlockSize + transientBlockSize * i, transientBlockSize);
     }
 
@@ -298,7 +289,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     DescriptorAllocation GPUDescriptorHeap::AllocateTransient(u32 descriptorCount)
     {
-        return m_TransientAllocators[Renderer::GetCurrentFrameIndex()]->Allocate(descriptorCount);
+        return m_TransientAllocators[Application::Get().GetCurrentFrameIndex()]->Allocate(descriptorCount);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -282,15 +282,20 @@ namespace Atom
         ATOM_ENGINE_ASSERT(m_IsRecording);
         ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
 
-        const auto& resourceDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
-        ATOM_ENGINE_ASSERT(resourceDescriptorTable.RootParameterIndex != UINT32_MAX);
+        if (resourceTable.IsValid())
+        {
+            const auto& resourceDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
+            if (resourceDescriptorTable.RootParameterIndex == UINT32_MAX)
+                return;
 
-        m_CommandList->SetGraphicsRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
+            m_CommandList->SetGraphicsRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
+        }
 
         if (samplerTable.IsValid())
         {
             const auto& samplerDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetSamplerDescriptorTable(bindPoint);
-            ATOM_ENGINE_ASSERT(samplerDescriptorTable.RootParameterIndex != UINT32_MAX);
+            if (samplerDescriptorTable.RootParameterIndex == UINT32_MAX)
+                return;
 
             m_CommandList->SetGraphicsRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable.GetBaseGpuDescriptor());
         }

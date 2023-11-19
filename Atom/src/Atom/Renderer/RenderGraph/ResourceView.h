@@ -32,7 +32,7 @@ namespace Atom
     public:
         virtual bool IsReadOnly() const = 0;
         virtual const char* GetName() const = 0;
-        virtual ResourceID GetResourceID() const = 0;
+        virtual const ResourceID& GetResourceID() const = 0;
 
         template<typename ViewClass>
         ResourceView<ViewClass>* As() { return dynamic_cast<ResourceView<ViewClass>*>(this); }
@@ -44,18 +44,18 @@ namespace Atom
     class ResourceView : public IResourceView
     {
     public:
-        ResourceView(ResourceID resourceID, ResourceScheduler& resourceScheduler)
+        ResourceView(const ResourceID& resourceID, ResourceScheduler& resourceScheduler)
             : m_ResourceID(resourceID), m_ResourceScheduler(resourceScheduler) {}
 
         virtual bool IsReadOnly() const override { return ViewClass::ReadOnly; }
         virtual const char* GetName() const override { return ViewClass::ViewClassName; }
-        virtual ResourceID GetResourceID() const override { return m_ResourceID; }
+        virtual const ResourceID& GetResourceID() const override { return m_ResourceID; }
 
         typename ViewClass::HWResourceType* GetData() const;
         typename ViewClass::HWResourceType* GetData(u32 mip, u32 slice) const;
 
     private:
-        ResourceID         m_ResourceID;
+        const ResourceID&  m_ResourceID;
         ResourceScheduler& m_ResourceScheduler;
     };
 }

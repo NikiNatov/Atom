@@ -19,7 +19,7 @@ namespace Atom
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_MATERIAL"))
 			{
-				m_Material = AssetManager::GetAsset<MaterialAsset>(*(UUID*)payload->Data, true);
+				m_Material = AssetManager::GetAsset<Material>(*(UUID*)payload->Data, true);
 			}
 
 			ImGui::EndDragDropTarget();
@@ -361,7 +361,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialEditorPanel::SetMaterial(const Ref<MaterialAsset>& material)
+    void MaterialEditorPanel::SetMaterial(const Ref<Material>& material)
     {
         m_Material = material;
     }

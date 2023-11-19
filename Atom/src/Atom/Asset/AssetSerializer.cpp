@@ -7,6 +7,7 @@
 #include "Atom/Asset/MeshAsset.h"
 
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/Buffer.h"
 #include "Atom/Scene/Scene.h"
 #include "Atom/Scene/Components.h"
@@ -156,7 +157,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<MaterialAsset> asset)
+    static bool AssetSerializer::Serialize(const std::filesystem::path& filepath, Ref<Material> asset)
     {
         std::ofstream ofs(filepath, std::ios::out | std::ios::binary);
 
@@ -193,10 +194,10 @@ namespace Atom
         ofs.write((char*)asset->GetConstantsData().data(), asset->GetConstantsData().size());
 
         // Serialize textures
-        u32 textureCount = asset->GetTextureHandles().size();
+        u32 textureCount = asset->GetTextures().size();
         ofs.write((char*)&textureCount, sizeof(u32));
 
-        for (auto& [textureRegister, textureAsset] : asset->GetTextureHandles())
+        for (auto& [textureRegister, textureAsset] : asset->GetTextures())
         {
             UUID textureHandle = 0;
 
@@ -211,19 +212,6 @@ namespace Atom
 
             ofs.write((char*)&textureRegister, sizeof(u32));
             ofs.write((char*)&textureHandle, sizeof(u64));
-        }
-
-        // Serialize samplers
-        u32 samplerCount = asset->m_MaterialResource->GetSamplers().size();
-        ofs.write((char*)&samplerCount, sizeof(u32));
-
-        for (auto& [samplerRegister, sampler] : asset->m_MaterialResource->GetSamplers())
-        {
-            TextureFilter filter = sampler ? sampler->GetFilter() : TextureFilter::NumFilters;
-            TextureWrap wrap = sampler ? sampler->GetWrap() : TextureWrap::NumWraps;
-            ofs.write((char*)&samplerRegister, sizeof(u32));
-            ofs.write((char*)&filter, sizeof(TextureFilter));
-            ofs.write((char*)&wrap, sizeof(TextureWrap));
         }
 
         return true;
@@ -278,7 +266,7 @@ namespace Atom
         {
             UUID materialUUID = 0;
 
-            if (Ref<MaterialAsset> material = asset->m_MaterialTable->GetMaterial(submeshIdx))
+            if (Ref<Material> material = asset->m_MaterialTable->GetMaterial(submeshIdx))
                 materialUUID = material->m_MetaData.UUID;
 
             ofs.write((char*)&materialUUID, sizeof(u64));
@@ -799,7 +787,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     template<>
-    Ref<MaterialAsset> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
+    Ref<Material> AssetSerializer::Deserialize(const std::filesystem::path& filepath)
     {
         std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
 
@@ -818,7 +806,7 @@ namespace Atom
         String shaderName(shaderNameLength, '\0');
         ifs.read(shaderName.data(), shaderNameLength);
 
-        Ref<MaterialAsset> asset = CreateRef<MaterialAsset>(Renderer::GetShaderLibrary().Get<GraphicsShader>(shaderName), MaterialFlags::None);
+        Ref<Material> asset = CreateRef<Material>(ShaderLibrary::Get().Get<GraphicsShader>(shaderName), MaterialFlags::None);
         asset->m_MetaData = metaData;
 
         // Deserialize flags
@@ -842,32 +830,14 @@ namespace Atom
             ifs.read((char*)&textureHandle, sizeof(u64));
             
             Ref<TextureAsset> texture = textureHandle != 0 ? AssetManager::GetAsset<TextureAsset>(textureHandle, true) : nullptr;
-            if(texture)
-                asset->SetTexture(textureRegister, texture);
-        }
-
-        // Deserialize samplers
-        u32 samplerCount;
-        ifs.read((char*)&samplerCount, sizeof(u32));
-
-        for (u32 i = 0; i < samplerCount; i++)
-        {
-            u32 samplerRegister;
-            ifs.read((char*)&samplerRegister, sizeof(u32));
-
-            TextureFilter filter;
-            ifs.read((char*)&filter, sizeof(TextureFilter));
-
-            TextureWrap wrap;
-            ifs.read((char*)&wrap, sizeof(TextureWrap));
-
-            if (filter != TextureFilter::NumFilters && wrap != TextureWrap::NumWraps)
+            if (texture)
             {
-                asset->SetSampler(samplerRegister, Renderer::GetSampler(filter, wrap));
+                asset->m_Textures[textureRegister] = texture;
+                asset->m_TexturesDirty = true;
             }
         }
 
-        asset->m_MaterialResource->UpdateDescriptorTables();
+        asset->UpdateForRendering();
 
         return asset;
     }
@@ -931,7 +901,7 @@ namespace Atom
             UUID materialUUID;
             ifs.read((char*)&materialUUID, sizeof(u64));
 
-            meshDesc.MaterialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<MaterialAsset>(materialUUID, true));
+            meshDesc.MaterialTable->SetMaterial(submeshIdx, AssetManager::GetAsset<Material>(materialUUID, true));
         }
 
         Ref<Mesh> asset = CreateRef<Mesh>(meshDesc, isReadable);
@@ -1076,6 +1046,7 @@ namespace Atom
                 ifs.read((char*)&uuid, sizeof(UUID));
 
                 slc.EnvironmentMap = AssetManager::GetAsset<TextureCube>(uuid, true);
+                slc.IrradianceMap = slc.EnvironmentMap ? Renderer::CreateIrradianceMap(slc.EnvironmentMap->GetResource(), 32, "") : nullptr;
             }
 
             bool hasDirectionalLightComponent;

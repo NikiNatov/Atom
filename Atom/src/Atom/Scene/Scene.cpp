@@ -2,7 +2,6 @@
 #include "Scene.h"
 
 #include "Atom/Scene/Components.h"
-#include "Atom/Renderer/LightEnvironment.h"
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
 #include "Atom/Asset/AssetManager.h"
@@ -34,14 +33,12 @@ namespace Atom
     Scene::Scene(const String& name)
         : Asset(AssetType::Scene), m_Name(name)
     {
-        m_LightEnvironment = CreateRef<LightEnvironment>();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Scene::Scene(Scene&& rhs) noexcept
         : Asset(AssetType::Scene),
-        m_Name(std::move(rhs.m_Name)), m_Registry(std::move(rhs.m_Registry)), m_EditorCamera(std::move(rhs.m_EditorCamera)), m_State(rhs.m_State),
-        m_LightEnvironment(std::move(rhs.m_LightEnvironment))
+        m_Name(std::move(rhs.m_Name)), m_Registry(std::move(rhs.m_Registry)), m_EditorCamera(std::move(rhs.m_EditorCamera)), m_State(rhs.m_State)
     {
         for (auto& [uuid, entity] : rhs.m_EntitiesByID)
             m_EntitiesByID[uuid] = Entity((entt::entity)entity, this);
@@ -56,7 +53,6 @@ namespace Atom
             m_Registry = std::move(rhs.m_Registry);
             m_EditorCamera = std::move(rhs.m_EditorCamera);
             m_State = rhs.m_State;
-            m_LightEnvironment = std::move(rhs.m_LightEnvironment);
 
             for (auto& [uuid, entity] : rhs.m_EntitiesByID)
                 m_EntitiesByID[uuid] = Entity((entt::entity)entity, this);
@@ -69,7 +65,6 @@ namespace Atom
     Ref<Scene> Scene::Copy()
     {
         Ref<Scene> newScene = CreateRef<Scene>(m_Name);
-        *newScene->m_LightEnvironment = *m_LightEnvironment;
         newScene->m_EditorCamera = m_EditorCamera;
 
         HashMap<UUID, entt::entity> uuidToEnttIDMap;
@@ -345,11 +340,11 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Scene::OnEditRender(Ref<SceneRenderer> renderer)
+    void Scene::OnEditRender(Ref<Renderer> renderer)
     {
-        m_LightEnvironment->ClearLights();
-
         // Sky light
+        Ref<Texture> environmentMap = nullptr;
+        Ref<Texture> irradianceMap = nullptr;
         {
             auto view = m_Registry.view<SkyLightComponent>();
             for (auto entity : view)
@@ -358,43 +353,44 @@ namespace Atom
 
                 if (slc.EnvironmentMap)
                 {
-                    m_LightEnvironment->SetEnvironmentMap(slc.EnvironmentMap);
+                    environmentMap = slc.EnvironmentMap->GetResource();
+                    irradianceMap = slc.IrradianceMap;
                     break;
                 }
             }
         }
 
-        // Directional lights
+        renderer->BeginScene(m_EditorCamera, environmentMap, irradianceMap);
+
+        // Submit directional lights
         {
             auto view = m_Registry.view<DirectionalLightComponent, TransformComponent>();
             for (auto entity : view)
             {
                 auto [dlc, tc] = view.get<DirectionalLightComponent, TransformComponent>(entity);
-                m_LightEnvironment->AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
+                renderer->SubmitDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
             }
         }
 
-        // Point lights
+        // Submit point lights
         {
             auto view = m_Registry.view<PointLightComponent, TransformComponent>();
             for (auto entity : view)
             {
                 auto [plc, tc] = view.get<PointLightComponent, TransformComponent>(entity);
-                m_LightEnvironment->AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
+                renderer->SubmitPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
             }
         }
 
-        // Spot lights
+        // Submit spot lights
         {
             auto view = m_Registry.view<SpotLightComponent, TransformComponent>();
             for (auto entity : view)
             {
                 auto [slc, tc] = view.get<SpotLightComponent, TransformComponent>(entity);
-                m_LightEnvironment->AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
+                renderer->SubmitSpotLight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
             }
         }
-
-        renderer->BeginScene(m_EditorCamera, CreateRef<LightEnvironment>(*m_LightEnvironment));
 
         // Submit meshes
         {
@@ -456,7 +452,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Scene::OnRuntimeRender(Ref<SceneRenderer> renderer)
+    void Scene::OnRuntimeRender(Ref<Renderer> renderer)
     {
         auto view = m_Registry.view<CameraComponent, TransformComponent, SceneHierarchyComponent>();
 
@@ -495,9 +491,9 @@ namespace Atom
 
         if (mainCamera)
         {
-            m_LightEnvironment->ClearLights();
-
             // Sky light
+            Ref<Texture> environmentMap = nullptr;
+            Ref<Texture> irradianceMap = nullptr;
             {
                 auto view = m_Registry.view<SkyLightComponent>();
                 for (auto entity : view)
@@ -506,43 +502,44 @@ namespace Atom
 
                     if (slc.EnvironmentMap)
                     {
-                        m_LightEnvironment->SetEnvironmentMap(slc.EnvironmentMap);
+                        environmentMap = slc.EnvironmentMap->GetResource();
+                        irradianceMap = slc.IrradianceMap;
                         break;
                     }
                 }
             }
 
-            // Directional lights
+            renderer->BeginScene(*mainCamera, cameraTransform, environmentMap, irradianceMap);
+
+            // Submit directional lights
             {
                 auto view = m_Registry.view<DirectionalLightComponent, TransformComponent>();
                 for (auto entity : view)
                 {
                     auto [dlc, tc] = view.get<DirectionalLightComponent, TransformComponent>(entity);
-                    m_LightEnvironment->AddDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
+                    renderer->SubmitDirectionalLight(dlc.Color, glm::normalize(-tc.Translation), dlc.Intensity);
                 }
             }
 
-            // Point lights
+            // Submit point lights
             {
                 auto view = m_Registry.view<PointLightComponent, TransformComponent>();
                 for (auto entity : view)
                 {
                     auto [plc, tc] = view.get<PointLightComponent, TransformComponent>(entity);
-                    m_LightEnvironment->AddPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
+                    renderer->SubmitPointLight(plc.Color, tc.Translation, plc.Intensity, plc.AttenuationFactors);
                 }
             }
 
-            // Spot lights
+            // Submit spot lights
             {
                 auto view = m_Registry.view<SpotLightComponent, TransformComponent>();
                 for (auto entity : view)
                 {
                     auto [slc, tc] = view.get<SpotLightComponent, TransformComponent>(entity);
-                    m_LightEnvironment->AddSpotlight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
+                    renderer->SubmitSpotLight(slc.Color, tc.Translation, glm::normalize(slc.Direction), slc.Intensity, glm::radians(slc.ConeAngle), slc.AttenuationFactors);
                 }
             }
-
-            renderer->BeginScene(*mainCamera, cameraTransform, CreateRef<LightEnvironment>(*m_LightEnvironment));
 
             // Submit meshes
             {

@@ -4,15 +4,13 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/Logger.h"
 #include "Atom/Core/Input.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Scripting/ScriptEngine.h"
 #include "Atom/Physics/PhysicsEngine.h"
 #include "Atom/Asset/AssetManager.h"
 
 namespace Atom
 {
-    Application* Application::ms_Application = nullptr;
-
     // -----------------------------------------------------------------------------------------------------------------------------
     Application::Application(const ApplicationSpecification& spec)
         : m_Specification(spec)
@@ -30,9 +28,26 @@ namespace Atom
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = CreateScope<Window>(properties);
 
-        Renderer::Initialize();
+        m_ShaderLibrary = CreateScope<ShaderLibrary>();
+        m_PipelineLibrary = CreateScope<PipelineLibrary>();
+
+        ShaderCompiler::SetOutputDirectory("../Atom/shaders/bin");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/MeshPBRShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/MeshPBRAnimatedShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/SkyBoxShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/ImGuiShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/CompositeShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/FullscreenQuadShader.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/GenerateMips.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/EquirectToCubeMap.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/CubeMapPrefilter.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/CubeMapIrradiance.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/BRDFShader.hlsl");
+
+        // Initialize engine systems
         PhysicsEngine::Initialize();
         Input::Initialize(m_Window->GetWindowHandle());
+        EngineResources::Initialize();
 
         m_ImGuiLayer = new ImGuiLayer();
         PushOverlay(m_ImGuiLayer);
@@ -47,7 +62,7 @@ namespace Atom
             layer->OnDetach();
 
         AssetManager::Shutdown();
-        Renderer::Shutdown();
+        EngineResources::Shutdown();
         ScriptEngine::Shutdown();
         PhysicsEngine::Shutdown();
     }
@@ -64,7 +79,7 @@ namespace Atom
 
             m_Window->ProcessEvents();
 
-            Renderer::BeginFrame();
+            Device::Get().ProcessDeferredReleases(GetCurrentFrameIndex());
 
             ExecuteMainThreadQueue();
 
@@ -82,8 +97,6 @@ namespace Atom
                 layer->OnImGuiRender();
 
             m_ImGuiLayer->EndFrame();
-
-            Renderer::EndFrame();
 
             m_Window->SwapBuffers();
 

@@ -21,8 +21,8 @@ namespace Atom
         };
 
     public:
-        TextureResource(ResourceID_UA id, const ResourceDescType& description);
-        TextureResource(ResourceID_UA id, HWResourceType* externalResource);
+        TextureResource(const ResourceID_UA& id, const ResourceDescType& description);
+        TextureResource(const ResourceID_UA& id, HWResourceType* externalResource);
         ~TextureResource();
 
         virtual void Allocate() override;

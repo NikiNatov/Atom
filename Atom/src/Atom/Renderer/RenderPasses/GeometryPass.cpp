@@ -2,9 +2,10 @@
 #include "GeometryPass.h"
 
 #include "Atom/Renderer/Pipeline.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
-#include "Atom/Scene/SceneRenderer.h"
+
+#include <autogen/cpp/MeshDrawParams.h>
 
 namespace Atom
 {
@@ -12,19 +13,19 @@ namespace Atom
     DECLARE_RID_DS(SceneDepthBuffer);
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    GeometryPass::GeometryPass(RenderPassID id, const String& name)
-        : RenderPass(id, name, CommandQueueType::Graphics)
+    GeometryPass::GeometryPass(RenderPassID id, const String& name, const Vector<MeshEntry>& meshEntries, bool isAnimated)
+        : RenderPass(id, name, CommandQueueType::Graphics), m_MeshEntries(meshEntries), m_IsAnimated(isAnimated)
     {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void GeometryPass::Build(RenderPassBuilder& builder)
     {
-        // Pipelines
+        if(!m_IsAnimated)
         {
             GraphicsPipelineDescription pipelineDesc;
             pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader");
+            pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRShader");
             pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA16F, TextureFormat::Depth24Stencil8 };
             pipelineDesc.Layout = {
                 { "POSITION", ShaderDataType::Float3 },
@@ -38,13 +39,13 @@ namespace Atom
             pipelineDesc.Wireframe = false;
             pipelineDesc.BackfaceCulling = true;
 
-            Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("GeometryPass_StaticMesh", pipelineDesc);
+            builder.SetPipelineStateDesc(pipelineDesc);
         }
-
+        else
         {
             GraphicsPipelineDescription pipelineDesc;
             pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRAnimatedShader");
+            pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRAnimatedShader");
             pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA16F, TextureFormat::Depth24Stencil8 };
             pipelineDesc.Layout = {
                 { "POSITION", ShaderDataType::Float3 },
@@ -60,7 +61,7 @@ namespace Atom
             pipelineDesc.Wireframe = false;
             pipelineDesc.BackfaceCulling = true;
 
-            Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("GeometryPass_AnimatedMesh", pipelineDesc);
+            builder.SetPipelineStateDesc(pipelineDesc);
         }
 
         // Resources
@@ -73,43 +74,34 @@ namespace Atom
     {
         RenderSurface* sceneColorOutput = context.GetRT(RID(SceneColorOutput))->GetData();
         RenderSurface* depthBuffer = context.GetDS_RW(RID(SceneDepthBuffer))->GetData();
-        GraphicsPipeline* staticMeshPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("GeometryPass_StaticMesh").get();
-        GraphicsPipeline* animatedMeshPipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("GeometryPass_AnimatedMesh").get();
-
-        struct MeshPBRInstanceConstants
-        {
-            glm::mat4 Transform;
-            u32 BoneTransformOffset;
-        };
 
         Ref<CommandBuffer> cmdBuffer = context.GetCommandBuffer();
 
         cmdBuffer->BeginRenderPass({ sceneColorOutput, depthBuffer });
 
-        // Render animated meshes
-        cmdBuffer->SetGraphicsPipeline(animatedMeshPipeline);
-        cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
-
-        const auto& animatedMeshes = context.GetSceneData().AnimatedMeshes;
-        for (u32 i = 0; i < context.GetSceneData().AnimatedMeshes.size(); i++)
+        for (const MeshEntry& meshEntry : m_MeshEntries)
         {
-            MeshPBRInstanceConstants constants = { animatedMeshes[i].Transform, animatedMeshes[i].BoneTransformIndex };
-            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &constants, sizeof(MeshPBRInstanceConstants) / 4);
-            Renderer::RenderMesh(cmdBuffer, animatedMeshes[i].Mesh, animatedMeshes[i].SubmeshIndex, animatedMeshes[i].Material);
-        }
+            const Submesh& submesh = meshEntry.Mesh->GetSubmeshes()[meshEntry.SubmeshIndex];
+            Ref<Material> material = meshEntry.Material ? meshEntry.Material : meshEntry.Mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex);
 
-        // Render static meshes
-        cmdBuffer->SetGraphicsPipeline(staticMeshPipeline);
-        cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
+            // Transition material textures
+            for (auto& [_, texture] : material->GetTextures())
+                if (texture)
+                    cmdBuffer->TransitionResource(texture->GetResource().get(), ResourceState::PixelShaderRead);
 
-        const auto& staticMeshes = context.GetSceneData().StaticMeshes;
-        for (u32 i = 0; i < staticMeshes.size(); i++)
-        {
-            MeshPBRInstanceConstants constants = { staticMeshes[i].Transform, UINT32_MAX };
-            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &constants, sizeof(MeshPBRInstanceConstants) / 4);
-            Renderer::RenderMesh(cmdBuffer, staticMeshes[i].Mesh, staticMeshes[i].SubmeshIndex, staticMeshes[i].Material);
+            material->UpdateForRendering();
+
+            SIG::MeshDrawParams meshDrawParams;
+            meshDrawParams.SetTransform(meshEntry.Transform);
+            meshDrawParams.SetBoneTransformOffset(meshEntry.BoneTransformOffset);
+            meshDrawParams.Compile();
+
+            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, meshDrawParams.GetRootConstantsData(), (sizeof(glm::mat4) + sizeof(u32)) / 4);
+            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Material, material->GetSIG()->GetRootConstantsData(), material->GetSIG()->GetRootConstantsCount());
+            cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Material, material->GetSIG()->GetResourceTable(), material->GetSIG()->GetSamplerTable());
+            cmdBuffer->SetVertexBuffer(meshEntry.Mesh->GetVertexBuffer().get());
+            cmdBuffer->SetIndexBuffer(meshEntry.Mesh->GetIndexBuffer().get());
+            cmdBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
         }
     }
 }

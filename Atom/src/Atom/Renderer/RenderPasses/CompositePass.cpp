@@ -4,9 +4,12 @@
 #include "Atom/Core/Application.h"
 
 #include "Atom/Renderer/Pipeline.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Renderer/ResourceBarrier.h"
+#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
+
+#include <autogen/cpp/FullscreenQuadParams.h>
 
 namespace Atom
 {
@@ -22,23 +25,20 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void CompositePass::Build(RenderPassBuilder& builder)
     {
-        // Pipelines
-        {
-            GraphicsPipelineDescription pipelineDesc;
-            pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("CompositeShader");
-            pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA8 };
-            pipelineDesc.Layout = {
-                { "POSITION", ShaderDataType::Float3 },
-                { "TEX_COORD", ShaderDataType::Float2 },
-            };
-            pipelineDesc.EnableBlend = false;
-            pipelineDesc.EnableDepthTest = false;
-            pipelineDesc.Wireframe = false;
-            pipelineDesc.BackfaceCulling = true;
+        GraphicsPipelineDescription pipelineDesc;
+        pipelineDesc.Topology = Topology::Triangles;
+        pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("CompositeShader");
+        pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA8 };
+        pipelineDesc.Layout = {
+            { "POSITION", ShaderDataType::Float3 },
+            { "TEX_COORD", ShaderDataType::Float2 },
+        };
+        pipelineDesc.EnableBlend = false;
+        pipelineDesc.EnableDepthTest = false;
+        pipelineDesc.Wireframe = false;
+        pipelineDesc.BackfaceCulling = true;
 
-            Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("CompositePass_Default", pipelineDesc);
-        }
+        builder.SetPipelineStateDesc(pipelineDesc);
 
         // Resources
         if (m_RenderToSwapChain)
@@ -66,15 +66,20 @@ namespace Atom
     {
         RenderSurface* finalOutput = context.GetRT(RID(FinalOutput))->GetData();
         Texture* sceneColorOutput = context.GetSR(RID(SceneColorOutput))->GetData();
-        GraphicsPipeline* pipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("CompositePass_Default").get();
 
         Ref<CommandBuffer> cmdBuffer = context.GetCommandBuffer();
 
         cmdBuffer->BeginRenderPass({ finalOutput }, true);
-        cmdBuffer->SetGraphicsPipeline(pipeline);
-        cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
 
-        Renderer::RenderFullscreenQuad(cmdBuffer, sceneColorOutput);
+        SIG::FullscreenQuadParams params;
+        params.SetTexture(sceneColorOutput);
+        params.SetTextureSampler(EngineResources::LinearClampSampler.get());
+        params.Compile();
+
+        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+        cmdBuffer->SetVertexBuffer(EngineResources::QuadVertexBuffer.get());
+        cmdBuffer->SetIndexBuffer(EngineResources::QuadIndexBuffer.get());
+        cmdBuffer->DrawIndexed(EngineResources::QuadIndexBuffer->GetElementCount(), 1, 0, 0, 0);
 
         // TODO: Handle this case in the render graph
         if (m_RenderToSwapChain)

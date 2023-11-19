@@ -112,6 +112,7 @@ namespace Atom
 	struct SkyLightComponent
 	{
 		Ref<TextureCube> EnvironmentMap = nullptr;
+		Ref<Texture> IrradianceMap = nullptr;	// Not used in editor
 
 		SkyLightComponent() = default;
 		SkyLightComponent(const SkyLightComponent& other) = default;

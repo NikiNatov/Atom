@@ -1,7 +1,7 @@
 #include "atompch.h"
 #include "MaterialWrapper.h"
 
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
 #include "Atom/Asset/AssetManager.h"
 
 namespace Atom
@@ -11,8 +11,8 @@ namespace Atom
         // -----------------------------------------------------------------------------------------------------------------------------
         Material::Material()
         {
-            Ref<GraphicsShader> shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("MeshPBRShader");
-            m_Material = CreateRef<Atom::MaterialAsset>(shader, MaterialFlags::DepthTested);
+            Ref<GraphicsShader> shader = ShaderLibrary::Get().Get<GraphicsShader>("MeshPBRShader");
+            m_Material = CreateRef<Atom::Material>(shader, MaterialFlags::DepthTested);
             AssetManager::RegisterAsset(m_Material);
         }
 
@@ -21,11 +21,11 @@ namespace Atom
             : m_Material(nullptr)
         {
             if (assetUUID != 0)
-                m_Material = AssetManager::GetAsset<Atom::MaterialAsset>(assetUUID, true);
+                m_Material = AssetManager::GetAsset<Atom::Material>(assetUUID, true);
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Material::Material(const Ref<Atom::MaterialAsset>& material)
+        Material::Material(const Ref<Atom::Material>& material)
             : m_Material(material)
         {
         }
@@ -322,7 +322,7 @@ namespace Atom
         }
 
         // -----------------------------------------------------------------------------------------------------------------------------
-        Ref<Atom::MaterialAsset> Material::GetMaterial() const
+        Ref<Atom::Material> Material::GetMaterial() const
         {
             return m_Material;
         }
@@ -335,7 +335,7 @@ namespace Atom
             if (uuid == 0)
                 return Material(nullptr);
 
-            return Material(AssetManager::GetAsset<Atom::MaterialAsset>(uuid, true));
+            return Material(AssetManager::GetAsset<Atom::Material>(uuid, true));
         }
     }
 }

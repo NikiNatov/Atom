@@ -1,17 +1,15 @@
 #include "atompch.h"
 
+#include "Atom/Core/Application.h"
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
 
 #include "Device.h"
 #include "CommandQueue.h"
 #include "ResourceStateTracker.h"
 #include "DescriptorHeap.h"
-#include "Renderer.h"
 
 namespace Atom
 {
-    Device* Device::ms_Instance = nullptr;
-
     // -----------------------------------------------------------------------------------------------------------------------------
     Device::Device(GPUPreference gpuPreference, const char* debugName)
     {
@@ -114,15 +112,13 @@ namespace Atom
         m_CopyQueue = CreateScope<CommandQueue>(CommandQueueType::Copy, "CopyQueue");
 
         // Create descriptor heaps
-        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResource, Renderer::GetConfig().MaxDescriptorsPerHeap, "ShaderResourceCPUHeap");
-        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTarget, Renderer::GetConfig().MaxDescriptorsPerHeap, "RenderTargetsCPUHeap");
-        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, Renderer::GetConfig().MaxDescriptorsPerHeap, "DepthStencilCPUHeap");
+        m_SRVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::ShaderResource, 2048, "ShaderResourceCPUHeap");
+        m_RTVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::RenderTarget, 2048, "RenderTargetsCPUHeap");
+        m_DSVHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::DepthStencil, 2048, "DepthStencilCPUHeap");
         m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
 
         m_GpuResourceHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::ShaderResource, 10000, 5000, "ShaderResourceGPUHeap");
         m_GpuSamplerHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::Sampler, 1048, 300, "ShaderResourceGPUHeap");
-
-        m_DeferredReleaseResources.resize(Renderer::GetFramesInFlight());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -132,7 +128,7 @@ namespace Atom
         WaitIdle();
 
         // Release everything
-        for (u32 i = 0; i < Renderer::GetFramesInFlight(); i++)
+        for (u32 i = 0; i < g_FramesInFlight; i++)
         {
             ProcessDeferredReleases(i);
         }
@@ -210,7 +206,7 @@ namespace Atom
         }
 
         std::lock_guard<std::mutex> lock(m_DeferredReleaseMutex);
-        m_DeferredReleaseResources[Renderer::GetCurrentFrameIndex()].push_back(resource);
+        m_DeferredReleaseResources[Application::Get().GetCurrentFrameIndex()].push_back(resource);
     }
     
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -1,53 +1,13 @@
 #include "atompch.h"
 #include "ResourceScheduler.h"
 
-#include "Atom/Scene/SceneRenderer.h"
-
-#include "Atom/Renderer/Device.h"
-#include "Atom/Renderer/EngineResources.h"
-
-#include "Atom/Renderer/RenderGraph/RenderGraph.h"
+#include "Atom/Renderer/PipelineLibrary.h"
 
 namespace Atom
 {
-    struct FrameConstants
-    {
-        glm::mat4 ViewMatrix = glm::mat4(1.0f);
-        glm::mat4 ProjectionMatrix = glm::mat4(1.0f);
-        glm::mat4 InvViewProjMatrix = glm::mat4(1.0f);
-        glm::vec3 CameraPosition = glm::vec3(0.0f);
-        f32 CameraExposure = 0.5f;
-        u32 NumLights = 0;
-        f32 p[11]{ 0 };
-    };
-
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceScheduler::ResourceScheduler(RenderGraph& graph)
-        : m_Graph(graph)
+    ResourceScheduler::ResourceScheduler()
     {
-        // Create frame constant buffers
-        BufferDescription frameCBDesc;
-        frameCBDesc.ElementCount = 1;
-        frameCBDesc.ElementSize = sizeof(FrameConstants);
-        frameCBDesc.IsDynamic = true;
-
-        m_FrameResources.ConstantBuffer = CreateRef<ConstantBuffer>(frameCBDesc, "FrameCB");
-
-        // Create lights structured buffer
-        BufferDescription lightsSBDesc;
-        lightsSBDesc.ElementCount = 1;
-        lightsSBDesc.ElementSize = sizeof(Light);
-        lightsSBDesc.IsDynamic = true;
-
-        m_FrameResources.LightsBuffer = CreateRef<StructuredBuffer>(lightsSBDesc, "LightsSB");
-
-        // Create bone transforms structured buffers
-        BufferDescription animSBDesc;
-        animSBDesc.ElementCount = 1;
-        animSBDesc.ElementSize = sizeof(glm::mat4);
-        animSBDesc.IsDynamic = true;
-
-        m_FrameResources.BoneTransformsBuffer = CreateRef<StructuredBuffer>(animSBDesc, "BoneTransformsBuffer");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -56,7 +16,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void ResourceScheduler::BeginScheduling()
+    void ResourceScheduler::BeginScheduling(u32 numRenderPasses)
     {
         for (auto* resource : m_Resources)
             delete resource;
@@ -72,14 +32,17 @@ namespace Atom
                 delete view;
 
         m_PassInputs.clear();
-        m_PassInputs.resize(m_Graph.GetRenderPasses().size());
+        m_PassInputs.resize(numRenderPasses);
 
         for (auto& outputs : m_PassOutputs)
             for (auto* view : outputs)
                 delete view;
 
         m_PassOutputs.clear();
-        m_PassOutputs.resize(m_Graph.GetRenderPasses().size());
+        m_PassOutputs.resize(numRenderPasses);
+
+        m_PassPipelines.clear();
+        m_PassPipelines.resize(numRenderPasses);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -87,91 +50,6 @@ namespace Atom
     {
         for (auto& resource : m_Resources)
             resource->Allocate();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void ResourceScheduler::UpdateSceneFrameData(const SceneFrameData& frameData)
-    {
-        // Update frame constant buffer data
-        
-        FrameConstants constants;
-        constants.ViewMatrix = frameData.CameraConstants.ViewMatrix;
-        constants.ProjectionMatrix = frameData.CameraConstants.ProjectionMatrix;
-        constants.InvViewProjMatrix = frameData.CameraConstants.InvViewProjMatrix;
-        constants.CameraPosition = frameData.CameraConstants.CameraPosition;
-        constants.CameraExposure = frameData.CameraConstants.CameraExposure;
-        constants.NumLights = frameData.Lights->GetLights().size();
-
-        void* data = m_FrameResources.ConstantBuffer->Map(0, 0);
-        memcpy(data, &constants, sizeof(FrameConstants));
-        m_FrameResources.ConstantBuffer->Unmap();
-
-        // Update lights structured buffer data
-        const auto& lights = frameData.Lights->GetLights();
-        if (!lights.empty())
-        {
-            if (m_FrameResources.LightsBuffer->GetElementCount() != lights.size())
-            {
-                BufferDescription sbDesc;
-                sbDesc.ElementCount = lights.size();
-                sbDesc.ElementSize = sizeof(Light);
-                sbDesc.IsDynamic = true;
-
-                m_FrameResources.LightsBuffer = CreateRef<StructuredBuffer>(sbDesc, "LightsSB");
-            }
-
-            void* lightsData = m_FrameResources.LightsBuffer->Map(0, 0);
-            memcpy(lightsData, lights.data(), sizeof(Light) * lights.size());
-            m_FrameResources.LightsBuffer->Unmap();
-        }
-
-        // Update bone transforms structured buffer data
-        if (!frameData.BoneTransforms.empty())
-        {
-            if (m_FrameResources.BoneTransformsBuffer->GetElementCount() != frameData.BoneTransforms.size())
-            {
-                BufferDescription animSBDesc;
-                animSBDesc.ElementCount = frameData.BoneTransforms.size();
-                animSBDesc.ElementSize = sizeof(glm::mat4);
-                animSBDesc.IsDynamic = true;
-
-                m_FrameResources.BoneTransformsBuffer = CreateRef<StructuredBuffer>(animSBDesc, "BoneTransformsSB");
-            }
-
-            void* boneTransformData = m_FrameResources.BoneTransformsBuffer->Map(0, 0);
-            memcpy(boneTransformData, frameData.BoneTransforms.data(), sizeof(glm::mat4) * frameData.BoneTransforms.size());
-            m_FrameResources.BoneTransformsBuffer->Unmap();
-        }
-
-        // Create resource descriptor tables for the frame
-        Ref<TextureCube> envMapAsset = frameData.Lights->GetEnvironmentMap();
-        m_FrameResources.EnvironmentMap = envMapAsset ? envMapAsset->GetResource() : EngineResources::BlackTextureCube;
-        m_FrameResources.IrradianceMap = frameData.Lights->GetIrradianceMap() ? frameData.Lights->GetIrradianceMap() : EngineResources::BlackTextureCube;
-        m_FrameResources.BRDFMap = Renderer::GetBRDF();
-
-        D3D12_CPU_DESCRIPTOR_HANDLE frameResourceDescriptors[] = {
-            m_FrameResources.EnvironmentMap->GetSRV()->GetDescriptor(),
-            m_FrameResources.IrradianceMap->GetSRV()->GetDescriptor(),
-            m_FrameResources.BRDFMap->GetSRV()->GetDescriptor(),
-            m_FrameResources.LightsBuffer->GetSRV(),
-            m_FrameResources.BoneTransformsBuffer->GetSRV()
-        };
-
-        m_FrameResources.ResourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(_countof(frameResourceDescriptors));
-        Device::Get().CopyDescriptors(m_FrameResources.ResourceTable, _countof(frameResourceDescriptors), frameResourceDescriptors, DescriptorHeapType::ShaderResource);
-
-        // Create sampler descriptor tables for the frame
-        Ref<TextureSampler> defaultSampler = Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp);
-        Ref<TextureSampler> envMapSampler = envMapAsset ? Renderer::GetSampler(envMapAsset->GetFilter(), envMapAsset->GetWrap()) : defaultSampler;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE frameSamplerDescriptors[] = {
-            envMapSampler->GetDescriptor(), // Environment map
-            defaultSampler->GetDescriptor(), // Irradiance map sampler
-            defaultSampler->GetDescriptor() // BRDF sampler
-        };
-
-        m_FrameResources.SamplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(_countof(frameSamplerDescriptors));
-        Device::Get().CopyDescriptors(m_FrameResources.SamplerTable, _countof(frameSamplerDescriptors), frameSamplerDescriptors, DescriptorHeapType::Sampler);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -227,7 +105,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool ResourceScheduler::IsResourceScheduledForPass(RenderPassID passID, ResourceID resourceID) const
+    bool ResourceScheduler::IsResourceScheduledForPass(RenderPassID passID, const ResourceID& resourceID) const
     {
         for (const IResourceView* view : m_PassInputs[passID])
         {
@@ -242,6 +120,18 @@ namespace Atom
         }
 
         return false;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ResourceScheduler::AssignPipelineToPass(RenderPassID passID, const GraphicsPipelineDescription& description)
+    {
+        m_PassPipelines[passID] = PipelineLibrary::Get().LoadGraphicsPipeline(description).get();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void ResourceScheduler::AssignPipelineToPass(RenderPassID passID, const ComputePipelineDescription& description)
+    {
+        m_PassPipelines[passID] = PipelineLibrary::Get().LoadComputePipeline(description).get();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

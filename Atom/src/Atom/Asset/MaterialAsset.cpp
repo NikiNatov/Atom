@@ -2,148 +2,158 @@
 #include "MaterialAsset.h"
 
 #include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/EngineResources.h"
 
 namespace Atom
 {
     // -------------------------------------------------- MaterialAsset ------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    MaterialAsset::MaterialAsset(const Ref<GraphicsShader>& shader, MaterialFlags flags)
-        : Asset(AssetType::Material)
+    Material::Material(const Ref<GraphicsShader>& shader, MaterialFlags flags)
+        : Asset(AssetType::Material), m_Shader(shader), m_Flags(flags)
     {
-        m_MaterialResource = CreateRef<Material>(shader, flags);
+        const ShaderLayout& shaderLayout = m_Shader->GetShaderLayout();
+        const ShaderLayout::ShaderConstants& constants = shaderLayout.GetConstants(ShaderBindPoint::Material);
+        const ShaderLayout::ShaderDescriptorTable& resourceTable = shaderLayout.GetResourceDescriptorTable(ShaderBindPoint::Material);
+        const ShaderLayout::ShaderDescriptorTable& samplerTable = shaderLayout.GetSamplerDescriptorTable(ShaderBindPoint::Material);
 
-        for (auto& [slot, _] : m_MaterialResource->GetTextures())
-            m_TextureHandles[slot] = nullptr;
+        // Create constants data storage
+        m_ConstantsData.resize(constants.TotalSize, 0);
+
+        // Create textures array
+        for (const auto& resource : resourceTable.Resources)
+        {
+            if (resource.Type == ShaderResourceType::Texture2D || resource.Type == ShaderResourceType::TextureCube)
+                m_Textures[resource.Register] = nullptr;
+        }
+
+        // Create material SIG
+        m_MaterialSIG = CreateRef<CustomShaderInputGroup>(ShaderBindPoint::Material, constants.TotalSize, m_Textures.size(), samplerTable.Resources.size());
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    MaterialAsset::MaterialAsset(const Ref<Material>& materialResource)
-        : Asset(AssetType::Material), m_MaterialResource(materialResource)
+    void Material::SetTexture(const char* name, const Ref<TextureAsset>& texture)
     {
-        for (auto& [slot, _] : m_MaterialResource->GetTextures())
-            m_TextureHandles[slot] = nullptr;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialAsset::SetTexture(const char* name, Ref<TextureAsset> texture)
-    {
-        const Material::Resource* textureResource = m_MaterialResource->FindResourceDeclaration(name);
-        if (!textureResource || textureResource->Type != ShaderResourceType::Texture2D)
+        const ShaderLayout::ShaderResource* textureResource = FindTextureDeclaration(name);
+        if (!textureResource)
         {
             ATOM_ERROR("Texture with name \"{}\" does not exist", name);
             return;
         }
 
-        String samplerName = fmt::format("{}Sampler", name);
-        const Material::Resource* samplerResource = m_MaterialResource->FindResourceDeclaration(samplerName.c_str());
-        if (!samplerResource || samplerResource->Type != ShaderResourceType::Sampler)
-        {
-            ATOM_ERROR("Missing sampler for texture with name \"{}\"", name);
+        if (m_Textures[textureResource->Register]->GetUUID() == texture->GetUUID())
             return;
-        }
 
-        Ref<TextureSampler> sampler = Renderer::GetSampler(texture->GetFilter(), texture->GetWrap());
-
-        m_MaterialResource->SetTexture(name, texture->GetResource());
-        m_MaterialResource->SetSampler(samplerName.c_str(), sampler);
-        m_TextureHandles[textureResource->Register] = texture;
+        m_Textures[textureResource->Register] = texture;
+        m_TexturesDirty = true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<TextureAsset> MaterialAsset::GetTexture(const char* name)
+    const Ref<TextureAsset>& Material::GetTexture(const char* name)
     {
-        const Material::Resource* resource = m_MaterialResource->FindResourceDeclaration(name);
-        if (!resource || resource->Type != ShaderResourceType::Texture2D)
+        const ShaderLayout::ShaderResource* resource = FindTextureDeclaration(name);
+        if (!resource)
         {
             ATOM_ERROR("Texture with name \"{}\" does not exist", name);
             return nullptr;
         }
 
-        return m_TextureHandles[resource->Register];
+        return m_Textures[resource->Register];
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool MaterialAsset::HasTexture(const char* name)
+    bool Material::HasTexture(const char* name)
     {
-        return m_MaterialResource->HasResource(name, ShaderResourceType::Texture2D);
+        return FindTextureDeclaration(name) != nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool MaterialAsset::HasUniform(const char* name, ShaderDataType type)
+    void Material::UpdateForRendering()
     {
-        return m_MaterialResource->HasUniform(name, type);
+        m_MaterialSIG->SetConstantData(0, m_ConstantsData.data(), m_ConstantsData.size());
+
+        if (m_TexturesDirty)
+        {
+            for (auto& [slot, texture] : m_Textures)
+            {
+                m_MaterialSIG->SetROTexture(slot, texture ? texture->GetResource() : EngineResources::BlackTexture);
+                m_MaterialSIG->SetSampler(slot, texture ? Renderer::GetSampler(texture->GetFilter(), texture->GetWrap()) : EngineResources::LinearClampSampler);
+            }
+
+            m_TexturesDirty = false;
+        }
+
+        m_MaterialSIG->Compile();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialAsset::SetFlag(MaterialFlags flag, bool state)
+    bool Material::HasUniform(const char* name, ShaderDataType type)
     {
-        m_MaterialResource->SetFlag(flag, state);
+        if (const ShaderLayout::Uniform* uniform = FindUniformDeclaration(name))
+            return uniform->Type == type;
+
+        return false;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialAsset::SetFlags(MaterialFlags flags)
+    void Material::SetFlag(MaterialFlags flag, bool state)
     {
-        m_MaterialResource->SetFlags(flags);
+        if (state)
+            m_Flags |= flag;
+        else
+            m_Flags &= ~flag;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool MaterialAsset::GetFlag(MaterialFlags flag) const
+    const ShaderLayout::Uniform* Material::FindUniformDeclaration(const char* name)
     {
-        return m_MaterialResource->GetFlag(flag);
+        const auto& constants = m_Shader->GetShaderLayout().GetConstants(ShaderBindPoint::Material);
+
+        for (const auto& uniform : constants.Uniforms)
+        {
+            if (uniform.Name == name)
+            {
+                return &uniform;
+            }
+        }
+
+        return nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    MaterialFlags MaterialAsset::GetFlags() const
+    const ShaderLayout::ShaderResource* Material::FindTextureDeclaration(const char* name)
     {
-        return m_MaterialResource->GetFlags();
+        const ShaderLayout::ShaderDescriptorTable& resourceTable = m_Shader->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
+
+        for (const ShaderLayout::ShaderResource& resource : resourceTable.Resources)
+        {
+            if (resource.Name == name && (resource.Type == ShaderResourceType::Texture2D || resource.Type == ShaderResourceType::TextureCube))
+            {
+                return &resource;
+            }
+        }
+
+        return nullptr;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool MaterialAsset::IsDirty() const
+    const ShaderLayout::ShaderResource* Material::FindSamplerDeclaration(const char* name)
     {
-        return m_MaterialResource->IsDirty();
-    }
+        const ShaderLayout::ShaderDescriptorTable& samplerTable = m_Shader->GetShaderLayout().GetSamplerDescriptorTable(ShaderBindPoint::Material);
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<GraphicsShader> MaterialAsset::GetShader() const
-    {
-        return m_MaterialResource->GetShader();
-    }
+        for (const ShaderLayout::ShaderResource& resource : samplerTable.Resources)
+        {
+            if (resource.Name == name)
+            {
+                return &resource;
+            }
+        }
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const Vector<byte>& MaterialAsset::GetConstantsData() const
-    {
-        return m_MaterialResource->GetConstantsData();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const Map<u32, Ref<TextureAsset>>& MaterialAsset::GetTextureHandles() const
-    {
-        return m_TextureHandles;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Material> MaterialAsset::GetResource() const
-    {
-        return m_MaterialResource;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialAsset::SetTexture(u32 slot, Ref<TextureAsset> texture)
-    {
-        m_MaterialResource->m_Textures[slot] = texture->GetResource();
-        m_TextureHandles[slot] = texture;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialAsset::SetSampler(u32 slot, Ref<TextureSampler> sampler)
-    {
-        m_MaterialResource->m_Samplers[slot] = sampler;
+        return nullptr;
     }
 
     // -------------------------------------------------- MaterialTable ------------------------------------------------------------
     // -----------------------------------------------------------------------------------------------------------------------------
-    void MaterialTable::SetMaterial(u32 submeshIdx, Ref<MaterialAsset> material)
+    void MaterialTable::SetMaterial(u32 submeshIdx, const Ref<Material>& material)
     {
         m_Materials[submeshIdx] = material;
     }
@@ -155,7 +165,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<MaterialAsset> MaterialTable::GetMaterial(u32 submeshIdx) const
+    const Ref<Material>& MaterialTable::GetMaterial(u32 submeshIdx) const
     {
         if (!HasMaterial(submeshIdx))
             return nullptr;

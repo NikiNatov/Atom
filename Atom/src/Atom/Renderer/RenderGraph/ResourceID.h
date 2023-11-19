@@ -21,6 +21,9 @@ namespace Atom
         ResourceID(const char* name);
         ~ResourceID();
 
+        ResourceID(const ResourceID&) = delete;
+        ResourceID& operator=(const ResourceID&) = delete;
+
         inline bool IsValid() const { return m_Index != InvalidIndex; }
         inline u16 GetIndex() const { return m_Index; }
         inline const char* GetName() const { return m_Name; }

@@ -2,7 +2,8 @@
 #include "SkyBoxPass.h"
 
 #include "Atom/Renderer/Pipeline.h"
-#include "Atom/Renderer/Renderer.h"
+#include "Atom/Renderer/ShaderLibrary.h"
+#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
 
 namespace Atom
@@ -19,23 +20,20 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void SkyBoxPass::Build(RenderPassBuilder& builder)
     {
-        // Pipelines
-        {
-            GraphicsPipelineDescription pipelineDesc;
-            pipelineDesc.Topology = Topology::Triangles;
-            pipelineDesc.Shader = Renderer::GetShaderLibrary().Get<GraphicsShader>("SkyBoxShader");
-            pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA16F, TextureFormat::Depth24Stencil8 };
-            pipelineDesc.Layout = {
-                { "POSITION", ShaderDataType::Float3 },
-                { "TEX_COORD", ShaderDataType::Float2 },
-            };
-            pipelineDesc.EnableBlend = false;
-            pipelineDesc.EnableDepthTest = false;
-            pipelineDesc.Wireframe = false;
-            pipelineDesc.BackfaceCulling = true;
+        GraphicsPipelineDescription pipelineDesc;
+        pipelineDesc.Topology = Topology::Triangles;
+        pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("SkyBoxShader");
+        pipelineDesc.RenderTargetFormats = { TextureFormat::RGBA16F, TextureFormat::Depth24Stencil8 };
+        pipelineDesc.Layout = {
+            { "POSITION", ShaderDataType::Float3 },
+            { "TEX_COORD", ShaderDataType::Float2 },
+        };
+        pipelineDesc.EnableBlend = false;
+        pipelineDesc.EnableDepthTest = false;
+        pipelineDesc.Wireframe = false;
+        pipelineDesc.BackfaceCulling = true;
 
-            Renderer::GetPipelineLibrary().Load<GraphicsPipeline>("SkyBoxPass_Default", pipelineDesc);
-        }
+        builder.SetPipelineStateDesc(pipelineDesc);
 
         // Resources
         TextureDescription colorOutputDesc;
@@ -64,15 +62,12 @@ namespace Atom
     {
         RenderSurface* sceneColorOutput = context.GetRT(RID(SceneColorOutput))->GetData();
         RenderSurface* depthBuffer = context.GetDS_RW(RID(SceneDepthBuffer))->GetData();
-        GraphicsPipeline* pipeline = Renderer::GetPipelineLibrary().Get<GraphicsPipeline>("SkyBoxPass_Default").get();
 
         Ref<CommandBuffer> cmdBuffer = context.GetCommandBuffer();
 
         cmdBuffer->BeginRenderPass({ sceneColorOutput, depthBuffer }, true);
-        cmdBuffer->SetGraphicsPipeline(pipeline);
-        cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, context.GetFrameConstantBuffer().get());
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, context.GetFrameResourceTable(), context.GetFrameSamplerTable());
-
-        Renderer::RenderFullscreenQuad(cmdBuffer, nullptr);
+        cmdBuffer->SetVertexBuffer(EngineResources::QuadVertexBuffer.get());
+        cmdBuffer->SetIndexBuffer(EngineResources::QuadIndexBuffer.get());
+        cmdBuffer->DrawIndexed(EngineResources::QuadIndexBuffer->GetElementCount(), 1, 0, 0, 0);
     }
 }

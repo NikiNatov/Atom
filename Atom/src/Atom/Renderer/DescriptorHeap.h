@@ -126,7 +126,7 @@ namespace Atom
         DescriptorHeap&                      m_Heap;
         Map<u32, FreeBlocksByOffsetEntry>    m_FreeBlocksByOffset;
         MultiMap<u32, FreeBlocksBySizeEntry> m_FreeBlocksBySize;
-        Vector<Vector<DescriptorAllocation>> m_DeferredReleaseAllocations;
+        Vector<DescriptorAllocation>         m_DeferredReleaseAllocations[g_FramesInFlight];
         std::mutex                           m_Mutex;
     };
 
@@ -140,9 +140,9 @@ namespace Atom
         void ReleaseDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor, bool deferredRelease);
         void ProcessDeferredReleases(u32 frameIndex);
     private:
-        Queue<u32>          m_FreeSlots;
-        Vector<Vector<u32>> m_DeferredReleaseDescriptors;
-        std::mutex          m_Mutex;
+        Queue<u32>  m_FreeSlots;
+        Vector<u32> m_DeferredReleaseDescriptors[g_FramesInFlight];
+        std::mutex  m_Mutex;
     };
 
     class GPUDescriptorHeap : public DescriptorHeap
@@ -155,7 +155,7 @@ namespace Atom
         void Release(DescriptorAllocation&& allocation, bool deferredRelease);
         void ProcessDeferredReleases(u32 frameIndex);
     private:
-        Scope<DescriptorAllocator>         m_PersistentAllocator = nullptr;
-        Vector<Scope<DescriptorAllocator>> m_TransientAllocators;
+        Scope<DescriptorAllocator> m_PersistentAllocator = nullptr;
+        Scope<DescriptorAllocator> m_TransientAllocators[g_FramesInFlight];
     };
 }

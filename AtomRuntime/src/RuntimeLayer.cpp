@@ -28,7 +28,9 @@ namespace Atom
 
         const auto& window = Application::Get().GetWindow();
 
-        m_SceneRenderer = CreateRef<SceneRenderer>(true);
+        RendererSpecification rendererSpec;
+        rendererSpec.RenderToSwapChain = true;
+        m_SceneRenderer = CreateRef<Renderer>(rendererSpec);
         m_SceneRenderer->SetViewportSize(window.GetWidth(), window.GetHeight());
 
         m_ActiveScene->OnStart();

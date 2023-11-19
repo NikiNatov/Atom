@@ -149,4 +149,6 @@ namespace Atom
     {
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
+
+    constexpr u8 g_FramesInFlight = 3;
 }

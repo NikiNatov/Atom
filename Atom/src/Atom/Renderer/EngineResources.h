@@ -3,8 +3,9 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Renderer/Texture.h"
 #include "Atom/Renderer/Buffer.h"
-#include "Atom/Renderer/Material.h"
 #include "Atom/Renderer/TextureSampler.h"
+
+#include "Atom/Asset/MaterialAsset.h"
 
 namespace Atom
 {
@@ -15,6 +16,7 @@ namespace Atom
         inline static Ref<Texture> BlackTexture;
         inline static Ref<Texture> BlackTextureCube;
         inline static Ref<Texture> ErrorTexture;
+        inline static Ref<Texture> BRDFTexture;
 
         // Materials
         inline static Ref<Material> DefaultMaterial;

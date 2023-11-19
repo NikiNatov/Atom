@@ -25,6 +25,7 @@ project "Atom"
 	includedirs
 	{
 		"src",
+		"shaders",
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.glm}",
 		"%{IncludeDirs.imgui}",

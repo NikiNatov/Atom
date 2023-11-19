@@ -8,21 +8,14 @@
 #include "Atom/Renderer/RenderGraph/RenderPassContext.h"
 #include "Atom/Renderer/RenderGraph/ResourceView.h"
 
-#include "Atom/Scene/SceneRenderer.h"
-
-#include <pix3.h>
-
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderGraph::RenderGraph(const SceneRenderer& sceneRenderer)
-        : m_SceneRenderer(sceneRenderer)
+    RenderGraph::RenderGraph()
     {
         m_QueueFences[u32(CommandQueueType::Graphics)] = CreateRef<Fence>("Render Graph GfxQueue Fence");
         m_QueueFences[u32(CommandQueueType::Compute)] = CreateRef<Fence>("Render Graph ComputeQueue Fence");
         m_QueueFences[u32(CommandQueueType::Copy)] = CreateRef<Fence>("Render Graph CopyQueue Fence");
-
-        m_ResourceSchedulers.resize(Renderer::GetFramesInFlight(), ResourceScheduler(*this));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -32,24 +25,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::Build()
+    void RenderGraph::Build(ResourceScheduler& resourceScheduler)
     {
-        BuildAdjacencyLists();
-        BuildExecutionOrderAndDependencyGroups();
+        BuildAdjacencyLists(resourceScheduler);
+        BuildExecutionOrderAndDependencyGroups(resourceScheduler);
         BuildSynchronizations();
-        BuildResourceTransitions();
+        BuildResourceTransitions(resourceScheduler);
         BuildRenderPassEvents();
         BuildRedirectedTransitionsEvents();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::Execute()
-    {
-        m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()].UpdateSceneFrameData(m_SceneRenderer.GetSceneFrameData());
-
-        RecordRedirectedTransitions();
-        RecordRenderPasses();
-        ExecuteCommandLists();
+        BuildEventFenceValues();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -70,23 +54,10 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const RenderSurfaceResource* RenderGraph::GetFinalOutput() const
-    {
-        const ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()];
-        const IResourceView* finalOutputView = resourceScheduler.GetPassOutputs(m_OrderedPasses.back())[0];
-        const RenderSurfaceResource* finalOutput = resourceScheduler.GetResource(finalOutputView->GetResourceID())->As<RenderSurfaceResource>();
-        ATOM_ENGINE_ASSERT(finalOutput);
-        return finalOutput;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::BuildAdjacencyLists()
+    void RenderGraph::BuildAdjacencyLists(ResourceScheduler& resourceScheduler)
     {
         // Build pass resources
-        u32 frameIdx = Renderer::GetCurrentFrameIndex();
-        ResourceScheduler& resourceScheduler = m_ResourceSchedulers[frameIdx];
-
-        resourceScheduler.BeginScheduling();
+        resourceScheduler.BeginScheduling(m_Passes.size());
 
         for (auto& pass : m_Passes)
         {
@@ -125,7 +96,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::BuildExecutionOrderAndDependencyGroups()
+    void RenderGraph::BuildExecutionOrderAndDependencyGroups(ResourceScheduler& resourceScheduler)
     {
         Vector<bool> visited(m_Passes.size(), false);
         Vector<bool> nodesOnStack(m_Passes.size(), false);
@@ -169,13 +140,12 @@ namespace Atom
         RenderPassID prevPassPerQueue[u32(CommandQueueType::NumTypes)] = { UINT16_MAX, UINT16_MAX, UINT16_MAX };
         u32 globalExecutionIndex = 0;
 
-        ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()];
         for (DependencyGroup& depGroup : m_DependencyGroups)
         {
             u32 dependencyGroupExecutionIndex = 0;
 
             // Stores all the queues in which a resource is read
-            Map<ResourceID, Set<CommandQueueType>> resourcesReadByQueues;
+            Map<u16, Set<CommandQueueType>> resourcesReadByQueues;
 
             for (RenderPassID passID : depGroup.Passes)
             {
@@ -338,11 +308,8 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::BuildResourceTransitions()
+    void RenderGraph::BuildResourceTransitions(ResourceScheduler& resourceScheduler)
     {
-        u32 frameIdx = Renderer::GetCurrentFrameIndex();
-        ResourceScheduler& resourceScheduler = m_ResourceSchedulers[frameIdx];
-
         for (DependencyGroup& depGroup : m_DependencyGroups)
         {
             depGroup.TransitionBarriers.resize(depGroup.Passes.size());
@@ -350,11 +317,11 @@ namespace Atom
 
             for (RenderPassID passID : depGroup.Passes)
             {
-                auto transitionResource = [&](ResourceID resourceID, bool isReadOnly)
+                auto transitionResource = [&](const ResourceID& resourceID, bool isReadOnly)
                 {
                     Resource* resource = resourceScheduler.GetResource(resourceID);
 
-                    ResourceState newState = GetResourceStateForDependencyGroup(resourceID, depGroup.GroupIndex, isReadOnly);
+                    ResourceState newState = GetResourceStateForDependencyGroup(resourceID, depGroup.GroupIndex, isReadOnly, resourceScheduler);
                     std::optional<TransitionBarrier> transitionBarrier = resourceScheduler.TransitionResource(resource, newState);
 
                     bool needsRedirecting = false;
@@ -406,14 +373,18 @@ namespace Atom
 
         for (RenderPassID passID : m_OrderedPasses)
         {
-            const char* passName = m_Passes[passID]->m_Name.c_str();
             CommandQueueType passQueueType = m_Passes[passID]->m_QueueType;
 
             CommandQueue* cmdQueue = Device::Get().GetCommandQueue(passQueueType);
 
+            DependencyGroup& depGroup = m_DependencyGroups[m_Passes[passID]->m_DependencyGroupIndex];
+            u32 passIdxInGroup = m_Passes[passID]->m_DependencyGroupExecutionIndex;
+
             RenderPassEvent passEvent;
-            passEvent.PassID = passID;
-            passEvent.PassCmdBuffer = cmdQueue->GetCommandBuffer();
+            passEvent.RenderPass = m_Passes[passID];
+            passEvent.TransitionBarriers = &depGroup.TransitionBarriers[passIdxInGroup];
+            passEvent.UAVBarriers = &depGroup.UAVBarriers[passIdxInGroup];
+            passEvent.CmdBuffer = cmdQueue->GetCommandBuffer();
 
             u32 queueIdx = u32(passQueueType);
             if (m_Passes[passID]->m_SignalRequired)
@@ -484,6 +455,7 @@ namespace Atom
             // Create redirected transitions event
             RedirectedTransitionsEvent transitionEvent;
             transitionEvent.DepGroupIndex = depGroup.GroupIndex;
+            transitionEvent.RedirectedTransitionBarriers = &depGroup.RedirectedTransitionBarriers;
             transitionEvent.CmdBuffer = Device::Get().GetCommandQueue(mostCompetentQueue)->GetCommandBuffer();
             transitionEvent.Signal.Fence = m_QueueFences[u32(mostCompetentQueue)];
 
@@ -555,67 +527,8 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::RecordRedirectedTransitions()
+    void RenderGraph::BuildEventFenceValues()
     {
-        for (RenderGraphEventListIt& eventIt : m_RedirectedTransitionsEvents)
-        {
-            RedirectedTransitionsEvent& event = std::get<RedirectedTransitionsEvent>(*eventIt);
-
-            Vector<ResourceBarrier*> redirectedBarriers;
-            redirectedBarriers.reserve(m_DependencyGroups[event.DepGroupIndex].RedirectedTransitionBarriers.size());
-
-            for (TransitionBarrier& barrier : m_DependencyGroups[event.DepGroupIndex].RedirectedTransitionBarriers)
-                redirectedBarriers.push_back(&barrier);
-
-            event.CmdBuffer->Begin();
-            PIXBeginEvent(event.CmdBuffer->GetCommandList().Get(), 0, fmt::format("RedirectedTransitions_DepGroup{}", event.DepGroupIndex).c_str());
-
-            for (TransitionBarrier& barrier : m_DependencyGroups[event.DepGroupIndex].RedirectedTransitionBarriers)
-                event.CmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
-
-            PIXEndEvent(event.CmdBuffer->GetCommandList().Get());
-            event.CmdBuffer->End();
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::RecordRenderPasses()
-    {
-        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
-        GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
-
-        for (RenderPassID passID : m_OrderedPasses)
-        {
-            RenderPassEvent& event = std::get<RenderPassEvent>(*m_RenderPassEvents[passID]);
-
-            RenderPass* pass = m_Passes[event.PassID];
-            DependencyGroup& depGroup = m_DependencyGroups[pass->m_DependencyGroupIndex];
-            u32 passIdxInGroup = pass->m_DependencyGroupExecutionIndex;
-
-            // Record render commands
-            event.PassCmdBuffer->Begin();
-            PIXBeginEvent(event.PassCmdBuffer->GetCommandList().Get(), 0, pass->m_Name.c_str());
-
-            for (TransitionBarrier& barrier : depGroup.TransitionBarriers[passIdxInGroup])
-                event.PassCmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
-
-            for (UAVBarrier& barrier : depGroup.UAVBarriers[passIdxInGroup])
-                event.PassCmdBuffer->AddUAVBarrier(barrier.GetResource());
-
-            event.PassCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-
-            RenderPassContext passContext(pass->m_ID, event.PassCmdBuffer, m_ResourceSchedulers[Renderer::GetCurrentFrameIndex()], m_SceneRenderer.GetSceneFrameData());
-            pass->Execute(passContext);
-
-            PIXEndEvent(event.PassCmdBuffer->GetCommandList().Get());
-            event.PassCmdBuffer->End();
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void RenderGraph::ExecuteCommandLists()
-    {
-        // Initialize fence values for each render graph event
         for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
         {
             for (RenderGraphEvent& event : m_RenderGraphEvents[queueIdx])
@@ -630,65 +543,6 @@ namespace Atom
                         passEventPtr->Signal.FenceValue = m_QueueFences[queueIdx]->IncrementTargetValue();
                 }
             }
-        }
-
-        // Execute
-        Vector<Ref<CommandBuffer>> cmdBufferBatches[u32(CommandQueueType::NumTypes)];
-
-        for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
-        {
-            CommandQueue* cmdQueue = Device::Get().GetCommandQueue(CommandQueueType(queueIdx));
-
-            for (RenderGraphEvent& event : m_RenderGraphEvents[queueIdx])
-            {
-                if (RedirectedTransitionsEvent* transitionEventPtr = std::get_if<RedirectedTransitionsEvent>(&event))
-                {
-                    if (!transitionEventPtr->SignalsToWait.empty())
-                    {
-                        // If we have fences to wait for, execute the current cmd buffer batch and wait
-                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
-                        cmdBufferBatches[queueIdx].clear();
-
-                        for (u32 i = 0; i < transitionEventPtr->SignalsToWait.size(); i++)
-                            cmdQueue->WaitFence(transitionEventPtr->SignalsToWait[i]->Fence, transitionEventPtr->SignalsToWait[i]->FenceValue);
-                    }
-
-                    // Execute redirected transitions and signal fence
-                    cmdQueue->ExecuteCommandList(transitionEventPtr->CmdBuffer);
-                    cmdQueue->SignalFence(transitionEventPtr->Signal.Fence, transitionEventPtr->Signal.FenceValue);
-                }
-                else if (RenderPassEvent* passEventPtr = std::get_if<RenderPassEvent>(&event))
-                {
-                    if (!passEventPtr->SignalsToWait.empty())
-                    {
-                        // If we have fences to wait for, flush the current cmd buffer batch and wait
-                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
-                        cmdBufferBatches[queueIdx].clear();
-
-                        for (u32 i = 0; i < passEventPtr->SignalsToWait.size(); i++)
-                            cmdQueue->WaitFence(passEventPtr->SignalsToWait[i]->Fence, passEventPtr->SignalsToWait[i]->FenceValue);
-                    }
-
-                    if (passEventPtr->PassCmdBuffer)
-                        cmdBufferBatches[queueIdx].push_back(passEventPtr->PassCmdBuffer);
-
-                    if (passEventPtr->Signal.Fence)
-                    {
-                        // If we have fences to signal, flush the current cmd buffer batch and signal
-                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
-                        cmdQueue->SignalFence(passEventPtr->Signal.Fence, passEventPtr->Signal.FenceValue);
-
-                        cmdBufferBatches[queueIdx].clear();
-                    }
-                }
-            }
-        }
-
-        // Flush any remaining cmd buffers
-        for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
-        {
-            CommandQueue* cmdQueue = Device::Get().GetCommandQueue(CommandQueueType(queueIdx));
-            cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
         }
     }
 
@@ -711,11 +565,8 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceState RenderGraph::GetResourceStateForDependencyGroup(ResourceID resourceID, u32 depGroupIdx, bool isReadOnly)
+    ResourceState RenderGraph::GetResourceStateForDependencyGroup(const ResourceID& resourceID, u32 depGroupIdx, bool isReadOnly, ResourceScheduler& resourceScheduler)
     {
-        u32 frameIdx = Renderer::GetCurrentFrameIndex();
-        ResourceScheduler& resourceScheduler = m_ResourceSchedulers[frameIdx];
-
         ResourceState state = ResourceState::Common;
         for (RenderPassID passID : m_DependencyGroups[depGroupIdx].Passes)
         {

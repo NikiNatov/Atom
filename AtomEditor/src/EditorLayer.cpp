@@ -34,7 +34,9 @@ namespace Atom
         const auto& cmdLineArgs = Application::Get().GetSpecification().CommandLineArgs;
         OpenProject(cmdLineArgs.Count > 1 ? cmdLineArgs.Args[1] : "SandboxProject/SandboxProject.atmproj");
         
-        m_Renderer = CreateRef<SceneRenderer>(false);
+        RendererSpecification rendererSpec;
+        rendererSpec.RenderToSwapChain = false;
+        m_Renderer = CreateRef<Renderer>(rendererSpec);
 
         m_SceneHierarchyPanel.SetScene(m_EditorScene);
         m_ActiveScene = m_EditorScene;

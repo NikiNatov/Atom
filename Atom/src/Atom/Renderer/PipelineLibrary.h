@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Atom/Core/Core.h"
+#include "Atom/Core/Hash.h"
 #include "Atom/Renderer/Pipeline.h"
 
 namespace Atom
@@ -8,39 +9,21 @@ namespace Atom
     class PipelineLibrary
     {
     public:
-        PipelineLibrary() = default;
-        ~PipelineLibrary() = default;
+        PipelineLibrary();
 
-        template<typename PipelineType>
-        void Add(const String& name, const Ref<PipelineType>& pipeline)
-        {
-            if (!Exists(name))
-                m_PipelineMap[name] = pipeline;
-        }
+        Ref<GraphicsPipeline> LoadGraphicsPipeline(const GraphicsPipelineDescription& description, const char* debugName = "Unnamed Gfx Pipeline");
+        Ref<ComputePipeline> LoadComputePipeline(const ComputePipelineDescription& description, const char* debugName = "Unnamed Compute Pipeline");
 
-        template<typename PipelineType, typename PipelineDescType>
-        Ref<PipelineType> Load(const String& name, const PipelineDescType& description)
-        {
-            if (Exists(name))
-                return Get<PipelineType>(name);
-
-            Ref<PipelineType> pipeline = CreateRef<PipelineType>(description, name.c_str());
-            Add(name, pipeline);
-            return pipeline;
-        }
-
-        template<typename PipelineType>
-        Ref<PipelineType> Get(const String& name) const
-        {
-            ATOM_ENGINE_ASSERT(Exists(name), "Pipeline does not exist!");
-            Ref<PipelineType> pipeline = std::dynamic_pointer_cast<PipelineType>(m_PipelineMap.at(name));
-            ATOM_ENGINE_ASSERT(pipeline, "Incorrect pipeline type!");
-            return pipeline;
-        }
+        Ref<GraphicsPipeline> GetGraphicsPipeline(const GraphicsPipelineDescription& description) const;
+        Ref<ComputePipeline> GetComputePipeline(const ComputePipelineDescription& description) const;
 
         void Clear();
-        bool Exists(const String& name) const;
+    public:
+        inline static PipelineLibrary& Get() { return *ms_Instance; }
     private:
-        HashMap<String, Ref<Pipeline>> m_PipelineMap;
+        HashMap<u64, Ref<GraphicsPipeline>> m_GfxPipelines;
+        HashMap<u64, Ref<ComputePipeline>>  m_ComputePipelines;
+    private:
+        inline static PipelineLibrary* ms_Instance = nullptr;
     };
 }

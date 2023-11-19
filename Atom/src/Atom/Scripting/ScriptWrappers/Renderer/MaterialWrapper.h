@@ -14,7 +14,7 @@ namespace Atom
         public:
             Material();
             Material(u64 assetUUID);
-            Material(const Ref<Atom::MaterialAsset>& material);
+            Material(const Ref<Atom::Material>& material);
 
             void SetInt(const String& uniformName, s32 value);
             void SetFloat(const String& uniformName, f32 value);
@@ -38,11 +38,11 @@ namespace Atom
             bool HasFlag(MaterialFlags flag) const;
             
             UUID GetUUID() const;
-            Ref<Atom::MaterialAsset> GetMaterial() const;
+            Ref<Atom::Material> GetMaterial() const;
 
             static Material Find(const std::filesystem::path& assetPath);
         private:
-            Ref<Atom::MaterialAsset> m_Material = nullptr;
+            Ref<Atom::Material> m_Material = nullptr;
         };
     }
 }

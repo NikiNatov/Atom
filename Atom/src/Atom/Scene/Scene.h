@@ -2,8 +2,8 @@
 
 #include "Atom/Core/Core.h"
 #include "Atom/Renderer/EditorCamera.h"
+#include "Atom/Renderer/Renderer.h"
 #include "Atom/Scene/Entity.h"
-#include "Atom/Scene/SceneRenderer.h"
 #include "Atom/Asset/Asset.h"
 
 #include <entt/entt.hpp>
@@ -44,8 +44,8 @@ namespace Atom
         void OnStart();
         void OnUpdate(Timestep ts);
         void OnStop();
-        void OnEditRender(Ref<SceneRenderer> renderer);
-        void OnRuntimeRender(Ref<SceneRenderer> renderer);
+        void OnEditRender(Ref<Renderer> renderer);
+        void OnRuntimeRender(Ref<Renderer> renderer);
         void OnImGuiRender();
         void OnViewportResize(u32 width, u32 height);
 
@@ -59,6 +59,5 @@ namespace Atom
         EditorCamera          m_EditorCamera;
         SceneState            m_State = SceneState::Edit;
         HashMap<UUID, Entity> m_EntitiesByID;
-        Ref<LightEnvironment> m_LightEnvironment;
     };
 }

@@ -5,7 +5,6 @@
 #include "CommandQueue.h"
 #include "Texture.h"
 #include "ResourceStateTracker.h"
-#include "Renderer.h"
 
 namespace Atom
 {
@@ -23,7 +22,7 @@ namespace Atom
 
         // Create the swap chain
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.BufferCount = Renderer::GetFramesInFlight();
+        swapChainDesc.BufferCount = g_FramesInFlight;
         swapChainDesc.Width = m_Width;
         swapChainDesc.Height = m_Height;
         swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -43,15 +42,13 @@ namespace Atom
         m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
         // Create the back buffers
-        u32 framesInFlight = Renderer::GetFramesInFlight();
-        m_BackBuffers.resize(framesInFlight, nullptr);
         RecreateBuffers();
 
         // Create frame fence
         m_FrameFence = CreateRef<Fence>("Frame fence");
 
         // Initialize fence values
-        m_FrameFenceValues.resize(framesInFlight, 0);
+        memset(m_FrameFenceValues, 0, g_FramesInFlight * sizeof(u64));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -87,14 +84,14 @@ namespace Atom
             // Wait for GPU to finish all work
             Device::Get().WaitIdle();
 
-            for (u32 i = 0; i < m_BackBuffers.size(); i++)
+            for (u32 i = 0; i < g_FramesInFlight; i++)
             {
                 ResourceStateTracker::RemoveGlobalResourceState(m_BackBuffers[i]->GetTexture().get());
                 m_BackBuffers[i].reset();
             }
 
             u32 flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-            DXCall(m_DXGISwapChain->ResizeBuffers(m_BackBuffers.size(), 0, 0, DXGI_FORMAT_UNKNOWN, flags));
+            DXCall(m_DXGISwapChain->ResizeBuffers(g_FramesInFlight, 0, 0, DXGI_FORMAT_UNKNOWN, flags));
             m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
 
             RecreateBuffers();
@@ -120,12 +117,6 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    u32 SwapChain::GetBackBufferCount() const
-    {
-        return m_BackBuffers.size();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     Ref<RenderSurface> SwapChain::GetBackBuffer() const
     {
         return m_BackBuffers[m_BackBufferIndex];
@@ -135,7 +126,7 @@ namespace Atom
     void SwapChain::RecreateBuffers()
     {
         // Recreate resources
-        for (u32 i = 0; i < m_BackBuffers.size(); i++)
+        for (u32 i = 0; i < g_FramesInFlight; i++)
         {
             // Get the back buffer resource
             ComPtr<ID3D12Resource2> backBuffer = nullptr;

@@ -3,138 +3,423 @@
 
 #include "Atom/Core/Application.h"
 #include "Atom/Core/DirectX12/DirectX12Utils.h"
-#include "Atom/Renderer/CommandQueue.h"
-#include "Atom/Renderer/EngineResources.h"
 #include "Atom/Asset/MeshAsset.h"
 
+#include "Atom/Renderer/CommandQueue.h"
+#include "Atom/Renderer/EngineResources.h"
+
+#include "Atom/Renderer/RenderPasses/SkyBoxPass.h"
+#include "Atom/Renderer/RenderPasses/GeometryPass.h"
+#include "Atom/Renderer/RenderPasses/CompositePass.h"
+
+#include <autogen/cpp/FrameParams.h>
+#include <autogen/cpp/EquirectToCubeMapParams.h>
+#include <autogen/cpp/CubeMapPrefilterParams.h>
+#include <autogen/cpp/CubeMapIrradianceParams.h>
+#include <autogen/cpp/GenerateMipsParams.h>
+
+#include <imgui.h>
 #include <pix3.h>
 
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Initialize(const RendererConfig& config)
+    Renderer::Renderer(const RendererSpecification& spec)
+        : m_Specification(spec)
     {
-        ms_Config = config;
-
-        // Compile and load shaders
-        ShaderCompiler::SetOutputDirectory("../Atom/shaders/bin");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/MeshPBRShader.hlsl");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/MeshPBRAnimatedShader.hlsl");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/SkyBoxShader.hlsl");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/ImGuiShader.hlsl");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/CompositeShader.hlsl");
-        ms_ShaderLibrary.LoadGraphicsShader("../Atom/shaders/FullscreenQuadShader.hlsl");
-        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/GenerateMips.hlsl");
-        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/EquirectToCubeMap.hlsl");
-        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/CubeMapPrefilter.hlsl");
-        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/CubeMapIrradiance.hlsl");
-        ms_ShaderLibrary.LoadComputeShader("../Atom/shaders/BRDFShader.hlsl");
-
-        // Load pipelines
-
-        {
-            ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("GenerateMips");
-
-            ms_PipelineLibrary.Load<ComputePipeline>("GenerateMipsPipeline", pipelineDesc);
-        }
-
-        {
-            ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("EquirectToCubeMap");
-
-            ms_PipelineLibrary.Load<ComputePipeline>("EquirectToCubeMapPipeline", pipelineDesc);
-        }
-
-        {
-            ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("CubeMapPrefilter");
-
-            ms_PipelineLibrary.Load<ComputePipeline>("CubeMapPrefilterPipeline", pipelineDesc);
-        }
-
-        {
-            ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("CubeMapIrradiance");
-
-            ms_PipelineLibrary.Load<ComputePipeline>("CubeMapIrradiancePipeline", pipelineDesc);
-        }
-
-        {
-            ComputePipelineDescription pipelineDesc;
-            pipelineDesc.Shader = ms_ShaderLibrary.Get<ComputeShader>("BRDFShader");
-
-            ms_PipelineLibrary.Load<ComputePipeline>("BRDFPipeline", pipelineDesc);
-        }
-
-        // Generate BRDF texture
-        ms_BRDFTexture = Renderer::CreateBRDFTexture();
-
-        // Create common engine resources
-        EngineResources::Initialize();
-
-        // Wait for all compute operations to complete before we continue
-        Device::Get().GetCommandQueue(CommandQueueType::Compute)->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::Shutdown()
+    void Renderer::BeginScene(const Camera& camera, const glm::mat4& cameraTransform, const Ref<Texture>& environmentMap, const Ref<Texture>& irradianceMap)
     {
-        ms_PipelineLibrary.Clear();
-        ms_ShaderLibrary.Clear();
-        ms_BRDFTexture.reset();
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
 
-        EngineResources::Shutdown();
+        m_FrameData.ViewMatrix = glm::inverse(cameraTransform);
+        m_FrameData.ProjectionMatrix = camera.GetProjection();
+        m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
+        m_FrameData.CameraPosition = cameraTransform[3];
+        m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.Lights.clear();
+        m_FrameData.BoneTransforms.clear();
+        m_FrameData.StaticMeshes.clear();
+        m_FrameData.AnimatedMeshes.clear();
+        m_FrameData.EnvironmentMaps[currentFrameIdx] = environmentMap ? environmentMap : EngineResources::BlackTextureCube;
+        m_FrameData.IrradianceMaps[currentFrameIdx] = irradianceMap ? irradianceMap : EngineResources::BlackTextureCube;
+
+        m_RenderGraph.Reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::BeginFrame()
+    void Renderer::BeginScene(const EditorCamera& editorCamera, const Ref<Texture>& environmentMap, const Ref<Texture>& irradianceMap)
     {
-        u32 currentFrameIndex = GetCurrentFrameIndex();
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
 
-        Device::Get().ProcessDeferredReleases(currentFrameIndex);
-        PIXBeginEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get(), 0, "Begin Frame");
+        m_FrameData.ViewMatrix = editorCamera.GetViewMatrix();
+        m_FrameData.ProjectionMatrix = editorCamera.GetProjection();
+        m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
+        m_FrameData.CameraPosition = editorCamera.GetPosition();
+        m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.Lights.clear();
+        m_FrameData.BoneTransforms.clear();
+        m_FrameData.StaticMeshes.clear();
+        m_FrameData.AnimatedMeshes.clear();
+        m_FrameData.EnvironmentMaps[currentFrameIdx] = environmentMap ? environmentMap : EngineResources::BlackTextureCube;
+        m_FrameData.IrradianceMaps[currentFrameIdx] = irradianceMap ? irradianceMap : EngineResources::BlackTextureCube;
+
+        m_RenderGraph.Reset();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderMesh(Ref<CommandBuffer> commandBuffer, Ref<Mesh> mesh, u32 submeshIdx, Ref<Material> overrideMaterial)
+    void Renderer::SubmitDirectionalLight(const glm::vec3& color, const glm::vec3& direction, f32 intensity)
     {
-        const Submesh& submesh = mesh->GetSubmeshes()[submeshIdx];
-        Ref<Material> material = overrideMaterial ? overrideMaterial : mesh->GetMaterialTable()->GetMaterial(submesh.MaterialIndex)->GetResource();
-
-        // Transition textures
-        for (auto& [_, texture] : material->GetTextures())
-            if(texture)
-                commandBuffer->TransitionResource(texture.get(), ResourceState::PixelShaderRead);
-
-        // Set material descriptor tables
-        if (material->IsDirty())
-            material->UpdateDescriptorTables();
-
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Material, material->GetConstantsData().data(), material->GetConstantsData().size() / 4);
-        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Material, material->GetResourceTable(), material->GetSamplerTable());
-        commandBuffer->SetVertexBuffer(mesh->GetVertexBuffer().get());
-        commandBuffer->SetIndexBuffer(mesh->GetIndexBuffer().get());
-        commandBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);
+        Light& light = m_FrameData.Lights.emplace_back();
+        light.Type = LightType::DirLight;
+        light.Color = { color.r, color.g, color.b, 1.0 };
+        light.Direction = { direction.x, direction.y, direction.z, 0.0f };
+        light.Intensity = intensity;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::RenderFullscreenQuad(Ref<CommandBuffer> commandBuffer, Texture* texture)
+    void Renderer::SubmitPointLight(const glm::vec3& color, const glm::vec3& position, f32 intensity, const glm::vec3& attenuationFactors)
     {
-        if (texture)
+        Light& light = m_FrameData.Lights.emplace_back();
+        light.Type = LightType::PointLight;
+        light.Color = { color.r, color.g, color.b, 1.0 };
+        light.Position = { position.x, position.y, position.z, 1.0f };
+        light.Intensity = intensity;
+        light.AttenuationFactors = attenuationFactors;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::SubmitSpotLight(const glm::vec3& color, const glm::vec3& position, const glm::vec3& direction, f32 intensity, f32 coneAngle, const glm::vec3& attenuationFactors)
+    {
+        Light& light = m_FrameData.Lights.emplace_back();
+        light.Type = LightType::SpotLight;
+        light.Color = { color.r, color.g, color.b, 1.0 };
+        light.Position = { position.x, position.y, position.z, 1.0f };
+        light.Direction = { direction.x, direction.y, direction.z, 0.0f };
+        light.Intensity = intensity;
+        light.ConeAngle = coneAngle;
+        light.AttenuationFactors = attenuationFactors;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable)
+    {
+        if (!mesh)
+            return;
+
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
+
+        const auto& submeshes = mesh->GetSubmeshes();
+        for (u32 submeshIdx = 0; submeshIdx < submeshes.size(); submeshIdx++)
         {
-            DescriptorAllocation resourceTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocateTransient(1);
-            Device::Get().CopyDescriptors(resourceTable, 1, &texture->GetSRV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
+            const Submesh& submesh = submeshes[submeshIdx];
+            const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
+            Ref<Material> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
 
-            DescriptorAllocation samplerTable = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp)->GetDescriptor(), DescriptorHeapType::Sampler);
+            MeshEntry& meshEntry = m_FrameData.StaticMeshes.emplace_back();
+            meshEntry.Mesh = mesh;
+            meshEntry.SubmeshIndex = submeshIdx;
+            meshEntry.Transform = transform;
+            meshEntry.Material = material ? material : EngineResources::ErrorMaterial;
+        }
+    }
 
-            commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::SubmitAnimatedMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, const Ref<MaterialTable>& materialTable, const Ref<Skeleton>& skeleton)
+    {
+        if (!mesh || !skeleton)
+            return;
+
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
+
+        // Submit draw command for each submesh
+        const auto& submeshes = mesh->GetSubmeshes();
+        for (u32 submeshIdx = 0; submeshIdx < submeshes.size(); submeshIdx++)
+        {
+            const Submesh& submesh = submeshes[submeshIdx];
+            const Ref<MaterialTable>& meshMaterialTable = mesh->GetMaterialTable();
+            Ref<Material> material = materialTable && materialTable->HasMaterial(submesh.MaterialIndex) ? materialTable->GetMaterial(submesh.MaterialIndex) : meshMaterialTable->GetMaterial(submesh.MaterialIndex);
+
+            MeshEntry& meshEntry = m_FrameData.AnimatedMeshes.emplace_back();
+            meshEntry.Mesh = mesh;
+            meshEntry.SubmeshIndex = submeshIdx;
+            meshEntry.Transform = transform;
+            meshEntry.Material = material ? material : EngineResources::ErrorMaterialAnimated;
+            meshEntry.BoneTransformOffset = m_FrameData.BoneTransforms.size();
         }
 
-        commandBuffer->SetVertexBuffer(EngineResources::QuadVertexBuffer.get());
-        commandBuffer->SetIndexBuffer(EngineResources::QuadIndexBuffer.get());
-        commandBuffer->DrawIndexed(EngineResources::QuadIndexBuffer->GetElementCount(), 1, 0, 0, 0);
+        // Set all bone transforms
+        for (auto& bone : skeleton->GetBones())
+            m_FrameData.BoneTransforms.push_back(bone.AnimatedTransform);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::SetViewportSize(u32 width, u32 height)
+    {
+        m_FrameData.ViewportWidth = width;
+        m_FrameData.ViewportHeight = height;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::Render()
+    {
+        BuildRenderPasses();
+        UpdateFrameGPUBuffers();
+        RecordCommandBuffers();
+        ExecuteCommandBuffers();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::OnImGuiRender()
+    {
+        ImGui::Begin("Scene Renderer");
+
+        for (RenderPassID passID : m_RenderGraph.GetOrderedPasses())
+        {
+            if (ImGui::CollapsingHeader(m_RenderGraph.GetRenderPass(passID)->GetName().c_str()))
+            {
+                const ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Application::Get().GetCurrentFrameIndex()];
+                for (const IResourceView* outputView : resourceScheduler.GetPassOutputs(passID))
+                {
+                    Resource* resource = resourceScheduler.GetResource(outputView->GetResourceID());
+
+                    ImGui::Columns(2);
+                    ImGui::SetColumnWidth(0, 150.0f);
+                    ImGui::Text(resource->GetName());
+                    ImGui::NextColumn();
+                    ImGui::PushItemWidth(-1);
+
+                    if (TextureResource* textureResource = resource->As<TextureResource>())
+                    {
+                        ImGui::ImageButton((ImTextureID)textureResource->GetHWResource(), { textureResource->GetWidth() * 0.25f, textureResource->GetHeight() * 0.25f }, { 0.0f, 0.0f });
+                    }
+                    else if (RenderSurfaceResource* surfaceResource = resource->As<RenderSurfaceResource>())
+                    {
+                        ImGui::ImageButton((ImTextureID)surfaceResource->GetHWResource(), { surfaceResource->GetWidth() * 0.25f, surfaceResource->GetHeight() * 0.25f }, { 0.0f, 0.0f });
+                    }
+
+                    ImGui::PopItemWidth();
+                    ImGui::Columns(1);
+
+                    ImGui::Separator();
+                }
+            }
+        }
+
+        ImGui::End();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    const Texture* Renderer::GetFinalImage() const
+    {
+        const ResourceScheduler& resourceScheduler = m_ResourceSchedulers[Application::Get().GetCurrentFrameIndex()];
+
+        ATOM_ENGINE_ASSERT(!m_RenderGraph.GetOrderedPasses().empty(), "Render graph has no render passes");
+        RenderPassID finalPassID = m_RenderGraph.GetOrderedPasses().back();
+        const ResourceID& finalOutputResourceID = resourceScheduler.GetPassOutputs(finalPassID).back()->GetResourceID();
+        const RenderSurfaceResource* finalOutput = resourceScheduler.GetResource(finalOutputResourceID)->As<RenderSurfaceResource>();
+
+        ATOM_ENGINE_ASSERT(finalOutput);
+        return (Texture*)finalOutput->GetHWResource();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::BuildRenderPasses()
+    {
+        m_RenderGraph.AddRenderPass<SkyBoxPass>("SkyBoxPass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight);
+        m_RenderGraph.AddRenderPass<GeometryPass>("StaticGeometryPass", m_FrameData.StaticMeshes, false);
+        m_RenderGraph.AddRenderPass<GeometryPass>("AnimatedGeometryPass", m_FrameData.AnimatedMeshes, true);
+        m_RenderGraph.AddRenderPass<CompositePass>("CompositePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.RenderToSwapChain);
+
+        m_RenderGraph.Build(m_ResourceSchedulers[Application::Get().GetCurrentFrameIndex()]);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::UpdateFrameGPUBuffers()
+    {
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
+
+        // Update lights structured buffer data
+        if (!m_FrameData.Lights.empty())
+        {
+            if (!m_FrameData.LightsGPUBuffers[currentFrameIdx] || m_FrameData.LightsGPUBuffers[currentFrameIdx]->GetElementCount() != m_FrameData.Lights.size())
+            {
+                BufferDescription sbDesc;
+                sbDesc.ElementCount = m_FrameData.Lights.size();
+                sbDesc.ElementSize = sizeof(Light);
+                sbDesc.IsDynamic = true;
+
+                m_FrameData.LightsGPUBuffers[currentFrameIdx] = CreateRef<StructuredBuffer>(sbDesc, "LightsGPUBuffer");
+            }
+
+            void* lightsData = m_FrameData.LightsGPUBuffers[currentFrameIdx]->Map(0, 0);
+            memcpy(lightsData, m_FrameData.Lights.data(), sizeof(Light) * m_FrameData.Lights.size());
+            m_FrameData.LightsGPUBuffers[currentFrameIdx]->Unmap();
+        }
+
+        // Update bone transforms structured buffer data
+        if (!m_FrameData.BoneTransforms.empty())
+        {
+            if (!m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx] || m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx]->GetElementCount() != m_FrameData.BoneTransforms.size())
+            {
+                BufferDescription animSBDesc;
+                animSBDesc.ElementCount = m_FrameData.BoneTransforms.size();
+                animSBDesc.ElementSize = sizeof(glm::mat4);
+                animSBDesc.IsDynamic = true;
+
+                m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx] = CreateRef<StructuredBuffer>(animSBDesc, "BoneTransformsGPUBuffer");
+            }
+
+            void* boneTransformData = m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx]->Map(0, 0);
+            memcpy(boneTransformData, m_FrameData.BoneTransforms.data(), sizeof(glm::mat4) * m_FrameData.BoneTransforms.size());
+            m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx]->Unmap();
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::RecordCommandBuffers()
+    {
+        u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
+
+        SIG::FrameParams frameSIG;
+        frameSIG.SetViewMatrix(m_FrameData.ViewMatrix);
+        frameSIG.SetProjectionMatrix(m_FrameData.ProjectionMatrix);
+        frameSIG.SetInvViewProjMatrix(m_FrameData.InvViewProjMatrix);
+        frameSIG.SetCameraPosition(m_FrameData.CameraPosition);
+        frameSIG.SetCameraExposure(m_FrameData.CameraExposure);
+        frameSIG.SetNumLights(m_FrameData.Lights.size());
+        frameSIG.SetLights(m_FrameData.LightsGPUBuffers[currentFrameIdx].get());
+        frameSIG.SetBoneTransforms(m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx].get());
+        frameSIG.SetEnvironmentMap(m_FrameData.EnvironmentMaps[currentFrameIdx].get());
+        frameSIG.SetIrradianceMap(m_FrameData.IrradianceMaps[currentFrameIdx].get());
+        frameSIG.SetBRDFMap(EngineResources::BRDFTexture.get());
+        frameSIG.SetEnvironmentMapSampler(EngineResources::LinearClampSampler.get());
+        frameSIG.SetIrradianceMapSampler(EngineResources::LinearClampSampler.get());
+        frameSIG.SetBRDFMapSampler(EngineResources::LinearClampSampler.get());
+
+        frameSIG.Compile();
+
+        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+        GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
+
+        for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
+        {
+            for (const RenderGraph::RenderGraphEvent& event : m_RenderGraph.GetRenderGraphEvents((CommandQueueType)queueIdx))
+            {
+                if (const RenderGraph::RedirectedTransitionsEvent* transitionEventPtr = std::get_if<RenderGraph::RedirectedTransitionsEvent>(&event))
+                {
+                    transitionEventPtr->CmdBuffer->Begin();
+                    PIXBeginEvent(transitionEventPtr->CmdBuffer->GetCommandList().Get(), 0, fmt::format("RedirectedTransitions_DepGroup{}", transitionEventPtr->DepGroupIndex).c_str());
+
+                    for (const TransitionBarrier& barrier : *(transitionEventPtr->RedirectedTransitionBarriers))
+                        transitionEventPtr->CmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
+
+                    PIXEndEvent(transitionEventPtr->CmdBuffer->GetCommandList().Get());
+                    transitionEventPtr->CmdBuffer->End();
+                }
+                else if (const RenderGraph::RenderPassEvent* passEventPtr = std::get_if<RenderGraph::RenderPassEvent>(&event))
+                {
+                    passEventPtr->CmdBuffer->Begin();
+                    PIXBeginEvent(passEventPtr->CmdBuffer->GetCommandList().Get(), 0, passEventPtr->RenderPass->GetName().c_str());
+
+                    for (const TransitionBarrier& barrier : *(passEventPtr->TransitionBarriers))
+                        passEventPtr->CmdBuffer->TransitionResource(barrier.GetResource(), barrier.GetAfterState());
+
+                    for (const UAVBarrier& barrier : *(passEventPtr->UAVBarriers))
+                        passEventPtr->CmdBuffer->AddUAVBarrier(barrier.GetResource());
+
+                    passEventPtr->CmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+
+                    // Set pipeline state and Frame SIG
+                    const ResourceScheduler& resourceScheduler = m_ResourceSchedulers[currentFrameIdx];
+                    const Pipeline* pipeline = resourceScheduler.GetPassPipeline(passEventPtr->RenderPass->GetID());
+                    ATOM_ENGINE_ASSERT(pipeline, fmt::format("No pipline set for pass {}", passEventPtr->RenderPass->GetName().c_str()).c_str());
+
+                    if (const GraphicsPipeline* gfxPipeline = dynamic_cast<const GraphicsPipeline*>(pipeline))
+                    {
+                        passEventPtr->CmdBuffer->SetGraphicsPipeline(gfxPipeline);
+                        passEventPtr->CmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, frameSIG.GetConstantBuffer().get());
+                        passEventPtr->CmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, frameSIG.GetResourceTable(), frameSIG.GetSamplerTable());
+                    }
+                    else if (const ComputePipeline* computePipeline = dynamic_cast<const ComputePipeline*>(pipeline))
+                    {
+                        passEventPtr->CmdBuffer->SetComputePipeline(computePipeline);
+                        passEventPtr->CmdBuffer->SetComputeConstants(ShaderBindPoint::Frame, frameSIG.GetConstantBuffer().get());
+                        passEventPtr->CmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Frame, frameSIG.GetResourceTable(), frameSIG.GetSamplerTable());
+                    }
+
+                    RenderPassContext passContext(passEventPtr->RenderPass->GetID(), passEventPtr->CmdBuffer, resourceScheduler);
+                    passEventPtr->RenderPass->Execute(passContext);
+
+                    PIXEndEvent(passEventPtr->CmdBuffer->GetCommandList().Get());
+                    passEventPtr->CmdBuffer->End();
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    void Renderer::ExecuteCommandBuffers()
+    {
+        Vector<Ref<CommandBuffer>> cmdBufferBatches[u32(CommandQueueType::NumTypes)];
+
+        for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
+        {
+            CommandQueue* cmdQueue = Device::Get().GetCommandQueue(CommandQueueType(queueIdx));
+
+            for (const RenderGraph::RenderGraphEvent& event : m_RenderGraph.GetRenderGraphEvents((CommandQueueType)queueIdx))
+            {
+                if (const RenderGraph::RedirectedTransitionsEvent* transitionEventPtr = std::get_if<RenderGraph::RedirectedTransitionsEvent>(&event))
+                {
+                    if (!transitionEventPtr->SignalsToWait.empty())
+                    {
+                        // If we have fences to wait for, execute the current cmd buffer batch and wait
+                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
+                        cmdBufferBatches[queueIdx].clear();
+
+                        for (u32 i = 0; i < transitionEventPtr->SignalsToWait.size(); i++)
+                            cmdQueue->WaitFence(transitionEventPtr->SignalsToWait[i]->Fence, transitionEventPtr->SignalsToWait[i]->FenceValue);
+                    }
+
+                    // Execute redirected transitions and signal fence
+                    cmdQueue->ExecuteCommandList(transitionEventPtr->CmdBuffer);
+                    cmdQueue->SignalFence(transitionEventPtr->Signal.Fence, transitionEventPtr->Signal.FenceValue);
+                }
+                else if (const RenderGraph::RenderPassEvent* passEventPtr = std::get_if<RenderGraph::RenderPassEvent>(&event))
+                {
+                    if (!passEventPtr->SignalsToWait.empty())
+                    {
+                        // If we have fences to wait for, flush the current cmd buffer batch and wait
+                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
+                        cmdBufferBatches[queueIdx].clear();
+
+                        for (u32 i = 0; i < passEventPtr->SignalsToWait.size(); i++)
+                            cmdQueue->WaitFence(passEventPtr->SignalsToWait[i]->Fence, passEventPtr->SignalsToWait[i]->FenceValue);
+                    }
+
+                    if (passEventPtr->CmdBuffer)
+                        cmdBufferBatches[queueIdx].push_back(passEventPtr->CmdBuffer);
+
+                    if (passEventPtr->Signal.Fence)
+                    {
+                        // If we have fences to signal, flush the current cmd buffer batch and signal
+                        cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
+                        cmdQueue->SignalFence(passEventPtr->Signal.Fence, passEventPtr->Signal.FenceValue);
+
+                        cmdBufferBatches[queueIdx].clear();
+                    }
+                }
+            }
+        }
+
+        // Flush any remaining cmd buffers
+        for (u32 queueIdx = 0; queueIdx < (u32)CommandQueueType::NumTypes; queueIdx++)
+        {
+            CommandQueue* cmdQueue = Device::Get().GetCommandQueue(CommandQueueType(queueIdx));
+            cmdQueue->ExecuteCommandLists(cmdBufferBatches[queueIdx]);
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -160,34 +445,37 @@ namespace Atom
         envMapDesc.ArraySize = 6;
         envMapDesc.MipLevels = (u32)glm::log2((f32)mapSize) + 1;
         envMapDesc.Flags = TextureFlags::ShaderResource | TextureFlags::UnorderedAccess | TextureFlags::CubeMap;
+        envMapDesc.InitialState = ResourceState::UnorderedAccess;
 
         Ref<Texture> envMapUnfiltered = CreateRef<Texture>(envMapDesc, fmt::format("{}(Unfiltered)", debugName).c_str());
 
         {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ShaderLibrary::Get().Get<ComputeShader>("EquirectToCubeMap");
+            Ref<ComputePipeline> pipeline = PipelineLibrary::Get().LoadComputePipeline(pipelineDesc, "EquirectToCubeMapPipeline");
+
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
 
-            auto& d3dDevice = Device::Get().GetD3DDevice();
-
-            DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
+            SIG::EquirectToCubeMapParams params;
+            params.SetInputTexture(equirectTexture.get());
+            params.SetInputTextureSampler(EngineResources::LinearRepeatSampler.get());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(equirectTexture.get(), ResourceState::NonPixelShaderRead);
-            computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), ResourceState::UnorderedAccess);
-            computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("EquirectToCubeMapPipeline").get());
+            computeCmdBuffer->SetComputePipeline(pipeline.get());
             computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
 
             for (u32 mip = 0; mip < envMapDesc.MipLevels; mip++)
             {
                 Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX);
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { equirectTexture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
-                DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
-                Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
+                params.SetMipLevel(mip);
+                params.SetOutputTexture(mipView.get());
+                params.Compile();
 
-                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &mip, 1);
-                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
+                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 1);
+                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
                 computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
             }
 
@@ -223,16 +511,20 @@ namespace Atom
         }
 
         {
+            ComputePipelineDescription pipelineDesc;
+            pipelineDesc.Shader = ShaderLibrary::Get().Get<ComputeShader>("CubeMapPrefilter");
+            Ref<ComputePipeline> pipeline = PipelineLibrary::Get().LoadComputePipeline(pipelineDesc, "CubeMapPrefilterPipeline");
+
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "CubeMapPreFilter");
 
-            DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-            Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
+            SIG::CubeMapPrefilterParams params;
+            params.SetEnvMapUnfiltered(envMapUnfiltered.get());
+            params.SetEnvMapSampler(EngineResources::LinearRepeatSampler.get());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), ResourceState::NonPixelShaderRead);
-            computeCmdBuffer->TransitionResource(envMap.get(), ResourceState::UnorderedAccess);
-            computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapPrefilterPipeline").get());
+            computeCmdBuffer->SetComputePipeline(pipeline.get());
             computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
 
             u32 width = glm::max(envMapDesc.Width / 2, 1u);
@@ -241,14 +533,14 @@ namespace Atom
             for (u32 mip = 1; mip < envMapDesc.MipLevels; mip++)
             {
                 Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX);
-                D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { envMapUnfiltered->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
-
-                DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
-                Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
-
                 f32 roughness = mip / glm::max(envMapDesc.MipLevels - 1.0f, 1.0f);
-                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &roughness, 1);
-                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
+
+                params.SetEnvMap(mipView.get());
+                params.SetRoughness(roughness);
+                params.Compile();
+
+                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 1);
+                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
                 computeCmdBuffer->Dispatch(glm::max(width / 32, 1u), glm::max(height / 32, 1u), 6);
 
                 width = glm::max(width / 2, 1u);
@@ -285,6 +577,10 @@ namespace Atom
         gfxCmdBuffer->End();
         gfxQueue->ExecuteCommandList(gfxCmdBuffer);
 
+        ComputePipelineDescription pipelineDesc;
+        pipelineDesc.Shader = ShaderLibrary::Get().Get<ComputeShader>("CubeMapIrradiance");
+        Ref<ComputePipeline> pipeline = PipelineLibrary::Get().LoadComputePipeline(pipelineDesc, "CubeMapIrradiancePipeline");
+
         TextureDescription irradianceMapDesc;
         irradianceMapDesc.Format = TextureFormat::RGBA16F;
         irradianceMapDesc.Width = mapSize;
@@ -295,22 +591,20 @@ namespace Atom
 
         Ref<Texture> irradianceMap = CreateRef<Texture>(irradianceMapDesc, fmt::format("{}(IrradianceMap)", debugName).c_str());
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { environmentMap->GetSRV()->GetDescriptor(), irradianceMap->GetUAV()->GetDescriptor() };
-
-        DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
-        Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
-
-        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-        Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Repeat)->GetDescriptor(), DescriptorHeapType::Sampler);
-
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateIrradianceMap");
+
+        SIG::CubeMapIrradianceParams params;
+        params.SetEnvMap(environmentMap.get());
+        params.SetIrradianceMap(irradianceMap.get());
+        params.SetEnvMapSampler(EngineResources::LinearRepeatSampler.get());
+        params.Compile();
 
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
         computeCmdBuffer->TransitionResource(irradianceMap.get(), ResourceState::UnorderedAccess);
-        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("CubeMapIrradiancePipeline").get());
+        computeCmdBuffer->SetComputePipeline(pipeline.get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
+        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
         computeCmdBuffer->TransitionResource(environmentMap.get(), ResourceState::Common);
         computeCmdBuffer->TransitionResource(irradianceMap.get(), ResourceState::Common);
@@ -326,79 +620,45 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture> Renderer::CreateBRDFTexture()
-    {
-        TextureDescription brdfDesc;
-        brdfDesc.Width = 256;
-        brdfDesc.Height = 256;
-        brdfDesc.Format = TextureFormat::RG16F;
-        brdfDesc.MipLevels = 1;
-        brdfDesc.Flags = TextureFlags::UnorderedAccess | TextureFlags::ShaderResource;
-
-        Ref<Texture> brdfTexture = CreateRef<Texture>(brdfDesc, "BRDFTexture(Renderer)");
-
-        GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
-        DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(1);
-        Device::Get().CopyDescriptors(resourceTable, 1, &brdfTexture->GetUAV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
-
-        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
-        Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
-        computeCmdBuffer->Begin();
-        computeCmdBuffer->TransitionResource(brdfTexture.get(), ResourceState::UnorderedAccess);
-        computeCmdBuffer->SetComputePipeline(ms_PipelineLibrary.Get<ComputePipeline>("BRDFPipeline").get());
-        computeCmdBuffer->SetDescriptorHeaps(resourceHeap, nullptr);
-        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable);
-        computeCmdBuffer->Dispatch(glm::max(brdfDesc.Width / 32, 1u), glm::max(brdfDesc.Height / 32, 1u), 1);
-        computeCmdBuffer->TransitionResource(brdfTexture.get(), ResourceState::Common);
-        computeCmdBuffer->End();
-        computeQueue->ExecuteCommandList(computeCmdBuffer);
-
-        return brdfTexture;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::GenerateMips(Ref<Texture> texture)
     {
-        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
-        PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
-
         GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
         GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
+
+        CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
+
+        ComputePipelineDescription pipelineDesc;
+        pipelineDesc.Shader = ShaderLibrary::Get().Get<ComputeShader>("GenerateMips");
+        Ref<ComputePipeline> pipeline = PipelineLibrary::Get().LoadComputePipeline(pipelineDesc, "GenerateMipsPipeline");
+
+        PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
+
+        SIG::GenerateMipsParams params;
+        params.SetSrcTexture(texture.get());
+        params.SetBilinearClamp(EngineResources::LinearClampSampler.get());
 
         // Run compute shader for each mip
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
-        computeCmdBuffer->SetComputePipeline(Renderer::GetPipelineLibrary().Get<ComputePipeline>("GenerateMipsPipeline").get());
+        computeCmdBuffer->SetComputePipeline(pipeline.get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
 
         u32 width = glm::max(texture->GetWidth() / 2, 1u);
         u32 height = glm::max(texture->GetHeight() / 2, 1u);
 
-        struct GenerateMipCB
-        {
-            glm::vec2 TexelSize;
-            u32 TopMipLevel;
-        };
-
-        DescriptorAllocation samplerTable = samplerHeap->AllocateTransient(1);
-        Device::Get().CopyDescriptors(samplerTable, 1, &Renderer::GetSampler(TextureFilter::Linear, TextureWrap::Clamp)->GetDescriptor(), DescriptorHeapType::Sampler);
-
         for (u32 mip = 1; mip < texture->GetMipLevels(); mip++)
         {
             Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX);
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptors[] = { texture->GetSRV()->GetDescriptor(), mipView->GetUAV()->GetDescriptor() };
 
-            DescriptorAllocation resourceTable = resourceHeap->AllocateTransient(_countof(cpuDescriptors));
-            Device::Get().CopyDescriptors(resourceTable, _countof(cpuDescriptors), cpuDescriptors, DescriptorHeapType::ShaderResource);
-
-            GenerateMipCB constants;
-            constants.TexelSize = { 1.0f / width, 1.0f / height };
-            constants.TopMipLevel = mip - 1;
+            params.SetDstTexture(mipView.get());
+            params.SetTexelSize({ 1.0f / width, 1.0f / height });
+            params.SetTopMipLevel(mip - 1);
+            params.Compile();
 
             computeCmdBuffer->TransitionResource(texture.get(), ResourceState::NonPixelShaderRead, mip - 1);
             computeCmdBuffer->TransitionResource(texture.get(), ResourceState::UnorderedAccess, mip);
-            computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, &constants, 3);
-            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, resourceTable, samplerTable);
+            computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 3);
+            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
             computeCmdBuffer->AddUAVBarrier(texture.get());
@@ -411,11 +671,11 @@ namespace Atom
             computeCmdBuffer->TransitionResource(texture.get(), ResourceState::Common, mip);
 
         computeCmdBuffer->End();
-
         computeQueue->ExecuteCommandList(computeCmdBuffer);
-        computeQueue->Flush();
 
         PIXEndEvent(computeQueue->GetD3DCommandQueue().Get());
+
+        computeQueue->Flush();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -509,48 +769,6 @@ namespace Atom
         copyQueue->Flush();
 
         return readbackBuffer;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::EndFrame()
-    {
-        PIXEndEvent(Device::Get().GetCommandQueue(CommandQueueType::Graphics)->GetD3DCommandQueue().Get());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const RendererConfig& Renderer::GetConfig()
-    {
-        return ms_Config;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    u32 Renderer::GetCurrentFrameIndex()
-    {
-        return Application::Get().GetWindow().GetSwapChain()->GetCurrentBackBufferIndex();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    u32 Renderer::GetFramesInFlight()
-    {
-        return ms_Config.FramesInFlight;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    ShaderLibrary& Renderer::GetShaderLibrary()
-    {
-        return ms_ShaderLibrary;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    PipelineLibrary& Renderer::GetPipelineLibrary()
-    {
-        return ms_PipelineLibrary;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<Texture> Renderer::GetBRDF()
-    {
-        return ms_BRDFTexture;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -6,13 +6,13 @@
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
-    RenderPassContext::RenderPassContext(RenderPassID passID, Ref<CommandBuffer> cmdBuffer, const ResourceScheduler& resourceScheduler, const SceneFrameData& sceneData)
-        : m_PassID(passID), m_CommandBuffer(cmdBuffer), m_ResourceScheduler(resourceScheduler), m_SceneData(sceneData)
+    RenderPassContext::RenderPassContext(RenderPassID passID, Ref<CommandBuffer> cmdBuffer, const ResourceScheduler& resourceScheduler)
+        : m_PassID(passID), m_CommandBuffer(cmdBuffer), m_ResourceScheduler(resourceScheduler)
     {
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<TextureUAV>* RenderPassContext::GetUA(ResourceID_UA id) const
+    ResourceView<TextureUAV>* RenderPassContext::GetUA(const ResourceID_UA& id) const
     {
         IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No UAV found for resource");
@@ -21,7 +21,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<TextureSRV>* RenderPassContext::GetSR(ResourceID_UA id) const
+    ResourceView<TextureSRV>* RenderPassContext::GetSR(const ResourceID_UA& id) const
     {
         IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
@@ -30,7 +30,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<SurfaceRTV>* RenderPassContext::GetRT(ResourceID_RT id) const
+    ResourceView<SurfaceRTV>* RenderPassContext::GetRT(const ResourceID_RT& id) const
     {
         IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No RTV found for resource");
@@ -39,7 +39,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(ResourceID_RT id) const
+    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(const ResourceID_RT& id) const
     {
         IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
@@ -48,7 +48,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<SurfaceDSV_RW>* RenderPassContext::GetDS_RW(ResourceID_DS id) const
+    ResourceView<SurfaceDSV_RW>* RenderPassContext::GetDS_RW(const ResourceID_DS& id) const
     {
         IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No DSV found for resource");
@@ -57,7 +57,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<SurfaceDSV_RO>* RenderPassContext::GetDS_RO(ResourceID_DS id) const
+    ResourceView<SurfaceDSV_RO>* RenderPassContext::GetDS_RO(const ResourceID_DS& id) const
     {
         IResourceView* view = FindOutput(id);
         ATOM_ENGINE_ASSERT(view, "No DSV found for resource");
@@ -66,7 +66,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(ResourceID_DS id) const
+    ResourceView<SurfaceSRV>* RenderPassContext::GetSR(const ResourceID_DS& id) const
     {
         IResourceView* view = FindInput(id);
         ATOM_ENGINE_ASSERT(view, "No SRV found for resource");
@@ -75,25 +75,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    Ref<ConstantBuffer> RenderPassContext::GetFrameConstantBuffer() const
-    {
-        return m_ResourceScheduler.GetFrameResources().ConstantBuffer;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const DescriptorAllocation& RenderPassContext::GetFrameResourceTable() const
-    {
-        return m_ResourceScheduler.GetFrameResources().ResourceTable;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    const DescriptorAllocation& RenderPassContext::GetFrameSamplerTable() const
-    {
-        return m_ResourceScheduler.GetFrameResources().SamplerTable;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    IResourceView* RenderPassContext::FindInput(ResourceID id) const
+    IResourceView* RenderPassContext::FindInput(const ResourceID& id) const
     {
         for (const auto& view : m_ResourceScheduler.GetPassInputs(m_PassID))
             if (view->GetResourceID() == id)
@@ -103,7 +85,7 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    IResourceView* RenderPassContext::FindOutput(ResourceID id) const
+    IResourceView* RenderPassContext::FindOutput(const ResourceID& id) const
     {
         for (const auto& view : m_ResourceScheduler.GetPassOutputs(m_PassID))
             if (view->GetResourceID() == id)

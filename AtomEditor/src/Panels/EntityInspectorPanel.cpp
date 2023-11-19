@@ -477,6 +477,7 @@ namespace Atom
 						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TEXTURE_CUBE"))
 						{
 							component.EnvironmentMap = AssetManager::GetAsset<TextureCube>(*(UUID*)payload->Data, true);
+							component.IrradianceMap = component.EnvironmentMap ? Renderer::CreateIrradianceMap(component.EnvironmentMap->GetResource(), 32, "") : nullptr;
 						}
 
 						ImGui::EndDragDropTarget();
@@ -753,7 +754,7 @@ namespace Atom
 								else if (varType == ScriptVariableType::Material)
 								{
 									ScriptWrappers::Material data = scriptInstance->GetMemberValue<ScriptWrappers::Material>(name);
-									Ref<MaterialAsset> material = data.GetMaterial();
+									Ref<Material> material = data.GetMaterial();
 
 									ImGui::InputText(imguiID.c_str(), material ? (char*)material->GetAssetFilepath().stem().string().c_str() : "None", 50, ImGuiInputTextFlags_ReadOnly);
 
