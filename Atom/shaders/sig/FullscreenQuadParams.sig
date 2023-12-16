@@ -1,5 +1,4 @@
-ShaderInputGroup<BindPoint::Instance> FullscreenQuadParams
+ShaderInputGroup FullscreenQuadParams<BindTo=DefaultLayout::Instance>
 {
     Texture2D<float4> Texture;
-    SamplerState      TextureSampler;
 }

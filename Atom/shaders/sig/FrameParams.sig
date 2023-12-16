@@ -9,7 +9,7 @@ struct Light
     uint   LightType;
 }
 
-ShaderInputGroup<BindPoint::Frame> FrameParams
+ShaderInputGroup FrameParams<BindTo=DefaultLayout::Frame>
 {
     matrix                   ViewMatrix;
     matrix                   ProjectionMatrix;

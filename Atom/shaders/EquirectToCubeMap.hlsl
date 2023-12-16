@@ -1,8 +1,10 @@
 #shadertype cs
 
 #include "CommonConstants.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/EquirectToCubeMapParams.hlsli"
 
+static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
 static EquirectToCubeMapParams g_EquirectToCubeMapParams = CreateEquirectToCubeMapParams();
 
 float3 GetSamplingVector(uint3 ThreadID, float outputWidth, float outputHeight)
@@ -23,6 +25,7 @@ float3 GetSamplingVector(uint3 ThreadID, float outputWidth, float outputHeight)
 	return normalize(ret);
 }
 
+[RootSignature(DefaultLayout_Compute)]
 [numthreads(32, 32, 1)]
 void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 {
@@ -34,7 +37,7 @@ void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 	float phi = atan2(v.z, v.x);
 	float theta = acos(v.y);
 
-    float4 color = g_EquirectToCubeMapParams.InputTexture.SampleLevel(g_EquirectToCubeMapParams.InputTextureSampler, float2(phi / TwoPI, theta / PI), g_EquirectToCubeMapParams.MipLevel);
+    float4 color = g_EquirectToCubeMapParams.InputTexture.SampleLevel(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, float2(phi / TwoPI, theta / PI), g_EquirectToCubeMapParams.MipLevel);
 
     g_EquirectToCubeMapParams.OutputTexture[ThreadID] = color;
 }

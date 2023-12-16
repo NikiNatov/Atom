@@ -1,6 +1,7 @@
 #shadertype cs
 
 #include "PBRCommon.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/CubeMapIrradianceParams.hlsli"
 
 float3 SampleHemisphere(float u1, float u2)
@@ -9,8 +10,10 @@ float3 SampleHemisphere(float u1, float u2)
 	return float3(cos(TwoPI * u2) * u1p, sin(TwoPI * u2) * u1p, u1);
 }
 
+static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
 static CubeMapIrradianceParams g_CubeMapIrradianceParams = CreateCubeMapIrradianceParams();
 
+[RootSignature(DefaultLayout_Compute)]
 [numthreads(32, 32, 1)]
 void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 {
@@ -29,7 +32,7 @@ void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 		float3 Li = TangentToWorld(SampleHemisphere(u.x, u.y), N, S, T);
 		float cosTheta = max(0.0, dot(Li, N));
 
-        irradiance += 2.0 * g_CubeMapIrradianceParams.EnvMap.SampleLevel(g_CubeMapIrradianceParams.EnvMapSampler, Li, 0).rgb * cosTheta;
+        irradiance += 2.0 * g_CubeMapIrradianceParams.EnvMap.SampleLevel(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, Li, 0).rgb * cosTheta;
     }
 	irradiance /= float(NumSamples);
 

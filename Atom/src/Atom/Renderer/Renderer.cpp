@@ -340,14 +340,12 @@ namespace Atom
                     if (const GraphicsPipeline* gfxPipeline = dynamic_cast<const GraphicsPipeline*>(pipeline))
                     {
                         passEventPtr->CmdBuffer->SetGraphicsPipeline(gfxPipeline);
-                        passEventPtr->CmdBuffer->SetGraphicsConstants(ShaderBindPoint::Frame, frameSIG.GetConstantBuffer().get());
-                        passEventPtr->CmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Frame, frameSIG.GetResourceTable(), frameSIG.GetSamplerTable());
+                        passEventPtr->CmdBuffer->SetGraphicsSIG(frameSIG);
                     }
                     else if (const ComputePipeline* computePipeline = dynamic_cast<const ComputePipeline*>(pipeline))
                     {
                         passEventPtr->CmdBuffer->SetComputePipeline(computePipeline);
-                        passEventPtr->CmdBuffer->SetComputeConstants(ShaderBindPoint::Frame, frameSIG.GetConstantBuffer().get());
-                        passEventPtr->CmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Frame, frameSIG.GetResourceTable(), frameSIG.GetSamplerTable());
+                        passEventPtr->CmdBuffer->SetComputeSIG(frameSIG);
                     }
 
                     RenderPassContext passContext(passEventPtr->RenderPass->GetID(), passEventPtr->CmdBuffer, resourceScheduler);
@@ -458,7 +456,6 @@ namespace Atom
 
             SIG::EquirectToCubeMapParams params;
             params.SetInputTexture(equirectTexture.get());
-            params.SetInputTextureSampler(EngineResources::LinearRepeatSampler.get());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
@@ -474,8 +471,7 @@ namespace Atom
                 params.SetOutputTexture(mipView.get());
                 params.Compile();
 
-                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 1);
-                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+                computeCmdBuffer->SetComputeSIG(params);
                 computeCmdBuffer->Dispatch(envMapDesc.Width / 32, envMapDesc.Height / 32, 6);
             }
 
@@ -519,7 +515,6 @@ namespace Atom
 
             SIG::CubeMapPrefilterParams params;
             params.SetEnvMapUnfiltered(envMapUnfiltered.get());
-            params.SetEnvMapSampler(EngineResources::LinearRepeatSampler.get());
 
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
@@ -539,8 +534,7 @@ namespace Atom
                 params.SetRoughness(roughness);
                 params.Compile();
 
-                computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 1);
-                computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+                computeCmdBuffer->SetComputeSIG(params);
                 computeCmdBuffer->Dispatch(glm::max(width / 32, 1u), glm::max(height / 32, 1u), 6);
 
                 width = glm::max(width / 2, 1u);
@@ -596,7 +590,6 @@ namespace Atom
         SIG::CubeMapIrradianceParams params;
         params.SetEnvMap(environmentMap.get());
         params.SetIrradianceMap(irradianceMap.get());
-        params.SetEnvMapSampler(EngineResources::LinearRepeatSampler.get());
         params.Compile();
 
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
@@ -604,7 +597,7 @@ namespace Atom
         computeCmdBuffer->TransitionResource(irradianceMap.get(), ResourceState::UnorderedAccess);
         computeCmdBuffer->SetComputePipeline(pipeline.get());
         computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
-        computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+        computeCmdBuffer->SetComputeSIG(params);
         computeCmdBuffer->Dispatch(glm::max(irradianceMapDesc.Width / 32, 1u), glm::max(irradianceMapDesc.Height / 32, 1u), 6);
         computeCmdBuffer->TransitionResource(environmentMap.get(), ResourceState::Common);
         computeCmdBuffer->TransitionResource(irradianceMap.get(), ResourceState::Common);
@@ -633,10 +626,6 @@ namespace Atom
 
         PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "GenerateMips");
 
-        SIG::GenerateMipsParams params;
-        params.SetSrcTexture(texture.get());
-        params.SetBilinearClamp(EngineResources::LinearClampSampler.get());
-
         // Run compute shader for each mip
         Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
         computeCmdBuffer->Begin();
@@ -650,6 +639,8 @@ namespace Atom
         {
             Ref<Texture> mipView = CreateRef<Texture>(*texture, mip, UINT32_MAX);
 
+            SIG::GenerateMipsParams params;
+            params.SetSrcTexture(texture.get());
             params.SetDstTexture(mipView.get());
             params.SetTexelSize({ 1.0f / width, 1.0f / height });
             params.SetTopMipLevel(mip - 1);
@@ -657,8 +648,7 @@ namespace Atom
 
             computeCmdBuffer->TransitionResource(texture.get(), ResourceState::NonPixelShaderRead, mip - 1);
             computeCmdBuffer->TransitionResource(texture.get(), ResourceState::UnorderedAccess, mip);
-            computeCmdBuffer->SetComputeConstants(ShaderBindPoint::Instance, params.GetRootConstantsData(), 3);
-            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+            computeCmdBuffer->SetComputeSIG(params);
             computeCmdBuffer->Dispatch(glm::max(width / 8, 1u), glm::max(height / 8, 1u), 1);
 
             computeCmdBuffer->AddUAVBarrier(texture.get());

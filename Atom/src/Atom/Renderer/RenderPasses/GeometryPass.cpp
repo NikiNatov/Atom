@@ -96,9 +96,8 @@ namespace Atom
             meshDrawParams.SetBoneTransformOffset(meshEntry.BoneTransformOffset);
             meshDrawParams.Compile();
 
-            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, meshDrawParams.GetRootConstantsData(), (sizeof(glm::mat4) + sizeof(u32)) / 4);
-            cmdBuffer->SetGraphicsConstants(ShaderBindPoint::Material, material->GetSIG()->GetRootConstantsData(), material->GetSIG()->GetRootConstantsCount());
-            cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Material, material->GetSIG()->GetResourceTable(), material->GetSIG()->GetSamplerTable());
+            cmdBuffer->SetGraphicsSIG(meshDrawParams);
+            cmdBuffer->SetGraphicsSIG(*material->GetSIG());
             cmdBuffer->SetVertexBuffer(meshEntry.Mesh->GetVertexBuffer().get());
             cmdBuffer->SetIndexBuffer(meshEntry.Mesh->GetIndexBuffer().get());
             cmdBuffer->DrawIndexed(submesh.IndexCount, 1, submesh.StartIndex, submesh.StartVertex, 0);

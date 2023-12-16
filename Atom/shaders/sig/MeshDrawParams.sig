@@ -1,4 +1,4 @@
-ShaderInputGroup<BindPoint::Instance> MeshDrawParams
+ShaderInputGroup MeshDrawParams<BindTo=DefaultLayout::Instance>
 {
     matrix Transform;
     uint   BoneTransformOffset;

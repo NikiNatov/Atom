@@ -11,6 +11,9 @@
 #include "Atom/Renderer/CommandBuffer.h"
 #include "Atom/Renderer/Pipeline.h"
 #include "Atom/Renderer/Buffer.h"
+#include "Atom/Renderer/EngineResources.h"
+
+#include <autogen/cpp/ImGuiPassParams.h>
 
 namespace Atom
 {
@@ -23,11 +26,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     ImGuiLayer::~ImGuiLayer()
     {
-        for(u32 i = 0; i < g_FramesInFlight; i++)
-            for (auto& [_, descriptor] : m_TextureCache[i])
-                Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(descriptor), true);
-
-        Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->Release(std::move(m_SamplerDescriptor), true);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -133,51 +131,21 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    DescriptorAllocation ImGuiLayer::GetTextureHandle(const Texture* texture)
+    const SIG::ImGuiTextureParams& ImGuiLayer::GetSIGForTexture(const Texture* texture)
     {
         u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
 
         if (m_TextureCache[currentFrameIndex].find(texture) == m_TextureCache[currentFrameIndex].end())
         {
-            DescriptorAllocation gpuDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->AllocatePersistent(1);
-            Device::Get().CopyDescriptors(gpuDescriptor, 1, &texture->GetSRV()->GetDescriptor(), DescriptorHeapType::ShaderResource);
-            m_TextureCache[currentFrameIndex].emplace(texture, gpuDescriptor);
-            return gpuDescriptor;
+            SIG::ImGuiTextureParams textureParams;
+            textureParams.SetTexture(texture);
+            textureParams.Compile();
+
+            m_TextureCache[currentFrameIndex].emplace(texture, std::move(textureParams));
+            return m_TextureCache[currentFrameIndex][texture];
         }
 
         return m_TextureCache[currentFrameIndex][texture];
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void ImGuiLayer::SetRenderState(Ref<CommandBuffer> commandBuffer)
-    {
-        struct TransformCB
-        {
-            f32 MVPMatrix[4][4];
-        };
-
-        ImDrawData* drawData = ImGui::GetDrawData();
-
-        TransformCB transformCB;
-        f32 L = drawData->DisplayPos.x;
-        f32 R = drawData->DisplayPos.x + drawData->DisplaySize.x;
-        f32 T = drawData->DisplayPos.y;
-        f32 B = drawData->DisplayPos.y + drawData->DisplaySize.y;
-        f32 mvp[4][4] =
-        {
-            { 2.0f / (R - L),     0.0f,               0.0f,       0.0f },
-            { 0.0f,               2.0f / (T - B),     0.0f,       0.0f },
-            { 0.0f,               0.0f,               0.5f,       0.0f },
-            { (R + L) / (L - R),  (T + B) / (B - T),  0.5f,       1.0f },
-        };
-        memcpy(&transformCB.MVPMatrix, mvp, sizeof(mvp));
-
-        u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
-        commandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
-        commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
-        commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
-        commandBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
-        commandBuffer->SetGraphicsConstants(ShaderBindPoint::Instance, &transformCB, 16);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -187,19 +155,8 @@ namespace Atom
 
         if (drawData->DisplaySize.x > 0.0f && drawData->DisplaySize.y > 0.0f)
         {
-            CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
-            RenderSurface* swapChainBuffer = Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get();
-
-            Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
-            commandBuffer->Begin();
-            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), ResourceState::RenderTarget);
-            commandBuffer->BeginRenderPass({ Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get() }, m_ClearRenderTarget);
-
             u32 currentFrameIndex = Application::Get().GetCurrentFrameIndex();
 
-            // Reset the texture cache for current frame
-            for (auto& [_, descriptor] : m_TextureCache[currentFrameIndex])
-                Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource)->Release(std::move(descriptor), true);
             m_TextureCache[currentFrameIndex].clear();
 
             // Create and grow vertex/index buffers if needed
@@ -243,12 +200,42 @@ namespace Atom
             m_IndexBuffers[currentFrameIndex]->Unmap();
 
             // Setup the rendering pipeline
-            SetRenderState(commandBuffer);
+            ImDrawData* drawData = ImGui::GetDrawData();
+
+            f32 L = drawData->DisplayPos.x;
+            f32 R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+            f32 T = drawData->DisplayPos.y;
+            f32 B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+            glm::mat4 mvpMatrix =
+            {
+                { 2.0f / (R - L),     0.0f,               0.0f,       0.0f },
+                { 0.0f,               2.0f / (T - B),     0.0f,       0.0f },
+                { 0.0f,               0.0f,               0.5f,       0.0f },
+                { (R + L) / (L - R),  (T + B) / (B - T),  0.5f,       1.0f },
+            };
+
+            CommandQueue* gfxQueue = Device::Get().GetCommandQueue(CommandQueueType::Graphics);
+            RenderSurface* swapChainBuffer = Application::Get().GetWindow().GetSwapChain()->GetBackBuffer().get();
+
+            Ref<CommandBuffer> commandBuffer = gfxQueue->GetCommandBuffer();
+            commandBuffer->Begin();
+            commandBuffer->TransitionResource(swapChainBuffer->GetTexture().get(), ResourceState::RenderTarget);
+            commandBuffer->BeginRenderPass({ swapChainBuffer }, m_ClearRenderTarget);
+            commandBuffer->SetVertexBuffer(m_VertexBuffers[currentFrameIndex].get());
+            commandBuffer->SetIndexBuffer(m_IndexBuffers[currentFrameIndex].get());
+            commandBuffer->SetGraphicsPipeline(m_Pipeline.get());
+            commandBuffer->SetDescriptorHeaps(Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource), Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler));
 
             // Render command lists
             u32 globalVtxOffset = 0;
             u32 globalIdxOffset = 0;
             ImVec2 clipOff = drawData->DisplayPos;
+
+            SIG::ImGuiPassParams imguiPassParams;
+            imguiPassParams.SetMVPMatrix(mvpMatrix);
+            imguiPassParams.Compile();
+
+            commandBuffer->SetGraphicsSIG(imguiPassParams);
 
             for (u32 n = 0; n < drawData->CmdListsCount; n++)
             {
@@ -261,9 +248,7 @@ namespace Atom
                     {
                         // User callback, registered via ImDrawList::AddCallback()
                         // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                        if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                            SetRenderState(commandBuffer);
-                        else
+                        if (pcmd->UserCallback != ImDrawCallback_ResetRenderState)
                             pcmd->UserCallback(cmdList, pcmd);
                     }
                     else
@@ -278,9 +263,10 @@ namespace Atom
                         // Apply Scissor/clipping rectangle, Bind texture, Draw
                         const D3D12_RECT r = { (LONG)clipMin.x, (LONG)clipMin.y, (LONG)clipMax.x, (LONG)clipMax.y };
                         Texture* texture = (Texture*)pcmd->GetTexID();
+
+                        commandBuffer->SetGraphicsSIG(GetSIGForTexture(texture));
                         commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
                         commandBuffer->TransitionResource(texture, ResourceState::GenericRead);
-                        commandBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, GetTextureHandle(texture), m_SamplerDescriptor);
                         commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
@@ -299,21 +285,6 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void ImGuiLayer::CreateGraphicsObjects()
     {
-        // Create sampler
-        D3D12_SAMPLER_DESC defaultSamplerDesc = {};
-        defaultSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        defaultSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        defaultSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        defaultSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        defaultSamplerDesc.MipLODBias = 0.f;
-        defaultSamplerDesc.MaxAnisotropy = 0;
-        defaultSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        defaultSamplerDesc.MinLOD = 0.f;
-        defaultSamplerDesc.MaxLOD = 0.f;
-
-        m_SamplerDescriptor = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler)->AllocatePersistent(1);
-        Device::Get().GetD3DDevice()->CreateSampler(&defaultSamplerDesc, m_SamplerDescriptor.GetBaseCpuDescriptor());
-
         // Create the pipeline
         GraphicsPipelineDescription pipelineDesc;
         pipelineDesc.Shader = ShaderLibrary::Get().Get<GraphicsShader>("ImGuiShader");

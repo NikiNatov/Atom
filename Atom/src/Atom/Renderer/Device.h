@@ -21,7 +21,7 @@ namespace Atom
         Device(GPUPreference gpuPreference, const char* debugName = "Unnamed Device");
         ~Device();
 
-        void CopyDescriptors(const DescriptorAllocation& destination, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType);
+        void CopyDescriptors(const DescriptorAllocation& destination, u32 offset, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType);
         void WaitIdle() const;
         void ReleaseResource(ID3D12Resource* resource, bool deferredRelease);
         void ProcessDeferredReleases(u32 frameIndex);

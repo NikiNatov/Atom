@@ -1,5 +1,6 @@
 #shadertype vs
 
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/MeshDrawParams.hlsli"
 #include "autogen/hlsl/FrameParams.hlsli"
 
@@ -13,7 +14,7 @@ struct VSInput
     float3 Bitangent : BITANGENT;
 };
 
-struct PSInput
+struct VSOutput
 {
     float4 PositionSV     : SV_POSITION;
     float3 Position       : POSITION;
@@ -26,9 +27,10 @@ struct PSInput
 static MeshDrawParams g_MeshDrawParams = CreateMeshDrawParams();
 static FrameParams g_FrameParams = CreateFrameParams();
 
-PSInput VSMain(in VSInput input)
+[RootSignature(DefaultLayout_Graphics)]
+VSOutput VSMain(in VSInput input)
 {
-    PSInput output;
+    VSOutput output;
     output.Position = mul(g_MeshDrawParams.Transform, float4(input.Position, 1.0)).xyz;
     output.UV = input.UV;
     output.Normal = normalize(mul((float3x3)g_MeshDrawParams.Transform, input.Normal));
@@ -42,6 +44,7 @@ PSInput VSMain(in VSInput input)
 
 #include "PBRCommon.hlsli"
 
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/MaterialPBRParams.hlsli"
 #include "autogen/hlsl/FrameParams.hlsli"
 
@@ -58,6 +61,7 @@ struct PSInput
 static MaterialPBRParams g_MaterialPBRParams = CreateMaterialPBRParams();
 static FrameParams g_FrameParams = CreateFrameParams();
 
+[RootSignature(DefaultLayout_Graphics)]
 float4 PSMain(in PSInput input) : SV_Target
 {
     float4 albedoColor = g_MaterialPBRParams.UseAlbedoMap ? g_MaterialPBRParams.AlbedoMap.Sample(g_MaterialPBRParams.AlbedoMapSampler, input.UV).rgba : g_MaterialPBRParams.AlbedoColor;

@@ -13,7 +13,7 @@ namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
     Shader::Shader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData)
-        : m_Name(name), m_ShaderType(ShaderType::Graphics), m_ShaderLayout(vsData, psData)
+        : m_Name(name), m_ShaderType(ShaderType::Graphics), m_ShaderReflection(vsData, psData)
     {
         HashBuilder hashBuilder;
 
@@ -27,7 +27,7 @@ namespace Atom
 
     // -----------------------------------------------------------------------------------------------------------------------------
     Shader::Shader(const String& name, const Vector<byte>& csData)
-        : m_Name(name), m_ShaderType(ShaderType::Compute), m_ShaderLayout(csData)
+        : m_Name(name), m_ShaderType(ShaderType::Compute), m_ShaderReflection(csData)
     {
         HashBuilder hashBuilder;
 

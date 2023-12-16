@@ -118,7 +118,7 @@ namespace Atom
         m_SamplerHeap = CreateScope<CPUDescriptorHeap>(DescriptorHeapType::Sampler, 1024, "SamplerCPUHeap");
 
         m_GpuResourceHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::ShaderResource, 10000, 5000, "ShaderResourceGPUHeap");
-        m_GpuSamplerHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::Sampler, 1048, 300, "ShaderResourceGPUHeap");
+        m_GpuSamplerHeap = CreateScope<GPUDescriptorHeap>(DescriptorHeapType::Sampler, 1048, 300, "SamplerGPUHeap");
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -174,9 +174,9 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Device::CopyDescriptors(const DescriptorAllocation& destination, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType)
+    void Device::CopyDescriptors(const DescriptorAllocation& destination, u32 offset, u32 descriptorCount, D3D12_CPU_DESCRIPTOR_HANDLE* srcDescriptors, DescriptorHeapType heapType)
     {
-        m_D3DDevice->CopyDescriptors(1, &destination.GetBaseCpuDescriptor(), &descriptorCount, descriptorCount, srcDescriptors, nullptr, Utils::AtomDescriptorHeapTypeToD3D12(heapType));
+        m_D3DDevice->CopyDescriptors(1, &destination.GetCpuDescriptor(offset), &descriptorCount, descriptorCount, srcDescriptors, nullptr, Utils::AtomDescriptorHeapTypeToD3D12(heapType));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

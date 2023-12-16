@@ -1,6 +1,7 @@
 #shadertype vs
 
-#include "autogen/hlsl/ImGuiParams.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
+#include "autogen/hlsl/ImGuiPassParams.hlsli"
 
 struct VSInput
 {
@@ -9,19 +10,20 @@ struct VSInput
     float4 Color    : COLOR;
 };
 
-struct PSInput
+struct VSOutput
 {
     float4 Position : SV_POSITION;
     float2 UV       : TEX_COORD;
     float4 Color    : COLOR;
 };
 
-static ImGuiParams g_ImGuiParams = CreateImGuiParams();
+static ImGuiPassParams g_ImGuiPassParams = CreateImGuiPassParams();
 
-PSInput VSMain(VSInput input)
+[RootSignature(DefaultLayout_Graphics)]
+VSOutput VSMain(VSInput input)
 {
-    PSInput output;
-    output.Position = mul(g_ImGuiParams.MVPMatrix, float4(input.Position.xy, 0.0f, 1.0f));
+    VSOutput output;
+    output.Position = mul(g_ImGuiPassParams.MVPMatrix, float4(input.Position.xy, 0.0f, 1.0f));
     output.Color = input.Color;
     output.UV = input.UV;
     return output;
@@ -29,7 +31,8 @@ PSInput VSMain(VSInput input)
 
 #shadertype ps
 
-#include "autogen/hlsl/ImGuiParams.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
+#include "autogen/hlsl/ImGuiInstanceParams.hlsli"
 
 struct PSInput
 {
@@ -38,9 +41,11 @@ struct PSInput
     float4 Color    : COLOR;
 };
 
-static ImGuiParams g_ImGuiParams = CreateImGuiParams();
+static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
+static ImGuiInstanceParams g_ImGuiInstanceParams = CreateImGuiInstanceParams();
 
+[RootSignature(DefaultLayout_Graphics)]
 float4 PSMain(PSInput input) : SV_Target
 {
-    return input.Color * g_ImGuiParams.Texture.Sample(g_ImGuiParams.TextureSampler, input.UV);
+    return input.Color * g_ImGuiInstanceParams.Texture.Sample(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, input.UV);
 }

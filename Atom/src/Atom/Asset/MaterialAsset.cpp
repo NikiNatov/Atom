@@ -11,36 +11,41 @@ namespace Atom
     Material::Material(const Ref<GraphicsShader>& shader, MaterialFlags flags)
         : Asset(AssetType::Material), m_Shader(shader), m_Flags(flags)
     {
-        const ShaderLayout& shaderLayout = m_Shader->GetShaderLayout();
-        const ShaderLayout::ShaderConstants& constants = shaderLayout.GetConstants(ShaderBindPoint::Material);
-        const ShaderLayout::ShaderDescriptorTable& resourceTable = shaderLayout.GetResourceDescriptorTable(ShaderBindPoint::Material);
-        const ShaderLayout::ShaderDescriptorTable& samplerTable = shaderLayout.GetSamplerDescriptorTable(ShaderBindPoint::Material);
+        const ShaderReflection& shaderReflection = m_Shader->GetShaderReflection();
+        const Vector<ShaderConstant>& constants = shaderReflection.GetConstants(MaterialSIG::BindPointType::ShaderSpace);
+        const Vector<ShaderResource>& resources = shaderReflection.GetResources(MaterialSIG::BindPointType::ShaderSpace);
+        const Vector<ShaderResource>& samplers = shaderReflection.GetSamplers(MaterialSIG::BindPointType::ShaderSpace);
 
         // Create constants data storage
-        m_ConstantsData.resize(constants.TotalSize, 0);
+        u32 cbSize = 0;
+
+        for (const ShaderConstant& constant : constants)
+            cbSize += constant.Size;
+
+        m_ConstantsData.resize(cbSize, 0);
 
         // Create textures array
-        for (const auto& resource : resourceTable.Resources)
+        for (const ShaderResource& resource : resources)
         {
             if (resource.Type == ShaderResourceType::Texture2D || resource.Type == ShaderResourceType::TextureCube)
                 m_Textures[resource.Register] = nullptr;
         }
 
-        // Create material SIG
-        m_MaterialSIG = CreateRef<CustomShaderInputGroup>(ShaderBindPoint::Material, constants.TotalSize, m_Textures.size(), samplerTable.Resources.size());
+        // Create SIG
+        m_MaterialSIG = CreateRef<MaterialSIG>(cbSize, m_Textures.size(), 0, m_Textures.size(), true);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void Material::SetTexture(const char* name, const Ref<TextureAsset>& texture)
     {
-        const ShaderLayout::ShaderResource* textureResource = FindTextureDeclaration(name);
+        const ShaderResource* textureResource = FindTextureDeclaration(name);
         if (!textureResource)
         {
             ATOM_ERROR("Texture with name \"{}\" does not exist", name);
             return;
         }
 
-        if (m_Textures[textureResource->Register]->GetUUID() == texture->GetUUID())
+        if (m_Textures[textureResource->Register] && m_Textures[textureResource->Register]->GetUUID() == texture->GetUUID())
             return;
 
         m_Textures[textureResource->Register] = texture;
@@ -50,7 +55,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     const Ref<TextureAsset>& Material::GetTexture(const char* name)
     {
-        const ShaderLayout::ShaderResource* resource = FindTextureDeclaration(name);
+        const ShaderResource* resource = FindTextureDeclaration(name);
         if (!resource)
         {
             ATOM_ERROR("Texture with name \"{}\" does not exist", name);
@@ -69,14 +74,14 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Material::UpdateForRendering()
     {
-        m_MaterialSIG->SetConstantData(0, m_ConstantsData.data(), m_ConstantsData.size());
+        m_MaterialSIG->SetConstant(0, m_ConstantsData.data(), m_ConstantsData.size());
 
         if (m_TexturesDirty)
         {
             for (auto& [slot, texture] : m_Textures)
             {
-                m_MaterialSIG->SetROTexture(slot, texture ? texture->GetResource() : EngineResources::BlackTexture);
-                m_MaterialSIG->SetSampler(slot, texture ? Renderer::GetSampler(texture->GetFilter(), texture->GetWrap()) : EngineResources::LinearClampSampler);
+                m_MaterialSIG->SetROTexture(slot, texture ? texture->GetResource().get() : EngineResources::BlackTexture.get());
+                m_MaterialSIG->SetSampler(slot, texture ? Renderer::GetSampler(texture->GetFilter(), texture->GetWrap()).get() : EngineResources::LinearClampSampler.get());
             }
 
             m_TexturesDirty = false;
@@ -88,7 +93,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     bool Material::HasUniform(const char* name, ShaderDataType type)
     {
-        if (const ShaderLayout::Uniform* uniform = FindUniformDeclaration(name))
+        if (const ShaderConstant* uniform = FindUniformDeclaration(name))
             return uniform->Type == type;
 
         return false;
@@ -104,11 +109,11 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ShaderLayout::Uniform* Material::FindUniformDeclaration(const char* name)
+    const ShaderConstant* Material::FindUniformDeclaration(const char* name)
     {
-        const auto& constants = m_Shader->GetShaderLayout().GetConstants(ShaderBindPoint::Material);
+        const Vector<ShaderConstant>& constants = m_Shader->GetShaderReflection().GetConstants(MaterialSIG::BindPointType::ShaderSpace);
 
-        for (const auto& uniform : constants.Uniforms)
+        for (const ShaderConstant& uniform : constants)
         {
             if (uniform.Name == name)
             {
@@ -120,11 +125,11 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ShaderLayout::ShaderResource* Material::FindTextureDeclaration(const char* name)
+    const ShaderResource* Material::FindTextureDeclaration(const char* name)
     {
-        const ShaderLayout::ShaderDescriptorTable& resourceTable = m_Shader->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
+        const Vector<ShaderResource>& resources = m_Shader->GetShaderReflection().GetResources(MaterialSIG::BindPointType::ShaderSpace);
 
-        for (const ShaderLayout::ShaderResource& resource : resourceTable.Resources)
+        for (const ShaderResource& resource : resources)
         {
             if (resource.Name == name && (resource.Type == ShaderResourceType::Texture2D || resource.Type == ShaderResourceType::TextureCube))
             {
@@ -136,15 +141,15 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    const ShaderLayout::ShaderResource* Material::FindSamplerDeclaration(const char* name)
+    const ShaderResource* Material::FindSamplerDeclaration(const char* name)
     {
-        const ShaderLayout::ShaderDescriptorTable& samplerTable = m_Shader->GetShaderLayout().GetSamplerDescriptorTable(ShaderBindPoint::Material);
+        const Vector<ShaderResource>& samplers = m_Shader->GetShaderReflection().GetSamplers(MaterialSIG::BindPointType::ShaderSpace);
 
-        for (const ShaderLayout::ShaderResource& resource : samplerTable.Resources)
+        for (const ShaderResource& sampler : samplers)
         {
-            if (resource.Name == name)
+            if (sampler.Name == name)
             {
-                return &resource;
+                return &sampler;
             }
         }
 

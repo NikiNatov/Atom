@@ -9,12 +9,17 @@ namespace SIGCompiler
         None = 0,
         Unknown,
         ShaderInputGroup,
+        ShaderInputLayout,
         BindPoint,
+        StaticSampler,
         BaseType,
         Matrix,
         Struct,
         ResourceType,
         Sampler,
+        BindToAnotation,
+        SamplerFilter,
+        SamplerWrap,
         Identifier,
         Number,
         LeftAngleBracket,
@@ -24,6 +29,9 @@ namespace SIGCompiler
         LeftSquareBracket,
         RightSquareBracket,
         SemiColon,
+        Colon,
+        Equals,
+        Comma,
     };
 
     struct SIGToken

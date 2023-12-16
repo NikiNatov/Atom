@@ -17,6 +17,7 @@ project "AtomEditor"
 	includedirs
 	{
 		"%{wks.location}/Atom/src",
+		"%{wks.location}/Atom/shaders",
 		"%{IncludeDirs.spd_log}",
 		"%{IncludeDirs.imgui}",
 		"%{IncludeDirs.glm}",

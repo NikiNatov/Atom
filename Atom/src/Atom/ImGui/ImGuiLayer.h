@@ -6,18 +6,19 @@
 
 #include "Atom/Renderer/DescriptorHeap.h"
 
+#include <autogen/cpp/ImGuiTextureParams.h>
+
 namespace Atom
 {
     class CommandBuffer;
     class GraphicsPipeline;
-    class Texture2D;
     class Texture;
     class VertexBuffer;
     class IndexBuffer;
 
     class ImGuiLayer : public Layer
     {
-        using TextureCache = HashMap<const Texture*, DescriptorAllocation>;
+        using TextureCache = HashMap<const Texture*, SIG::ImGuiTextureParams>;
     public:
         ImGuiLayer();
         virtual ~ImGuiLayer();
@@ -32,8 +33,7 @@ namespace Atom
         void SetClearRenderTarget(bool clear);
         void SetDarkTheme();
     private:
-        DescriptorAllocation GetTextureHandle(const Texture* texture);
-        void SetRenderState(Ref<CommandBuffer> commandBuffer);
+        const SIG::ImGuiTextureParams& GetSIGForTexture(const Texture* texture);
         void RenderDrawData();
         void CreateGraphicsObjects();
     private:
@@ -41,7 +41,6 @@ namespace Atom
         bool                      m_ClearRenderTarget = false;
         Ref<GraphicsPipeline>     m_Pipeline;
         Ref<Texture>              m_FontTexture;
-        DescriptorAllocation      m_SamplerDescriptor;
         Ref<VertexBuffer>         m_VertexBuffers[g_FramesInFlight];
         Ref<IndexBuffer>          m_IndexBuffers[g_FramesInFlight];
         TextureCache              m_TextureCache[g_FramesInFlight];

@@ -3,9 +3,7 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Core/DirectX12/DirectX12.h"
 #include "Atom/Renderer/DescriptorHeap.h"
-#include "Atom/Renderer/ShaderLayout.h"
-
-#include <d3dcompiler.h>
+#include "Atom/Renderer/ShaderReflection.h"
 
 namespace Atom
 {
@@ -23,16 +21,16 @@ namespace Atom
 
         inline const String& GetName() const { return m_Name; }
         inline u64 GetHash() const { return m_Hash; }
-        inline const ShaderLayout& GetShaderLayout() const { return m_ShaderLayout; }
+        inline const ShaderReflection& GetShaderReflection() const { return m_ShaderReflection; }
         inline ShaderType GetShaderType() const { return m_ShaderType; }
     protected:
         Shader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData);
         Shader(const String& name, const Vector<byte>& csData);
     protected:
-        String       m_Name;
-        u64          m_Hash;
-        ShaderType   m_ShaderType;
-        ShaderLayout m_ShaderLayout;
+        String           m_Name;
+        u64              m_Hash;
+        ShaderType       m_ShaderType;
+        ShaderReflection m_ShaderReflection;
     };
 
     class GraphicsShader : public Shader

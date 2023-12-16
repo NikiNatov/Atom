@@ -71,12 +71,13 @@ namespace Atom
             brdfParams.Compile();
 
             GPUDescriptorHeap* resourceHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::ShaderResource);
+            GPUDescriptorHeap* samplerHeap = Device::Get().GetGPUDescriptorHeap(DescriptorHeapType::Sampler);
             CommandQueue* computeQueue = Device::Get().GetCommandQueue(CommandQueueType::Compute);
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->SetComputePipeline(brdfPipeline.get());
-            computeCmdBuffer->SetDescriptorHeaps(resourceHeap, nullptr);
-            computeCmdBuffer->SetComputeDescriptorTables(ShaderBindPoint::Instance, brdfParams.GetResourceTable());
+            computeCmdBuffer->SetDescriptorHeaps(resourceHeap, samplerHeap);
+            computeCmdBuffer->SetComputeSIG(brdfParams);
             computeCmdBuffer->Dispatch(glm::max(brdfTextureDesc.Width / 32, 1u), glm::max(brdfTextureDesc.Height / 32, 1u), 1);
             computeCmdBuffer->TransitionResource(BRDFTexture.get(), ResourceState::Common);
             computeCmdBuffer->End();

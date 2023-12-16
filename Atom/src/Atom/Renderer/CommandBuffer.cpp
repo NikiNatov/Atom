@@ -13,6 +13,7 @@
 #include "Atom/Renderer/Renderer.h"
 #include "Atom/Renderer/ResourceBarrier.h"
 #include "Atom/Renderer/RenderSurface.h"
+#include "Atom/Renderer/SIG/ShaderInputGroupLayout.h"
 
 #include <glm\gtc\type_ptr.hpp>
 
@@ -222,103 +223,6 @@ namespace Atom
 
         m_CommandList->SetComputeRootSignature(pipeline->GetD3DDescription().pRootSignature);
         m_CommandList->SetPipelineState(pipeline->GetD3DPipeline().Get());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetGraphicsConstants(ShaderBindPoint bindPoint, const ConstantBuffer* constantBuffer)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
-        ATOM_ENGINE_ASSERT(bindPoint != ShaderBindPoint::Material && bindPoint != ShaderBindPoint::Instance, "Material and Instance bind points use root constants");
-
-        const auto& shaderConstants = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetConstants(bindPoint);
-        ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
-
-        m_CommandList->SetGraphicsRootConstantBufferView(shaderConstants.RootParameterIndex, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetComputeConstants(ShaderBindPoint bindPoint, const ConstantBuffer* constantBuffer)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentComputePipeline, "No compute pipeline is bound");
-        ATOM_ENGINE_ASSERT(bindPoint != ShaderBindPoint::Material && bindPoint != ShaderBindPoint::Instance, "Material and Instance bind points use root constants");
-
-        const auto& shaderConstants = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetConstants(bindPoint);
-        ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
-
-        m_CommandList->SetComputeRootConstantBufferView(shaderConstants.RootParameterIndex, constantBuffer->GetD3DResource()->GetGPUVirtualAddress());
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetGraphicsConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
-        ATOM_ENGINE_ASSERT(bindPoint == ShaderBindPoint::Material || bindPoint == ShaderBindPoint::Instance, "Only Material and Instance bind points use root constants");
-
-        const auto& shaderConstants = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetConstants(bindPoint);
-        ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
-
-        m_CommandList->SetGraphicsRoot32BitConstants(shaderConstants.RootParameterIndex, numConstants, data, 0);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetComputeConstants(ShaderBindPoint bindPoint, const void* data, u32 numConstants)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentComputePipeline, "No compute pipeline is bound");
-        ATOM_ENGINE_ASSERT(bindPoint == ShaderBindPoint::Material || bindPoint == ShaderBindPoint::Instance, "Only Material and Instance bind points use root constants");
-
-        const auto& shaderConstants = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetConstants(bindPoint);
-        ATOM_ENGINE_ASSERT(shaderConstants.RootParameterIndex != UINT32_MAX);
-
-        m_CommandList->SetComputeRoot32BitConstants(shaderConstants.RootParameterIndex, numConstants, data, 0);
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetGraphicsDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentGraphicsPipeline, "No graphics pipeline is bound");
-
-        if (resourceTable.IsValid())
-        {
-            const auto& resourceDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
-            if (resourceDescriptorTable.RootParameterIndex == UINT32_MAX)
-                return;
-
-            m_CommandList->SetGraphicsRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
-        }
-
-        if (samplerTable.IsValid())
-        {
-            const auto& samplerDescriptorTable = m_CurrentGraphicsPipeline->GetShader()->GetShaderLayout().GetSamplerDescriptorTable(bindPoint);
-            if (samplerDescriptorTable.RootParameterIndex == UINT32_MAX)
-                return;
-
-            m_CommandList->SetGraphicsRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable.GetBaseGpuDescriptor());
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------------------
-    void CommandBuffer::SetComputeDescriptorTables(ShaderBindPoint bindPoint, const DescriptorAllocation& resourceTable, const DescriptorAllocation& samplerTable)
-    {
-        ATOM_ENGINE_ASSERT(m_IsRecording);
-        ATOM_ENGINE_ASSERT(m_CurrentComputePipeline, "No compute pipeline is bound");
-        
-        const auto& resourceDescriptorTable = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetResourceDescriptorTable(bindPoint);
-        ATOM_ENGINE_ASSERT(resourceDescriptorTable.RootParameterIndex != UINT32_MAX);
-
-        m_CommandList->SetComputeRootDescriptorTable(resourceDescriptorTable.RootParameterIndex, resourceTable.GetBaseGpuDescriptor());
-
-        if (samplerTable.IsValid())
-        {
-            const auto& samplerDescriptorTable = m_CurrentComputePipeline->GetComputeShader()->GetShaderLayout().GetSamplerDescriptorTable(bindPoint);
-            ATOM_ENGINE_ASSERT(samplerDescriptorTable.RootParameterIndex != UINT32_MAX);
-
-            m_CommandList->SetComputeRootDescriptorTable(samplerDescriptorTable.RootParameterIndex, samplerTable.GetBaseGpuDescriptor());
-        }
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

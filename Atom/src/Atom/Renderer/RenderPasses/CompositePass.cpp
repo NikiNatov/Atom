@@ -73,10 +73,9 @@ namespace Atom
 
         SIG::FullscreenQuadParams params;
         params.SetTexture(sceneColorOutput);
-        params.SetTextureSampler(EngineResources::LinearClampSampler.get());
         params.Compile();
 
-        cmdBuffer->SetGraphicsDescriptorTables(ShaderBindPoint::Instance, params.GetResourceTable(), params.GetSamplerTable());
+        cmdBuffer->SetGraphicsSIG(params);
         cmdBuffer->SetVertexBuffer(EngineResources::QuadVertexBuffer.get());
         cmdBuffer->SetIndexBuffer(EngineResources::QuadIndexBuffer.get());
         cmdBuffer->DrawIndexed(EngineResources::QuadIndexBuffer->GetElementCount(), 1, 0, 0, 0);

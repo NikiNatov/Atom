@@ -14,6 +14,8 @@
 #include "Atom/Renderer/TextureSampler.h"
 #include "Atom/Renderer/ResourceState.h"
 
+#include <d3d12shader.h>
+
 namespace Atom { namespace Utils {
 
     // -----------------------------------------------------------------------------------------------------------------------------

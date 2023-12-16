@@ -1,6 +1,5 @@
-ShaderInputGroup<BindPoint::Instance> CubeMapIrradianceParams
+ShaderInputGroup CubeMapIrradianceParams<BindTo=DefaultLayout::Instance>
 {
     TextureCube<float4>      EnvMap;
     RWTexture2DArray<float4> IrradianceMap;
-    SamplerState             EnvMapSampler;
 }

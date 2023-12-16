@@ -1,6 +1,7 @@
 #shadertype cs
 
 #include "PBRCommon.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/BRDFParams.hlsli"
 
 float3 SampleGGX(float u1, float u2, float roughness)
@@ -28,6 +29,7 @@ float GaSchlickGGX_IBL(float cosLi, float cosLo, float roughness)
 
 static BRDFParams g_BRDFParams = CreateBRDFParams();
 
+[RootSignature(DefaultLayout_Compute)]
 [numthreads(32, 32, 1)]
 void CSMain(uint2 ThreadID : SV_DispatchThreadID)
 {

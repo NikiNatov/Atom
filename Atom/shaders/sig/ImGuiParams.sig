@@ -1,7 +1,9 @@
-ShaderInputGroup<BindPoint::Instance> ImGuiParams
+ShaderInputGroup ImGuiPassParams<BindTo=DefaultLayout::Pass>
 {
-    matrix            MVPMatrix;
+    matrix MVPMatrix;
+}
 
+ShaderInputGroup ImGuiTextureParams<BindTo=DefaultLayout::Instance>
+{
     Texture2D<float4> Texture;
-    SamplerState      TextureSampler;
 }

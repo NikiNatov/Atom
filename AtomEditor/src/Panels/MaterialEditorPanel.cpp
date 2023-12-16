@@ -37,8 +37,8 @@ namespace Atom
 
 			if (ImGui::CollapsingHeader("Textures", flags))
 			{
-				const auto& resourceTable = m_Material->GetShader()->GetShaderLayout().GetResourceDescriptorTable(ShaderBindPoint::Material);
-				for (auto& resource : resourceTable.Resources)
+				const auto& resources = m_Material->GetShader()->GetShaderReflection().GetResources(Material::MaterialSIG::BindPointType::ShaderSpace);
+				for (auto& resource : resources)
 				{
 					if (resource.Type == ShaderResourceType::Texture2D)
 					{
@@ -75,8 +75,8 @@ namespace Atom
 
 			if (ImGui::CollapsingHeader("Uniforms", flags))
 			{
-				const auto& constants = m_Material->GetShader()->GetShaderLayout().GetConstants(ShaderBindPoint::Material);
-				for (auto& uniform : constants.Uniforms)
+				const auto& constants = m_Material->GetShader()->GetShaderReflection().GetConstants(Material::MaterialSIG::BindPointType::ShaderSpace);
+				for (auto& uniform : constants)
 				{
 					if (uniform.Name[0] == '_')
 						continue;

@@ -3,7 +3,9 @@
 #include "Atom/Core/Core.h"
 #include "Atom/Asset/TextureAsset.h"
 #include "Atom/Renderer/Shader.h"
-#include "Atom/Renderer/ShaderInputGroup.h"
+#include "Atom/Renderer/SIG/ShaderInputGroup.h"
+
+#include <autogen/cpp/MaterialParams.h>
 
 namespace Atom
 {
@@ -22,12 +24,14 @@ namespace Atom
     {
         friend class AssetSerializer;
     public:
+        using MaterialSIG = CustomShaderInputGroup<SIG::MaterialParams>;
+    public:
         Material(const Ref<GraphicsShader>& shader, MaterialFlags flags);
 
         template<typename T>
         void SetUniform(const char* name, const T& value)
         {
-            const ShaderLayout::Uniform* uniform = FindUniformDeclaration(name);
+            const ShaderConstant* uniform = FindUniformDeclaration(name);
             if (!uniform)
             {
                 ATOM_ERROR("Uniform with name \"{}\" does not exist", name);
@@ -49,7 +53,7 @@ namespace Atom
         template<typename T>
         const T& GetUniform(const char* name)
         {
-            const ShaderLayout::Uniform* uniform = FindUniformDeclaration(name);
+            const ShaderConstant* uniform = FindUniformDeclaration(name);
             if (!uniform)
             {
                 ATOM_ERROR("Uniform with name \"{}\" does not exist", name);
@@ -80,18 +84,18 @@ namespace Atom
         inline const Ref<GraphicsShader>& GetShader() const { return m_Shader; }
         inline const Vector<byte>& GetConstantsData() const { return m_ConstantsData; }
         inline const Map<u32, Ref<TextureAsset>>& GetTextures() const { return m_Textures; }
-        inline const Ref<CustomShaderInputGroup>& GetSIG() const { return m_MaterialSIG; }
+        inline const Ref<MaterialSIG>& GetSIG() const { return m_MaterialSIG; }
     private:
-        const ShaderLayout::Uniform* FindUniformDeclaration(const char* name);
-        const ShaderLayout::ShaderResource* FindTextureDeclaration(const char* name);
-        const ShaderLayout::ShaderResource* FindSamplerDeclaration(const char* name);
+        const ShaderConstant* FindUniformDeclaration(const char* name);
+        const ShaderResource* FindTextureDeclaration(const char* name);
+        const ShaderResource* FindSamplerDeclaration(const char* name);
     private:
         Ref<GraphicsShader>         m_Shader;
         MaterialFlags               m_Flags;
         Vector<byte>                m_ConstantsData;
         Map<u32, Ref<TextureAsset>> m_Textures;
-        Ref<CustomShaderInputGroup> m_MaterialSIG;
-        bool                        m_TexturesDirty = false;
+        Ref<MaterialSIG>            m_MaterialSIG;
+        bool                        m_TexturesDirty = true;
     };
 
     class MaterialTable

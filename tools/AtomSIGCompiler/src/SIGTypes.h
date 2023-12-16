@@ -4,18 +4,10 @@
 #include <vector>
 #include <unordered_set>
 #include <variant>
+#include <sstream>
 
 namespace SIGCompiler
 {
-    enum class SIGBindPoint
-    {
-        None = 0,
-        Instance,
-        Material,
-        Pass,
-        Frame,
-    };
-
     enum class SIGConstantType
     {
         None = 0,
@@ -62,7 +54,7 @@ namespace SIGCompiler
         std::string Name;
         SIGResourceType Type;
         uint32_t ShaderRegister;
-        std::variant<SIGConstantType, SIGStructType> ReturnType;
+        std::variant<SIGConstantType, std::string> ReturnType;
         uint32_t ArraySize;
     };
 
@@ -73,30 +65,94 @@ namespace SIGCompiler
         uint32_t ArraySize;
     };
 
+    struct SIGBindPoint
+    {
+        std::string Name;
+        std::string LayoutName;
+        std::string FullName;
+        uint32_t ShaderSpace = UINT32_MAX;
+
+        uint32_t ConstantBufferRootIdx = UINT32_MAX;
+        uint32_t ResourceTableRootIdx = UINT32_MAX;
+        uint32_t SamplerTableRootIdx = UINT32_MAX;
+
+        uint32_t ConstantBufferSize = 0;
+        uint32_t NumSRVs = 0;
+        uint32_t NumUAVs = 0;
+        uint32_t NumSamplers = 0;
+    };
+
+    enum class SamplerFilter
+    {
+        None = 0,
+        Linear, Nearest, Anisotropic
+    };
+
+    enum class SamplerWrap
+    {
+        None = 0,
+        Clamp, Repeat
+    };
+
+    struct SIGStaticSampler
+    {
+        std::string Name;
+        std::string LayoutName;
+        std::string FullName;
+        uint32_t ShaderSpace = UINT32_MAX;
+
+        uint32_t ShaderRegister;
+
+        SamplerFilter Filter;
+        SamplerWrap Wrap;
+    };
+
     class SIGDeclaration
     {
     public:
-        SIGDeclaration(const std::string& name, SIGBindPoint bindPoint);
+        SIGDeclaration(const std::string& name, const std::string& bindPointFullName);
 
         bool AddConstant(const std::string& name, SIGConstantType type);
-        bool AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType, uint32_t arraySize = 1);
+        bool AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, std::string>& returnType, uint32_t arraySize = 1);
         bool AddSampler(const std::string& name, uint32_t arraySize = 1);
 
         inline const std::string& GetName() const { return m_Name; }
-        inline SIGBindPoint GetBindPoint() const { return m_BindPoint; }
+        inline const std::string& GetBindPointFullName() const { return m_BindPointFullName; }
         inline const std::vector<SIGConstant>& GetConstants() const { return m_Constants; }
         inline const std::vector<SIGResource>& GetResources() const { return m_Resources; }
         inline const std::vector<SIGSampler>& GetSamplers() const { return m_Samplers; }
+        inline uint32_t GetConstantBufferSize() const { return m_ConstantBufferSize; }
+        inline uint32_t GetNumSRVs() const { return m_NumSRVs; }
+        inline uint32_t GetNumUAVs() const { return m_NumUAVs; }
+        inline uint32_t GetNumSamplers() const { return m_NumSamplers; }
     private:
         std::string m_Name;
-        SIGBindPoint m_BindPoint;
+        std::string m_BindPointFullName;
         std::vector<SIGConstant> m_Constants;
         std::vector<SIGResource> m_Resources;
         std::vector<SIGSampler> m_Samplers;
         std::unordered_set<std::string> m_ExistingNames;
 
+        uint32_t m_ConstantBufferSize = 0;
         uint32_t m_NumSRVs = 0;
         uint32_t m_NumUAVs = 0;
         uint32_t m_NumSamplers = 0;
+    };
+
+    class SIGLayoutDeclaration
+    {
+    public:
+        SIGLayoutDeclaration(const std::string& name);
+
+        bool AddBindPoint(const std::string& bindPointFullName);
+        bool AddStaticSampler(const std::string& staticSamplerFullName);
+
+        inline const std::string& GetName() const { return m_Name; }
+        inline const std::vector<std::string>& GetBindPointFullNames() const { return m_BindPointFullNames; }
+        inline const std::vector<std::string>& GetStaticSamplerFullNames() const { return m_StaticSamplerFullNames; }
+    private:
+        std::string m_Name;
+        std::vector<std::string> m_BindPointFullNames;
+        std::vector<std::string> m_StaticSamplerFullNames;
     };
 }

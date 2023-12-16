@@ -1,4 +1,4 @@
-ShaderInputGroup<BindPoint::Material> MaterialPBRParams
+ShaderInputGroup MaterialParams<BindTo=DefaultLayout::Material>
 {
     float4            AlbedoColor;
     float             Metalness;

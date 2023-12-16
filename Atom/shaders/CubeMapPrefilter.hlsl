@@ -1,6 +1,7 @@
 #shadertype cs
 
 #include "PBRCommon.hlsli"
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/CubeMapPrefilterParams.hlsli"
 
 float3 SampleGGX(float u1, float u2, float roughness)
@@ -23,8 +24,10 @@ float NdfGGX(float cosLh, float roughness)
 	return alphaSq / (PI * denom * denom);
 }
 
+static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
 static CubeMapPrefilterParams g_CubeMapPrefilterParams = CreateCubeMapPrefilterParams();
 
+[RootSignature(DefaultLayout_Compute)]
 [numthreads(32, 32, 1)]
 void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 {
@@ -69,7 +72,7 @@ void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 
 			float mipLevel = max(0.5 * log2(ws / wt) + 1.0, 0.0);
 
-            color += g_CubeMapPrefilterParams.EnvMapUnfiltered.SampleLevel(g_CubeMapPrefilterParams.EnvMapSampler, Li, mipLevel).rgb * cosLi;
+            color += g_CubeMapPrefilterParams.EnvMapUnfiltered.SampleLevel(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, Li, mipLevel).rgb * cosLi;
 			weight += cosLi;
 		}
 	}

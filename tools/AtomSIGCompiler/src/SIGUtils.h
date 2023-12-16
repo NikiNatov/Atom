@@ -4,20 +4,6 @@ namespace SIGCompiler
 {
     namespace Utils
     {
-        static SIGBindPoint StringToSIGBindPoint(const std::string& str)
-        {
-            if (str == "BindPoint::Frame")
-                return SIGBindPoint::Frame;
-            if (str == "BindPoint::Pass")
-                return SIGBindPoint::Pass;
-            if (str == "BindPoint::Material")
-                return SIGBindPoint::Material;
-            if (str == "BindPoint::Instance")
-                return SIGBindPoint::Instance;
-
-            return SIGBindPoint::None;
-        }
-
         static SIGConstantType StringToSIGConstantType(const std::string& str)
         {
             if (str == "int")
@@ -171,7 +157,7 @@ namespace SIGCompiler
             case SIGConstantType::Uint2:  return "glm::uvec2";
             case SIGConstantType::Uint3:  return "glm::uvec3";
             case SIGConstantType::Uint4:  return "glm::uvec4";
-            case SIGConstantType::Float:  return "float";
+            case SIGConstantType::Float:  return "f32";
             case SIGConstantType::Float2: return "glm::vec2";
             case SIGConstantType::Float3: return "glm::vec3";
             case SIGConstantType::Float4: return "glm::vec4";
@@ -218,27 +204,69 @@ namespace SIGCompiler
             return "";
         }
 
-        static std::string SIGBindPointToHlslString(SIGBindPoint bindPoint)
+        static SamplerFilter StringToSamplerFilter(const std::string& str)
         {
-            switch (bindPoint)
+            if (str == "SamplerFilter::Linear")
+                return SamplerFilter::Linear;
+            if (str == "SamplerFilter::Nearest")
+                return SamplerFilter::Nearest;
+            if (str == "SamplerFilter::Anisotropic")
+                return SamplerFilter::Anisotropic;
+
+            return SamplerFilter::None;
+        }
+
+        static SamplerWrap StringToSamplerWrap(const std::string& str)
+        {
+            if (str == "SamplerWrap::Clamp")
+                return SamplerWrap::Clamp;
+            if (str == "SamplerWrap::Repeat")
+                return SamplerWrap::Repeat;
+
+            return SamplerWrap::None;
+        }
+
+        static std::string SamplerFilterToHlslString(SamplerFilter filter)
+        {
+            switch (filter)
             {
-            case SIGBindPoint::Instance: return "space0";
-            case SIGBindPoint::Material: return "space1";
-            case SIGBindPoint::Pass:     return "space2";
-            case SIGBindPoint::Frame:    return "space3";
+            case SamplerFilter::Linear:      return "FILTER_MIN_MAG_MIP_LINEAR";
+            case SamplerFilter::Nearest:     return "FILTER_MIN_MAG_MIP_POINT";
+            case SamplerFilter::Anisotropic: return "FILTER_ANISOTROPIC";
             }
 
             return "";
         }
 
-        static std::string SIGBindPointToCppString(SIGBindPoint bindPoint)
+        static std::string SamplerFilterToCppString(SamplerFilter filter)
         {
-            switch (bindPoint)
+            switch (filter)
             {
-            case SIGBindPoint::Instance: return "ShaderBindPoint::Instance";
-            case SIGBindPoint::Material: return "ShaderBindPoint::Material";
-            case SIGBindPoint::Pass:     return "ShaderBindPoint::Pass";
-            case SIGBindPoint::Frame:    return "ShaderBindPoint::Frame";
+            case SamplerFilter::Linear:      return "TextureFilter::Linear";
+            case SamplerFilter::Nearest:     return "TextureFilter::Nearest";
+            case SamplerFilter::Anisotropic: return "TextureFilter::Anisotropic";
+            }
+
+            return "";
+        }
+
+        static std::string SamplerWrapToHlslString(SamplerWrap wrap)
+        {
+            switch (wrap)
+            {
+            case SamplerWrap::Clamp:  return "TEXTURE_ADDRESS_CLAMP";
+            case SamplerWrap::Repeat: return "TEXTURE_ADDRESS_WRAP";
+            }
+
+            return "";
+        }
+
+        static std::string SamplerWrapToCppString(SamplerWrap wrap)
+        {
+            switch (wrap)
+            {
+            case SamplerWrap::Clamp:  return "TextureWrap::Clamp";
+            case SamplerWrap::Repeat: return "TextureWrap::Repeat";
             }
 
             return "";

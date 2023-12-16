@@ -1,6 +1,8 @@
 #include "SIGTypes.h"
 #include "SIGUtils.h"
 
+#include <sstream>
+
 namespace SIGCompiler
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -26,8 +28,8 @@ namespace SIGCompiler
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    SIGDeclaration::SIGDeclaration(const std::string& name, SIGBindPoint bindPoint)
-        : m_Name(name), m_BindPoint(bindPoint)
+    SIGDeclaration::SIGDeclaration(const std::string& name, const std::string& bindPointFullName)
+        : m_Name(name), m_BindPointFullName(bindPointFullName)
     {
     }
 
@@ -42,12 +44,13 @@ namespace SIGCompiler
         sigConstant.Type = type;
         sigConstant.SizeInBytes = Utils::GetSIGConstantSize(type);
 
+        m_ConstantBufferSize += sigConstant.SizeInBytes;
         m_ExistingNames.insert(name);
         return true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    bool SIGDeclaration::AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, SIGStructType>& returnType, uint32_t arraySize)
+    bool SIGDeclaration::AddResource(const std::string& name, SIGResourceType type, const std::variant<SIGConstantType, std::string>& returnType, uint32_t arraySize)
     {
         if (m_ExistingNames.find(name) != m_ExistingNames.end())
             return false;
@@ -81,6 +84,32 @@ namespace SIGCompiler
 
         m_NumSamplers += arraySize;
         m_ExistingNames.insert(name);
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    SIGLayoutDeclaration::SIGLayoutDeclaration(const std::string& name)
+        : m_Name(name)
+    {
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool SIGLayoutDeclaration::AddBindPoint(const std::string& bindPointFullName)
+    {
+        if (std::find(m_BindPointFullNames.begin(), m_BindPointFullNames.end(), bindPointFullName) != m_BindPointFullNames.end())
+            return false;
+
+        m_BindPointFullNames.push_back(bindPointFullName);
+        return true;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------
+    bool SIGLayoutDeclaration::AddStaticSampler(const std::string& staticSamplerFullName)
+    {
+        if (std::find(m_StaticSamplerFullNames.begin(), m_StaticSamplerFullNames.end(), staticSamplerFullName) != m_StaticSamplerFullNames.end())
+            return false;
+
+        m_StaticSamplerFullNames.push_back(staticSamplerFullName);
         return true;
     }
 }

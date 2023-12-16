@@ -1,5 +1,6 @@
 #shadertype vs
 
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/FrameParams.hlsli"
 
 struct VSInput
@@ -8,7 +9,7 @@ struct VSInput
 	float2 UV 		: TEX_COORD;
 };
 
-struct PSInput
+struct VSOutput
 {
 	float4 PositionSV : SV_POSITION;
 	float3 Position	  : POSITION;
@@ -17,9 +18,10 @@ struct PSInput
 
 static FrameParams g_FrameParams = CreateFrameParams();
 
-PSInput VSMain(in VSInput input)
+[RootSignature(DefaultLayout_Graphics)]
+VSOutput VSMain(in VSInput input)
 {
-	PSInput output;
+    VSOutput output;
 	float3 pos = input.Position;
 	pos.z = 1.0f;
 	output.PositionSV = float4(pos, 1.0);
@@ -30,6 +32,7 @@ PSInput VSMain(in VSInput input)
 
 #shadertype ps
 
+#include "autogen/hlsl/DefaultLayout.hlsli"
 #include "autogen/hlsl/FrameParams.hlsli"
 
 struct PSInput
@@ -39,9 +42,11 @@ struct PSInput
 	float2 UV 		  : TEX_COORD;
 };
 
+static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
 static FrameParams g_FrameParams = CreateFrameParams();
 
+[RootSignature(DefaultLayout_Graphics)]
 float4 PSMain(in PSInput input) : SV_TARGET
 {
-	return g_FrameParams.EnvironmentMap.SampleLevel(g_FrameParams.EnvironmentMapSampler, input.Position, 0);
+    return g_FrameParams.EnvironmentMap.SampleLevel(g_DefaultLayoutStaticSamplers.LinearClampSampler, input.Position, 0);
 }

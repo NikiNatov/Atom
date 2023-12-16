@@ -9,6 +9,8 @@
 #include "Atom/Physics/PhysicsEngine.h"
 #include "Atom/Asset/AssetManager.h"
 
+#include <autogen/cpp/SIGDataBase.h>
+
 namespace Atom
 {
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -27,6 +29,9 @@ namespace Atom
         properties.VSync = m_Specification.VSync;
         properties.EventCallback = ATOM_BIND_EVENT_FN(Application::OnEvent);
         m_Window = CreateScope<Window>(properties);
+
+        // Initialize SIG database
+        SIG::SIGDataBase::Initialize();
 
         m_ShaderLibrary = CreateScope<ShaderLibrary>();
         m_PipelineLibrary = CreateScope<PipelineLibrary>();
@@ -49,6 +54,9 @@ namespace Atom
         Input::Initialize(m_Window->GetWindowHandle());
         EngineResources::Initialize();
 
+        
+
+        // Initialize ImGUI
         m_ImGuiLayer = new ImGuiLayer();
         PushOverlay(m_ImGuiLayer);
     }
@@ -61,6 +69,7 @@ namespace Atom
         for (auto layer : m_LayerStack)
             layer->OnDetach();
 
+        SIG::SIGDataBase::Shutdown();
         AssetManager::Shutdown();
         EngineResources::Shutdown();
         ScriptEngine::Shutdown();

@@ -5,6 +5,8 @@
 #include "Pipeline.h"
 #include "Device.h"
 
+#include <autogen/cpp/DefaultLayout.h>
+
 namespace Atom
 {
     namespace Utils
@@ -123,7 +125,7 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         m_D3DDescription.InputLayout = inputLayoutDesc;
-        m_D3DDescription.pRootSignature = shader->GetShaderLayout().GetRootSignature().Get();
+        m_D3DDescription.pRootSignature = SIG::DefaultLayout::GetInstance()->GetGraphicsRootSignature().Get(); // TODO: Make shader layout a parameter in the pipeline desc
         m_D3DDescription.VS = shader->GetD3DVSByteCode();
         m_D3DDescription.PS = shader->GetD3DPSByteCode();
         m_D3DDescription.RasterizerState = rasterizerState;
@@ -212,7 +214,7 @@ namespace Atom
         auto d3dDevice = Device::Get().GetD3DDevice();
 
         m_D3DDescription.CS = m_Description.Shader->GetD3DCSByteCode();
-        m_D3DDescription.pRootSignature = m_Description.Shader->GetShaderLayout().GetRootSignature().Get();
+        m_D3DDescription.pRootSignature = SIG::DefaultLayout::GetInstance()->GetComputeRootSignature().Get(); // TODO: Make shader layout a parameter in the pipeline desc
 
         DXCall(d3dDevice->CreateComputePipelineState(&m_D3DDescription, IID_PPV_ARGS(&m_D3DPipeline)));
 
