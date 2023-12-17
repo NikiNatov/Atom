@@ -49,7 +49,7 @@ namespace Atom
             return;
 
         m_Textures[textureResource->Register] = texture;
-        m_TexturesDirty = true;
+        m_Dirty = true;
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -74,20 +74,21 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Material::UpdateForRendering()
     {
-        m_MaterialSIG->SetConstant(0, m_ConstantsData.data(), m_ConstantsData.size());
-
-        if (m_TexturesDirty)
+        if (m_Dirty)
         {
+            m_MaterialSIG->SetConstant(0, m_ConstantsData.data(), m_ConstantsData.size());
+
             for (auto& [slot, texture] : m_Textures)
             {
                 m_MaterialSIG->SetROTexture(slot, texture ? texture->GetResource().get() : EngineResources::BlackTexture.get());
                 m_MaterialSIG->SetSampler(slot, texture ? Renderer::GetSampler(texture->GetFilter(), texture->GetWrap()).get() : EngineResources::LinearClampSampler.get());
             }
 
-            m_TexturesDirty = false;
+            m_MaterialSIG->Compile();
+
+            m_Dirty = false;
         }
 
-        m_MaterialSIG->Compile();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

@@ -833,7 +833,6 @@ namespace Atom
             if (texture)
             {
                 asset->m_Textures[textureRegister] = texture;
-                asset->m_TexturesDirty = true;
             }
         }
 

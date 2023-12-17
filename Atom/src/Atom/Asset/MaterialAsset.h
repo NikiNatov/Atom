@@ -48,6 +48,7 @@ namespace Atom
                 return;
 
             memcpy(m_ConstantsData.data() + uniform->Offset, &value, uniform->Size);
+            m_Dirty = true;
         }
 
         template<typename T>
@@ -95,7 +96,7 @@ namespace Atom
         Vector<byte>                m_ConstantsData;
         Map<u32, Ref<TextureAsset>> m_Textures;
         Ref<MaterialSIG>            m_MaterialSIG;
-        bool                        m_TexturesDirty = true;
+        bool                        m_Dirty = true;
     };
 
     class MaterialTable
