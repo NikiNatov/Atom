@@ -454,9 +454,6 @@ namespace Atom
 
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "EquirectToCubeMap");
 
-            SIG::EquirectToCubeMapParams params;
-            params.SetInputTexture(equirectTexture.get());
-
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(equirectTexture.get(), ResourceState::NonPixelShaderRead);
@@ -467,6 +464,8 @@ namespace Atom
             {
                 Ref<Texture> mipView = CreateRef<Texture>(*envMapUnfiltered, mip, UINT32_MAX);
 
+                SIG::EquirectToCubeMapParams params;
+                params.SetInputTexture(equirectTexture.get());
                 params.SetMipLevel(mip);
                 params.SetOutputTexture(mipView.get());
                 params.Compile();
@@ -513,9 +512,6 @@ namespace Atom
 
             PIXBeginEvent(computeQueue->GetD3DCommandQueue().Get(), 0, "CubeMapPreFilter");
 
-            SIG::CubeMapPrefilterParams params;
-            params.SetEnvMapUnfiltered(envMapUnfiltered.get());
-
             Ref<CommandBuffer> computeCmdBuffer = computeQueue->GetCommandBuffer();
             computeCmdBuffer->Begin();
             computeCmdBuffer->TransitionResource(envMapUnfiltered.get(), ResourceState::NonPixelShaderRead);
@@ -530,6 +526,8 @@ namespace Atom
                 Ref<Texture> mipView = CreateRef<Texture>(*envMap, mip, UINT32_MAX);
                 f32 roughness = mip / glm::max(envMapDesc.MipLevels - 1.0f, 1.0f);
 
+                SIG::CubeMapPrefilterParams params;
+                params.SetEnvMapUnfiltered(envMapUnfiltered.get());
                 params.SetEnvMap(mipView.get());
                 params.SetRoughness(roughness);
                 params.Compile();
