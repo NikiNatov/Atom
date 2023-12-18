@@ -12,7 +12,9 @@ namespace Atom
     ShaderReflection::ShaderReflection(const Vector<byte>& vsData, const Vector<byte>& psData)
     {
         Reflect(vsData);
-        Reflect(psData);
+
+        if(!psData.empty())
+            Reflect(psData);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

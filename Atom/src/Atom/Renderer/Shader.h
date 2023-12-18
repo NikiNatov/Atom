@@ -39,6 +39,8 @@ namespace Atom
         GraphicsShader(const String& name, const Vector<byte>& vsData, const Vector<byte>& psData);
         ~GraphicsShader();
 
+        inline bool HasPixelShader() const { return !m_PSData.empty(); }
+
         inline const Vector<byte>& GetVSData() const { return m_VSData; }
         inline const Vector<byte>& GetPSData() const { return m_PSData; }
         inline const D3D12_SHADER_BYTECODE& GetD3DVSByteCode() const { return m_D3DVSByteCode; }

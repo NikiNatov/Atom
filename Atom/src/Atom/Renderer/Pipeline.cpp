@@ -127,7 +127,7 @@ namespace Atom
         m_D3DDescription.InputLayout = inputLayoutDesc;
         m_D3DDescription.pRootSignature = SIG::DefaultLayout::GetInstance()->GetGraphicsRootSignature().Get(); // TODO: Make shader layout a parameter in the pipeline desc
         m_D3DDescription.VS = shader->GetD3DVSByteCode();
-        m_D3DDescription.PS = shader->GetD3DPSByteCode();
+        m_D3DDescription.PS = shader->HasPixelShader() ? shader->GetD3DPSByteCode() : D3D12_SHADER_BYTECODE{nullptr, 0};
         m_D3DDescription.RasterizerState = rasterizerState;
         m_D3DDescription.BlendState = blendState;
         m_D3DDescription.DepthStencilState = depthStencilState;
