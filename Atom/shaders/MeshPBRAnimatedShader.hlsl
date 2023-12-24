@@ -69,7 +69,7 @@ VSOutput VSMain(in VSInput input)
 #include "PBRCommon.hlsli"
 
 #include "autogen/hlsl/DefaultLayout.hlsli"
-#include "autogen/hlsl/MaterialPBRParams.hlsli"
+#include "autogen/hlsl/MaterialParams.hlsli"
 #include "autogen/hlsl/FrameParams.hlsli"
 
 struct PSInput
@@ -82,16 +82,16 @@ struct PSInput
     float3 Bitangent  : BITANGENT;
 };
 
-static MaterialPBRParams g_MaterialPBRParams = CreateMaterialPBRParams();
+static MaterialParams g_MaterialParams = CreateMaterialParams();
 static FrameParams g_FrameParams = CreateFrameParams();
 
 [RootSignature(DefaultLayout_Graphics)]
 float4 PSMain(in PSInput input) : SV_Target
 {
-    float4 albedoColor = g_MaterialPBRParams.UseAlbedoMap ? g_MaterialPBRParams.AlbedoMap.Sample(g_MaterialPBRParams.AlbedoMapSampler, input.UV).rgba : g_MaterialPBRParams.AlbedoColor;
-    float3 normal = g_MaterialPBRParams.UseNormalMap ? GetNormalFromMap(g_MaterialPBRParams.NormalMap, g_MaterialPBRParams.NormalMapSampler, input.UV, input.Tangent, input.Bitangent, input.Normal) : input.Normal;
-    float  metalness = g_MaterialPBRParams.UseMetalnessMap ? g_MaterialPBRParams.MetalnessMap.Sample(g_MaterialPBRParams.MetalnessMapSampler, input.UV).r : g_MaterialPBRParams.Metalness;
-    float  roughness = g_MaterialPBRParams.UseRoughnessMap ? g_MaterialPBRParams.RoughnessMap.Sample(g_MaterialPBRParams.RoughnessMapSampler, input.UV).r : g_MaterialPBRParams.Roughness;
+    float4 albedoColor = g_MaterialParams.UseAlbedoMap ? g_MaterialParams.AlbedoMap.Sample(g_MaterialParams.AlbedoMapSampler, input.UV).rgba : g_MaterialParams.AlbedoColor;
+    float3 normal = g_MaterialParams.UseNormalMap ? GetNormalFromMap(g_MaterialParams.NormalMap, g_MaterialParams.NormalMapSampler, input.UV, input.Tangent, input.Bitangent, input.Normal) : input.Normal;
+    float metalness = g_MaterialParams.UseMetalnessMap ? g_MaterialParams.MetalnessMap.Sample(g_MaterialParams.MetalnessMapSampler, input.UV).r : g_MaterialParams.Metalness;
+    float roughness = g_MaterialParams.UseRoughnessMap ? g_MaterialParams.RoughnessMap.Sample(g_MaterialParams.RoughnessMapSampler, input.UV).r : g_MaterialParams.Roughness;
 
     float3 N = normalize(normal);
     float3 V = normalize(g_FrameParams.CameraPosition - input.Position);

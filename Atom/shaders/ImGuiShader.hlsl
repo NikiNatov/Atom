@@ -32,7 +32,7 @@ VSOutput VSMain(VSInput input)
 #shadertype ps
 
 #include "autogen/hlsl/DefaultLayout.hlsli"
-#include "autogen/hlsl/ImGuiInstanceParams.hlsli"
+#include "autogen/hlsl/ImGuiTextureParams.hlsli"
 
 struct PSInput
 {
@@ -42,10 +42,10 @@ struct PSInput
 };
 
 static DefaultLayoutStaticSamplers g_DefaultLayoutStaticSamplers = CreateDefaultLayoutStaticSamplers();
-static ImGuiInstanceParams g_ImGuiInstanceParams = CreateImGuiInstanceParams();
+static ImGuiTextureParams g_ImGuiTextureParams = CreateImGuiTextureParams();
 
 [RootSignature(DefaultLayout_Graphics)]
 float4 PSMain(PSInput input) : SV_Target
 {
-    return input.Color * g_ImGuiInstanceParams.Texture.Sample(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, input.UV);
+    return input.Color * g_ImGuiTextureParams.Texture.Sample(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, input.UV);
 }
