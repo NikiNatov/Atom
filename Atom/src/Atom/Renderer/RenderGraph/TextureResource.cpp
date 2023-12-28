@@ -123,11 +123,12 @@ namespace Atom
         }
         else if (mip == TextureView::AllMips && slice != TextureView::AllSlices)
         {
-            return m_ViewData->SliceViews[mip];
+            return m_ViewData->SliceViews[slice];
         }
         else if (mip != TextureView::AllMips && slice != TextureView::AllSlices)
         {
-            return m_ViewData->SubresourceViews[mip];
+            u32 subresource = Texture::CalculateSubresource(mip, slice, m_Description.MipLevels, m_Description.ArraySize);
+            return m_ViewData->SubresourceViews[subresource];
         }
 
         return nullptr;

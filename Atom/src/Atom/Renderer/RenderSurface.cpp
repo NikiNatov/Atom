@@ -41,9 +41,9 @@ namespace Atom
         viewDesc.ArraySize = m_Texture->GetType() == TextureType::Texture3D ? m_Texture->GetDepth() : m_Texture->GetArraySize();
 
         if (IsSet(m_Texture->GetFlags(), TextureFlags::RenderTarget))
-            m_RTV = CreateScope<TextureViewRT>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
+            m_RTV = CreateScope<TextureViewRT>(&aliasedSurface, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
         if (IsSet(m_Texture->GetFlags(), TextureFlags::DepthStencil))
-            m_DSV = CreateScope<TextureViewDS>(this, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
+            m_DSV = CreateScope<TextureViewDS>(&aliasedSurface, viewDesc, !IsSet(m_Texture->GetFlags(), TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

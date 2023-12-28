@@ -118,6 +118,8 @@ namespace Atom
 
         m_Description.MipLevels = mipIndex == TextureView::AllMips ? aliasedTexture.m_Description.MipLevels : 1;
 
+        ResourceStateTracker::AddGlobalResourceState(this, m_Description.InitialState);
+
         // Create views
         TextureViewDescription viewDesc;
         viewDesc.FirstMip = mipIndex == TextureView::AllMips ? 0 : mipIndex;
@@ -126,9 +128,9 @@ namespace Atom
         viewDesc.ArraySize = m_Description.Type == TextureType::Texture3D ? m_Description.Depth : m_Description.ArraySize;
 
         if (IsSet(m_Description.Flags, TextureFlags::ShaderResource))
-            m_SRV = CreateScope<TextureViewRO>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+            m_SRV = CreateScope<TextureViewRO>(&aliasedTexture, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
         if (IsSet(m_Description.Flags, TextureFlags::UnorderedAccess))
-            m_UAV = CreateScope<TextureViewRW>(this, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
+            m_UAV = CreateScope<TextureViewRW>(&aliasedTexture, viewDesc, !IsSet(m_Description.Flags, TextureFlags::SwapChainBuffer));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------

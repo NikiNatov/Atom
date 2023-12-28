@@ -266,7 +266,6 @@ namespace Atom
 
                         commandBuffer->SetGraphicsSIG(GetSIGForTexture(texture));
                         commandBuffer->GetCommandList()->RSSetScissorRects(1, &r);
-                        commandBuffer->TransitionResource(texture, ResourceState::GenericRead);
                         commandBuffer->DrawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + globalIdxOffset, pcmd->VtxOffset + globalVtxOffset);
                     }
                 }
