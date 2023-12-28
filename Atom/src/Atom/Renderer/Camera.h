@@ -32,7 +32,6 @@ namespace Atom
         inline f32 GetNear() const { return m_Near; }
         inline f32 GetFar() const { return m_Far; }
         inline f32 GetAspectRatio() const { return m_AspectRatio; }
-        inline const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
     private:
         void RecalculateProjection();
     private:
@@ -56,7 +55,6 @@ namespace Atom
 		inline f32 GetSize() const { return m_Size; }
 		inline f32 GetNear() const { return m_Near; }
 		inline f32 GetFar() const { return m_Far; }
-		inline const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
 	private:
 		void RecalculateProjection();
 	private:

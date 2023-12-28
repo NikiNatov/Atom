@@ -37,7 +37,7 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void PerspectiveCamera::RecalculateProjection()
     {
-        m_ProjectionMatrix = glm::perspective(glm::radians(m_Fov), m_AspectRatio, m_Near, m_Far);
+        m_ProjectionMatrix = glm::perspectiveRH_ZO(glm::radians(m_Fov), m_AspectRatio, m_Near, m_Far);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ namespace Atom
         f32 top = m_Size * 0.5f;
         f32 bottom = -m_Size * 0.5f;
 
-        m_ProjectionMatrix = glm::ortho(left, right, bottom, top, m_Near, m_Far);
+        m_ProjectionMatrix = glm::orthoRH_ZO(left, right, bottom, top, m_Near, m_Far);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ namespace Atom
     void SceneCamera::RecalculateProjection()
     {
         if (m_ProjectionType == ProjectionType::Perspective)
-            m_ProjectionMatrix = glm::perspective(glm::radians(m_PerspectiveFOV), m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar);
+            m_ProjectionMatrix = glm::perspectiveRH_ZO(glm::radians(m_PerspectiveFOV), m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar);
         else
         {
             f32 left = -m_OrthographicSize * m_AspectRatio * 0.5f;
@@ -128,7 +128,7 @@ namespace Atom
             f32 top = m_OrthographicSize * 0.5f;
             f32 bottom = -m_OrthographicSize * 0.5f;
 
-            m_ProjectionMatrix = glm::ortho(left, right, bottom, top, m_OrthographicNear, m_OrthographicFar);
+            m_ProjectionMatrix = glm::orthoRH_ZO(left, right, bottom, top, m_OrthographicNear, m_OrthographicFar);
         }
     }
 }
