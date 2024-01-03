@@ -9,6 +9,7 @@
 #include "Atom/Renderer/EngineResources.h"
 
 #include "Atom/Renderer/RenderPasses/SkyBoxPass.h"
+#include "Atom/Renderer/RenderPasses/ShadowPass.h"
 #include "Atom/Renderer/RenderPasses/GeometryPass.h"
 #include "Atom/Renderer/RenderPasses/CompositePass.h"
 
@@ -20,6 +21,7 @@
 
 #include <imgui.h>
 #include <pix3.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Atom
 {
@@ -39,6 +41,7 @@ namespace Atom
         m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
         m_FrameData.CameraPosition = cameraTransform[3];
         m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.ShadowCascades.clear();
         m_FrameData.Lights.clear();
         m_FrameData.BoneTransforms.clear();
         m_FrameData.StaticMeshes.clear();
@@ -59,6 +62,7 @@ namespace Atom
         m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
         m_FrameData.CameraPosition = editorCamera.GetPosition();
         m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.ShadowCascades.clear();
         m_FrameData.Lights.clear();
         m_FrameData.BoneTransforms.clear();
         m_FrameData.StaticMeshes.clear();
@@ -121,8 +125,10 @@ namespace Atom
             MeshEntry& meshEntry = m_FrameData.StaticMeshes.emplace_back();
             meshEntry.Mesh = mesh;
             meshEntry.SubmeshIndex = submeshIdx;
-            meshEntry.Transform = transform;
             meshEntry.Material = material ? material : EngineResources::ErrorMaterial;
+            meshEntry.DrawParams.SetTransform(transform);
+            meshEntry.DrawParams.SetBoneTransformOffset(UINT32_MAX);
+            meshEntry.DrawParams.Compile();
         }
     }
 
@@ -145,9 +151,10 @@ namespace Atom
             MeshEntry& meshEntry = m_FrameData.AnimatedMeshes.emplace_back();
             meshEntry.Mesh = mesh;
             meshEntry.SubmeshIndex = submeshIdx;
-            meshEntry.Transform = transform;
             meshEntry.Material = material ? material : EngineResources::ErrorMaterialAnimated;
-            meshEntry.BoneTransformOffset = m_FrameData.BoneTransforms.size();
+            meshEntry.DrawParams.SetTransform(transform);
+            meshEntry.DrawParams.SetBoneTransformOffset(m_FrameData.BoneTransforms.size());
+            meshEntry.DrawParams.Compile();
         }
 
         // Set all bone transforms
@@ -165,8 +172,8 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::Render()
     {
+        PreRender();
         BuildRenderPasses();
-        UpdateFrameGPUBuffers();
         RecordCommandBuffers();
         ExecuteCommandBuffers();
     }
@@ -193,11 +200,33 @@ namespace Atom
 
                     if (TextureResource* textureResource = resource->As<TextureResource>())
                     {
-                        ImGui::ImageButton((ImTextureID)textureResource->GetHWResource(), { textureResource->GetWidth() * 0.25f, textureResource->GetHeight() * 0.25f }, { 0.0f, 0.0f });
+                        f32 aspectRatio = (f32)textureResource->GetWidth() / (f32)textureResource->GetHeight();
+                        if (textureResource->GetArraySize() > 1)
+                        {
+                            for (u32 i = 0; i < textureResource->GetArraySize(); i++)
+                            {
+                                ImGui::ImageButton((ImTextureID)textureResource->GetView(0, i), { 256 * aspectRatio, 256 }, { 0.0f, 0.0f });
+                            }
+                        }
+                        else
+                        {
+                            ImGui::ImageButton((ImTextureID)textureResource->GetHWResource(), { 256 * aspectRatio, 256 }, { 0.0f, 0.0f });
+                        }
                     }
                     else if (RenderSurfaceResource* surfaceResource = resource->As<RenderSurfaceResource>())
                     {
-                        ImGui::ImageButton((ImTextureID)surfaceResource->GetHWResource(), { surfaceResource->GetWidth() * 0.25f, surfaceResource->GetHeight() * 0.25f }, { 0.0f, 0.0f });
+                        f32 aspectRatio = (f32)surfaceResource->GetWidth() / (f32)surfaceResource->GetHeight();
+                        if (surfaceResource->GetArraySize() > 1)
+                        {
+                            for (u32 i = 0; i < surfaceResource->GetArraySize(); i++)
+                            {
+                                ImGui::ImageButton((ImTextureID)surfaceResource->GetView(0, i)->GetTexture().get(), { 256 * aspectRatio, 256 }, { 0.0f, 0.0f });
+                            }
+                        }
+                        else
+                        {
+                            ImGui::ImageButton((ImTextureID)surfaceResource->GetHWResource(), { 256 * aspectRatio, 256 }, { 0.0f, 0.0f });
+                        }
                     }
 
                     ImGui::PopItemWidth();
@@ -229,6 +258,8 @@ namespace Atom
     void Renderer::BuildRenderPasses()
     {
         m_RenderGraph.AddRenderPass<SkyBoxPass>("SkyBoxPass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight);
+        m_RenderGraph.AddRenderPass<ShadowPass>("StaticGeometryShadowPass", m_FrameData.ShadowCascades, m_FrameData.StaticMeshes, false);
+        m_RenderGraph.AddRenderPass<ShadowPass>("AnimatedGeometryShadowPass", m_FrameData.ShadowCascades, m_FrameData.AnimatedMeshes, true);
         m_RenderGraph.AddRenderPass<GeometryPass>("StaticGeometryPass", m_FrameData.StaticMeshes, false);
         m_RenderGraph.AddRenderPass<GeometryPass>("AnimatedGeometryPass", m_FrameData.AnimatedMeshes, true);
         m_RenderGraph.AddRenderPass<CompositePass>("CompositePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.RenderToSwapChain);
@@ -237,9 +268,97 @@ namespace Atom
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
-    void Renderer::UpdateFrameGPUBuffers()
+    void Renderer::PreRender()
     {
+        m_Specification.NumShadowCascades = glm::min(m_Specification.NumShadowCascades, MaxShadowCascades);
+        m_FrameData.ShadowCascades.resize(m_Specification.NumShadowCascades);
+
+        const Light* sunLightPtr = nullptr;
+        for (const Light& light : m_FrameData.Lights)
+        {
+            if (light.Type == LightType::DirLight)
+            {
+                sunLightPtr = &light;
+                break;
+            }
+        }
+
+        if (sunLightPtr)
+        {
+            for (u32 i = 0; i < m_Specification.NumShadowCascades; i++)
+            {
+                f32 splitDistanceFactor = ShadowCascadeSplitDistanceFactors[i];
+                f32 prevSplitDistanceFactor = i != 0 ? ShadowCascadeSplitDistanceFactors[i - 1] : 0.0f;
+
+                // Calculate camera frustum points in world space
+                std::vector<glm::vec4> cameraFrustumPoints =
+                {
+                    { -1.0f, -1.0f, 0.0f, 1.0f },
+                    { -1.0f,  1.0f, 0.0f, 1.0f },
+                    {  1.0f,  1.0f, 0.0f, 1.0f },
+                    {  1.0f, -1.0f, 0.0f, 1.0f },
+                    { -1.0f, -1.0f, 1.0f, 1.0f },
+                    { -1.0f,  1.0f, 1.0f, 1.0f },
+                    {  1.0f,  1.0f, 1.0f, 1.0f },
+                    {  1.0f, -1.0f, 1.0f, 1.0f }
+                };
+
+                for (glm::vec4& point : cameraFrustumPoints)
+                {
+                    point = m_FrameData.InvViewProjMatrix * point;
+                    point /= point.w;
+                }
+
+                for (u32 i = 0; i < 4; i++)
+                {
+                    glm::vec4 dirVector = cameraFrustumPoints[i + 4] - cameraFrustumPoints[i];
+                    cameraFrustumPoints[i + 4] = cameraFrustumPoints[i] + dirVector * splitDistanceFactor;
+                    cameraFrustumPoints[i] = cameraFrustumPoints[i] + dirVector * prevSplitDistanceFactor;
+                }
+
+                glm::vec3 frustumCenter(0.0f);
+
+                for (const glm::vec4& point : cameraFrustumPoints)
+                    frustumCenter += glm::vec3(point);
+
+                frustumCenter /= cameraFrustumPoints.size();
+
+                f32 maxRadiusFromCenter = FLT_MIN;
+                for (const glm::vec4& point : cameraFrustumPoints)
+                {
+                    glm::vec3 radiusVector = glm::vec3(point) - frustumCenter;
+                    maxRadiusFromCenter = glm::max(maxRadiusFromCenter, glm::length(radiusVector));
+                }
+
+                // Calculate light view projection matrix
+                glm::vec3 eye = frustumCenter - glm::vec3(sunLightPtr->Direction) * maxRadiusFromCenter;
+                glm::mat4 sunLightViewMatrix = glm::lookAtRH(eye, frustumCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::mat4 sunLightProjectionMatrix = glm::orthoRH_ZO(-maxRadiusFromCenter, maxRadiusFromCenter, -maxRadiusFromCenter, maxRadiusFromCenter, 0.0f, maxRadiusFromCenter * 2.0f);
+
+                m_FrameData.ShadowCascades[i].LightViewProjMatrix = sunLightProjectionMatrix * sunLightViewMatrix;
+                m_FrameData.ShadowCascades[i].SplitDistance = 0.1f + (1000.0f - 0.1f) * splitDistanceFactor;
+            }
+        }
+
         u32 currentFrameIdx = Application::Get().GetCurrentFrameIndex();
+
+        // Update shadow cascades structured buffer data
+        if (!m_FrameData.ShadowCascades.empty())
+        {
+            if (!m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx] || m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx]->GetElementCount() != m_FrameData.ShadowCascades.size())
+            {
+                BufferDescription sbDesc;
+                sbDesc.ElementCount = m_FrameData.ShadowCascades.size();
+                sbDesc.ElementSize = sizeof(ShadowCascade);
+                sbDesc.IsDynamic = true;
+
+                m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx] = CreateRef<StructuredBuffer>(sbDesc, "ShadowCascadeGPUBuffers");
+            }
+
+            void* shadowCascadesData = m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx]->Map(0, 0);
+            memcpy(shadowCascadesData, m_FrameData.ShadowCascades.data(), sizeof(ShadowCascade) * m_FrameData.ShadowCascades.size());
+            m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx]->Unmap();
+        }
 
         // Update lights structured buffer data
         if (!m_FrameData.Lights.empty())
@@ -290,7 +409,9 @@ namespace Atom
         frameSIG.SetCameraPosition(m_FrameData.CameraPosition);
         frameSIG.SetCameraExposure(m_FrameData.CameraExposure);
         frameSIG.SetNumLights(m_FrameData.Lights.size());
+        frameSIG.SetNumShadowCascades(m_Specification.NumShadowCascades);
         frameSIG.SetLights(m_FrameData.LightsGPUBuffers[currentFrameIdx].get());
+        frameSIG.SetShadowCascades(m_FrameData.ShadowCascadeGPUBuffers[currentFrameIdx].get());
         frameSIG.SetBoneTransforms(m_FrameData.BoneTransformsGPUBuffers[currentFrameIdx].get());
         frameSIG.SetEnvironmentMap(m_FrameData.EnvironmentMaps[currentFrameIdx].get());
         frameSIG.SetIrradianceMap(m_FrameData.IrradianceMaps[currentFrameIdx].get());

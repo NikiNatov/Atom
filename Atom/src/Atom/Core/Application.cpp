@@ -37,6 +37,8 @@ namespace Atom
         m_PipelineLibrary = CreateScope<PipelineLibrary>();
 
         ShaderCompiler::SetOutputDirectory("../Atom/shaders/bin");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/ShadowDepthPassAnimatedShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/ShadowDepthPassShader.hlsl");
         m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/MeshPBRShader.hlsl");
         m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/MeshPBRAnimatedShader.hlsl");
         m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/SkyBoxShader.hlsl");

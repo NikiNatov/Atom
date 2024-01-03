@@ -6,11 +6,13 @@
 #include "Atom/Renderer/RenderGraph/ResourceID.h"
 
 #include <autogen/cpp/MeshDrawParams.h>
+#include <autogen/cpp/ShadowParams.h>
 
 namespace Atom
 {
     DECLARE_RID_RT(SceneColorOutput);
     DECLARE_RID_DS(SceneDepthBuffer);
+    DECLARE_RID_DS(CascadeShadowMap);
 
     // -----------------------------------------------------------------------------------------------------------------------------
     GeometryPass::GeometryPass(RenderPassID id, const String& name, const Vector<MeshEntry>& meshEntries, bool isAnimated)
@@ -67,6 +69,7 @@ namespace Atom
         // Resources
         builder.Write(RID(SceneColorOutput));
         builder.Write(RID(SceneDepthBuffer));
+        builder.Read(RID(CascadeShadowMap), true);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
@@ -74,10 +77,18 @@ namespace Atom
     {
         RenderSurface* sceneColorOutput = context.GetRT(RID(SceneColorOutput))->GetData();
         RenderSurface* depthBuffer = context.GetDS_RW(RID(SceneDepthBuffer))->GetData();
+        Texture* cascadeShadowMap = context.GetSR(RID(CascadeShadowMap))->GetData();
 
         Ref<CommandBuffer> cmdBuffer = context.GetCommandBuffer();
 
         cmdBuffer->BeginRenderPass({ sceneColorOutput, depthBuffer });
+
+        SIG::ShadowParams shadowParams;
+        shadowParams.SetCascadeShadowMap(cascadeShadowMap);
+        shadowParams.SetDepthBias(0.0009f);
+        shadowParams.Compile();
+
+        cmdBuffer->SetGraphicsSIG(shadowParams);
 
         for (const MeshEntry& meshEntry : m_MeshEntries)
         {
@@ -91,12 +102,7 @@ namespace Atom
 
             material->UpdateForRendering();
 
-            SIG::MeshDrawParams meshDrawParams;
-            meshDrawParams.SetTransform(meshEntry.Transform);
-            meshDrawParams.SetBoneTransformOffset(meshEntry.BoneTransformOffset);
-            meshDrawParams.Compile();
-
-            cmdBuffer->SetGraphicsSIG(meshDrawParams);
+            cmdBuffer->SetGraphicsSIG(meshEntry.DrawParams);
             cmdBuffer->SetGraphicsSIG(*material->GetSIG());
             cmdBuffer->SetVertexBuffer(meshEntry.Mesh->GetVertexBuffer().get());
             cmdBuffer->SetIndexBuffer(meshEntry.Mesh->GetIndexBuffer().get());

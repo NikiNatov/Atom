@@ -15,6 +15,8 @@
 #include "Atom/Asset/MeshAsset.h"
 #include "Atom/Asset/MaterialAsset.h"
 
+#include <autogen/cpp/MeshDrawParams.h>
+
 namespace Atom
 {
     enum class LightType
@@ -37,16 +39,22 @@ namespace Atom
 
     struct MeshEntry
     {
-        Ref<Mesh>     Mesh;
-        u32           SubmeshIndex;
-        Ref<Material> Material;
-        glm::mat4     Transform;
-        u32           BoneTransformOffset = UINT32_MAX;
+        Ref<Mesh>           Mesh;
+        u32                 SubmeshIndex;
+        Ref<Material>       Material;
+        SIG::MeshDrawParams DrawParams;
+    };
+
+    struct ShadowCascade
+    {
+        glm::mat4 LightViewProjMatrix = glm::mat4(1.0f);
+        f32       SplitDistance = 0.0f;
     };
 
     struct RendererSpecification
     {
         bool RenderToSwapChain = false;
+        u32  NumShadowCascades = 4;
     };
 
     class Renderer
@@ -61,6 +69,7 @@ namespace Atom
             f32                   CameraExposure = 0.5f;
             u32                   ViewportWidth = 1;
             u32                   ViewportHeight = 1;
+            Vector<ShadowCascade> ShadowCascades;
             Vector<Light>         Lights;
             Vector<MeshEntry>     StaticMeshes;
             Vector<MeshEntry>     AnimatedMeshes;
@@ -69,6 +78,7 @@ namespace Atom
             // Per frame GPU resources
             Ref<Texture>          EnvironmentMaps[g_FramesInFlight];
             Ref<Texture>          IrradianceMaps[g_FramesInFlight];
+            Ref<StructuredBuffer> ShadowCascadeGPUBuffers[g_FramesInFlight];
             Ref<StructuredBuffer> LightsGPUBuffers[g_FramesInFlight];
             Ref<StructuredBuffer> BoneTransformsGPUBuffers[g_FramesInFlight];
         };
@@ -99,12 +109,14 @@ namespace Atom
         static Ref<TextureSampler> GetSampler(TextureFilter filter, TextureWrap wrap);
     private:
         void BuildRenderPasses();
-        void UpdateFrameGPUBuffers();
+        void PreRender();
         void RecordCommandBuffers();
         void ExecuteCommandBuffers();
     private:
         static constexpr u32 MaxAnimatedMeshes = 1024;
         static constexpr u32 MaxBonesPerMesh = 100;
+        static constexpr u32 MaxShadowCascades = 4;
+        static constexpr f32 ShadowCascadeSplitDistanceFactors[MaxShadowCascades] = { 0.02f, 0.06f, 0.15f, 0.20f };
 
         RendererSpecification m_Specification;
 
