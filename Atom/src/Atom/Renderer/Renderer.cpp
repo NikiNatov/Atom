@@ -11,6 +11,7 @@
 #include "Atom/Renderer/RenderPasses/SkyBoxPass.h"
 #include "Atom/Renderer/RenderPasses/ShadowPass.h"
 #include "Atom/Renderer/RenderPasses/GeometryPass.h"
+#include "Atom/Renderer/RenderPasses/BloomPass.h"
 #include "Atom/Renderer/RenderPasses/CompositePass.h"
 
 #include <autogen/cpp/FrameParams.h>
@@ -40,7 +41,7 @@ namespace Atom
         m_FrameData.ProjectionMatrix = camera.GetProjection();
         m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
         m_FrameData.CameraPosition = cameraTransform[3];
-        m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.CameraExposure = m_Specification.BloomSettings.CameraExposure;
         m_FrameData.ShadowCascades.clear();
         m_FrameData.Lights.clear();
         m_FrameData.BoneTransforms.clear();
@@ -61,7 +62,7 @@ namespace Atom
         m_FrameData.ProjectionMatrix = editorCamera.GetProjection();
         m_FrameData.InvViewProjMatrix = glm::inverse(m_FrameData.ProjectionMatrix * m_FrameData.ViewMatrix);
         m_FrameData.CameraPosition = editorCamera.GetPosition();
-        m_FrameData.CameraExposure = 0.5f; // Hard-coded for now
+        m_FrameData.CameraExposure = m_Specification.BloomSettings.CameraExposure;
         m_FrameData.ShadowCascades.clear();
         m_FrameData.Lights.clear();
         m_FrameData.BoneTransforms.clear();
@@ -181,7 +182,31 @@ namespace Atom
     // -----------------------------------------------------------------------------------------------------------------------------
     void Renderer::OnImGuiRender()
     {
-        ImGui::Begin("Scene Renderer");
+        ImGui::Begin("Renderer Settings");
+
+        if (ImGui::CollapsingHeader("Bloom"))
+        {
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 150.0f);
+            ImGui::Text("Camera exposure");
+            ImGui::Text("Bloom strength");
+            ImGui::Text("Filter radius");
+            ImGui::Text("Downsample steps");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##Exposure", &m_Specification.BloomSettings.CameraExposure, 0.01f, 0.1f, 2.0f);
+            ImGui::DragFloat("##BloomStrength", &m_Specification.BloomSettings.BloomStrength, 0.001f, 0.0f, 2.0f);
+            ImGui::DragFloat("##FilterRadius", &m_Specification.BloomSettings.FilterRadius);
+            ImGui::DragInt("##DownSampleSteps", &m_Specification.BloomSettings.DownSampleSteps, 0.01f, 0, 8);
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            ImGui::Separator();
+        }
+
+        ImGui::End();
+
+        ImGui::Begin("Render Passes");
 
         for (RenderPassID passID : m_RenderGraph.GetOrderedPasses())
         {
@@ -262,6 +287,9 @@ namespace Atom
         m_RenderGraph.AddRenderPass<ShadowPass>("AnimatedGeometryShadowPass", m_FrameData.ShadowCascades, m_FrameData.AnimatedMeshes, true);
         m_RenderGraph.AddRenderPass<GeometryPass>("StaticGeometryPass", m_FrameData.StaticMeshes, false);
         m_RenderGraph.AddRenderPass<GeometryPass>("AnimatedGeometryPass", m_FrameData.AnimatedMeshes, true);
+        m_RenderGraph.AddRenderPass<BloomDownsamplePass>("BloomDownsamplePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.BloomSettings);
+        m_RenderGraph.AddRenderPass<BloomUpsamplePass>("BloomUpsamplePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.BloomSettings);
+        m_RenderGraph.AddRenderPass<BloomCompositePass>("BloomCompositePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.BloomSettings);
         m_RenderGraph.AddRenderPass<CompositePass>("CompositePass", m_FrameData.ViewportWidth, m_FrameData.ViewportHeight, m_Specification.RenderToSwapChain);
 
         m_RenderGraph.Build(m_ResourceSchedulers[Application::Get().GetCurrentFrameIndex()]);

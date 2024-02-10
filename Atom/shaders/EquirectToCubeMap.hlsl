@@ -38,6 +38,6 @@ void CSMain(uint3 ThreadID : SV_DispatchThreadID)
 	float theta = acos(v.y);
 
     float4 color = g_EquirectToCubeMapParams.InputTexture.SampleLevel(g_DefaultLayoutStaticSamplers.LinearRepeatSampler, float2(phi / TwoPI, theta / PI), g_EquirectToCubeMapParams.MipLevel);
-
+    color = min(color, float4(100.0f, 100.0f, 100.0f, 100.0f));
     g_EquirectToCubeMapParams.OutputTexture[ThreadID] = color;
 }

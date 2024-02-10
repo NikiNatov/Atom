@@ -183,6 +183,10 @@ namespace Atom
             }
         }
 
+        m_OrderedPasses.clear();
+        for (RenderPassID passID = 0; passID < m_Passes.size(); passID++)
+            m_OrderedPasses.push_back(passID);
+
         // Validate final pass outputs
         const auto& finalOutputViews = resourceScheduler.GetPassOutputs(m_OrderedPasses.back());
         ATOM_ENGINE_ASSERT(finalOutputViews.size() == 1, "Final pass must contain only 1 output");

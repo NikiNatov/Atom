@@ -51,10 +51,20 @@ namespace Atom
         f32       SplitDistance = 0.0f;
     };
 
+    struct BloomSettings
+    {
+        f32 CameraExposure = 0.4f;
+        f32 BloomStrength = 0.06f;
+        f32 FilterRadius = 0.005f;
+        s32 DownSampleSteps = 9;
+    };
+
     struct RendererSpecification
     {
         bool RenderToSwapChain = false;
         u32  NumShadowCascades = 4;
+
+        BloomSettings BloomSettings;
     };
 
     class Renderer

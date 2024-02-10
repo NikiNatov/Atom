@@ -14,7 +14,7 @@
 namespace Atom
 {
     DEFINE_RID_RT(FinalOutput);
-    DECLARE_RID_RT(SceneColorOutput);
+    DECLARE_RID_RT(SceneBloom);
 
     // -----------------------------------------------------------------------------------------------------------------------------
     CompositePass::CompositePass(RenderPassID passID, const String& name, u32 viewportWidth, u32 viewportHeight, bool renderToSwapChain)
@@ -58,14 +58,14 @@ namespace Atom
             builder.NewRT(RID(FinalOutput), finalOutputDesc);
         }
 
-        builder.Read(RID(SceneColorOutput));
+        builder.Read(RID(SceneBloom));
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------
     void CompositePass::Execute(RenderPassContext& context)
     {
         RenderSurface* finalOutput = context.GetRT(RID(FinalOutput))->GetData();
-        Texture* sceneColorOutput = context.GetSR(RID(SceneColorOutput))->GetData();
+        Texture* sceneColorOutput = context.GetSR(RID(SceneBloom))->GetData();
 
         Ref<CommandBuffer> cmdBuffer = context.GetCommandBuffer();
 

@@ -50,6 +50,9 @@ namespace Atom
         m_ShaderLibrary->LoadComputeShader("../Atom/shaders/CubeMapPrefilter.hlsl");
         m_ShaderLibrary->LoadComputeShader("../Atom/shaders/CubeMapIrradiance.hlsl");
         m_ShaderLibrary->LoadComputeShader("../Atom/shaders/BRDFShader.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/BloomDownsampleShader.hlsl");
+        m_ShaderLibrary->LoadComputeShader("../Atom/shaders/BloomUpsampleShader.hlsl");
+        m_ShaderLibrary->LoadGraphicsShader("../Atom/shaders/BloomCompositeShader.hlsl");
 
         // Initialize engine systems
         PhysicsEngine::Initialize();
